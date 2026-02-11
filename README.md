@@ -73,6 +73,10 @@ npx serve files -p 3001 --cors
 | `pnpm init:user-data <name>` | Scaffold a new user-data project |
 | `pnpm validate:user-data` | Validate user-data structure |
 
+## License
+
+GPLv2 (GNU General Public License v2). See [LICENSE](LICENSE) for full terms.
+
 ## Notes
 
 - `artis.config.yaml` and `.env` are local and not committed; copy from the `.example` files.
