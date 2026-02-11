@@ -1,0 +1,1356 @@
+---
+// packages/admin/src/pages/settings/pages.astro
+import AdminLayout from "@layouts/AdminLayout.astro";
+import { Toggle } from "@components/ui/Toggle";
+import Button from "@components/ui/Button.astro";
+import fs from "fs/promises";
+import path from "path";
+import yaml from "js-yaml";
+import { getSettingsFilePath } from "../../lib/config-paths";
+
+// Load nav config on server side to set Toggle initial state
+let showLogoDefault = true;
+try {
+  const settingsPath = getSettingsFilePath();
+  const content = await fs.readFile(settingsPath, "utf-8");
+  const settings = yaml.load(content) as any;
+  if (settings?.nav?.showLogo !== undefined) {
+    showLogoDefault = settings.nav.showLogo !== false;
+  }
+} catch (e) {
+  // Use default
+}
+---
+
+<AdminLayout title="Pages & Navigation Settings">
+  <div slot="header-actions" class="flex items-center gap-3">
+    <span id="save-status" class="text-sm text-admin-muted"></span>
+    <Button
+      id="save-btn"
+      type="button"
+      variant="accent"
+      disabled
+      tooltip="No changes to save"
+      tooltipSide="bottom"
+    >
+      💾 Save Changes
+    </Button>
+  </div>
+  <div class="max-w-5xl space-y-8">
+    <!-- Header -->
+    <div class="card">
+      <div class="flex items-start justify-between mb-2">
+        <h2 class="text-lg font-semibold">📄 Page Configuration</h2>
+        <a
+          href="/style/themes"
+          id="theme-link"
+          class="flex items-center gap-2 px-3 py-1.5 text-xs bg-admin-sidebar rounded-lg text-admin-muted hover:text-admin-text hover:bg-admin-card transition-colors border border-admin-border"
+        >
+          <span>Theme:</span>
+          <span id="theme-name" class="font-medium">Loading...</span>
+        </a>
+      </div>
+      <p class="text-admin-muted text-sm">
+        Enable or disable pages, control navigation visibility, set the home
+        page, and configure inter-page linking behavior.
+      </p>
+    </div>
+
+    <!-- Navigation -->
+    <div id="navigation" class="card">
+      <h3 class="text-lg font-semibold mb-2">🧭 Navigation</h3>
+      <p class="text-sm text-admin-muted mb-4">
+        Manage the navigation menu that appears in the header and footer.
+      </p>
+
+      <!-- Show Logo Toggle -->
+      <div class="mb-4">
+        <Toggle
+          client:load
+          name="nav.showLogo"
+          label="Show logo in header"
+          defaultPressed={showLogoDefault}
+        />
+      </div>
+
+      <!-- Core Pages (Immutable) -->
+      <div class="mb-4">
+        <h4 class="text-sm font-semibold mb-2 text-admin-muted">Core Pages</h4>
+        <p class="text-xs text-admin-muted mb-2">
+          These pages are always available and can be reordered but not removed.
+        </p>
+        <div
+          class="bg-admin-sidebar/50 rounded-lg p-3 border border-admin-border/50"
+        >
+          <div id="core-pages-container" class="space-y-2">
+            <!-- Dynamic core pages rendered here -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Custom Navigation Items -->
+      <div class="mb-4">
+        <h4 class="text-sm font-semibold mb-2 text-admin-muted">
+          Custom Navigation Items
+        </h4>
+        <div
+          class="bg-admin-sidebar/50 rounded-lg p-3 border border-admin-border/50"
+        >
+          <div id="nav-items-container" class="space-y-2 mb-2">
+            <!-- Dynamic custom items rendered here -->
+          </div>
+
+          <button
+            type="button"
+            id="add-nav-item-btn"
+            class="btn btn-secondary w-full"
+          >
+            + Add Custom Navigation Item
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Home Page Selection -->
+    <div class="card">
+      <h3 class="text-lg font-semibold mb-2">🏠 Home Page</h3>
+      <p class="text-admin-muted text-sm mb-4">
+        Select which page visitors see when they visit your site root.
+      </p>
+      <div class="max-w-sm">
+        <select
+          id="home-page-select"
+          class="w-full p-3 bg-admin-sidebar border border-admin-border rounded-lg text-admin-text"
+        >
+          <option value="">Loading...</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Pages Configuration Table -->
+    <div class="card">
+      <h3 class="text-lg font-semibold mb-2">📋 Pages Configuration</h3>
+      <p class="text-admin-muted text-sm mb-4">
+        Manage page visibility and behavior. Only pages supported by your
+        current theme are shown.
+      </p>
+
+      <div class="border border-admin-border rounded-lg overflow-hidden">
+        <table class="w-full text-left text-sm">
+          <thead
+            class="bg-admin-sidebar border-b border-admin-border text-admin-muted font-medium"
+          >
+            <tr>
+              <th class="p-4">Page Type</th>
+              <th class="p-4 w-28 text-center">Available</th>
+              <th class="p-4 w-28 text-center">Enabled</th>
+              <th class="p-4 w-28 text-center">In Nav</th>
+              <th class="p-4 w-48">Main CTA</th>
+            </tr>
+          </thead>
+          <tbody id="pages-table-body" class="divide-y divide-admin-border">
+            <tr
+              ><td colspan="5" class="p-8 text-center text-admin-muted"
+                >Loading configuration...</td
+              ></tr
+            >
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</AdminLayout>
+
+<style>
+  .toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 22px;
+    background: var(--admin-border);
+    border-radius: 11px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .toggle-switch.active {
+    background: var(--admin-success, #22c55e);
+  }
+
+  .toggle-switch.disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+  }
+
+  .toggle-switch::after {
+    content: "";
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    background: white;
+    border-radius: 50%;
+    top: 3px;
+    left: 3px;
+    transition: transform 0.2s;
+  }
+
+  .toggle-switch.active::after {
+    transform: translateX(18px);
+  }
+
+  .available-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 500;
+    border-radius: 4px;
+  }
+
+  .available-badge.yes {
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+  }
+
+  .available-badge.no {
+    background: rgba(156, 163, 175, 0.15);
+    color: #9ca3af;
+  }
+
+  .cta-select {
+    width: 100%;
+    padding: 6px 8px;
+    font-size: 12px;
+    background: var(--admin-sidebar);
+    border: 1px solid var(--admin-border);
+    border-radius: 4px;
+    color: var(--admin-text);
+  }
+
+  .cta-select:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* Navigation drag and drop styles */
+  .draggable-core-page,
+  .draggable-custom-item {
+    transition: all 0.2s;
+  }
+
+  .draggable-core-page[data-dragging="true"],
+  .draggable-custom-item[data-dragging="true"] {
+    opacity: 0.5;
+  }
+
+  .draggable-core-page.drop-zone-active,
+  .draggable-custom-item.drop-zone-active {
+    border-color: var(--admin-accent);
+    box-shadow: 0 0 0 2px var(--admin-accent);
+  }
+
+  .nav-checkbox {
+    accent-color: var(--admin-accent);
+  }
+</style>
+
+<script>
+  // ============================================================================
+  // Types
+  // ============================================================================
+
+  interface PageTypeDefinition {
+    id: string;
+    label: string;
+    multiInstance: boolean;
+    isCore: boolean;
+    isCustom?: boolean;
+    defaultEnabled: boolean;
+  }
+
+  interface PagesConfig {
+    enabled: Record<string, boolean>;
+    homePage: string;
+    linking: Record<string, string>;
+    showInNav?: Record<string, boolean>;
+  }
+
+  interface NavItem {
+    label: string;
+    href: string;
+    external?: boolean;
+  }
+
+  interface NavConfig {
+    showLogo: boolean;
+    items: NavItem[];
+  }
+
+  interface ApiResponse {
+    pageTypes: PageTypeDefinition[];
+    pages: PagesConfig;
+    supportedPages: string[];
+    themeName: string;
+  }
+
+  // ============================================================================
+  // State
+  // ============================================================================
+
+  let pageTypes: PageTypeDefinition[] = [];
+  let supportedPages: string[] = [];
+  let pagesConfig: PagesConfig = {
+    enabled: {},
+    homePage: "gallery",
+    linking: {},
+  };
+  let originalPagesConfig: string = "";
+
+  let navConfig: NavConfig = { showLogo: true, items: [] };
+  let originalNavConfig: string = "";
+
+  let hasChanges = false;
+  let isSaving = false;
+
+  // Immutable core pages - always present, cannot be deleted
+  const IMMUTABLE_PAGES = [
+    { label: "Gallery", href: "/" },
+    { label: "Slideshow", href: "/slideshow" },
+    { label: "About", href: "/about" },
+  ];
+
+  let corePagesOrder: number[] = [0, 1, 2]; // Indices into IMMUTABLE_PAGES
+  let customNavItems: NavItem[] = [];
+  const validationErrors: Record<number, { label?: string; href?: string }> =
+    {};
+
+  // ============================================================================
+  // Elements
+  // ============================================================================
+
+  const homeSelect = document.getElementById(
+    "home-page-select",
+  ) as HTMLSelectElement;
+  const tableBody = document.getElementById(
+    "pages-table-body",
+  ) as HTMLTableSectionElement;
+  const saveBtn = document.getElementById("save-btn") as HTMLButtonElement;
+  const saveStatus = document.getElementById("save-status") as HTMLSpanElement;
+  const themeNameSpan = document.getElementById(
+    "theme-name",
+  ) as HTMLSpanElement;
+
+  // Navigation elements - get the Toggle container (parent of hidden input)
+  const navShowLogoInput = document.querySelector(
+    'input[name="nav.showLogo"]',
+  ) as HTMLInputElement;
+  const navShowLogoToggle =
+    navShowLogoInput?.parentElement as HTMLElement | null;
+
+  // Helper function to get showLogo value from Toggle component
+  function getShowLogoValue(): boolean {
+    // Check container's pressed property first (set by Toggle component)
+    const containerPressed = (navShowLogoToggle as any)?.pressed;
+    if (typeof containerPressed === "boolean") {
+      return containerPressed;
+    }
+    // Fall back to hidden input value
+    return navShowLogoInput?.value === "on";
+  }
+
+  const corePagesContainer = document.getElementById("core-pages-container");
+  const navItemsContainer = document.getElementById("nav-items-container");
+  const navEmptyState = document.getElementById("nav-empty-state");
+  const addNavItemBtn = document.getElementById("add-nav-item-btn");
+
+  // ============================================================================
+  // Constants
+  // ============================================================================
+
+  const BASE_HOME_OPTIONS = [
+    { id: "home", label: "Dedicated Home Page" },
+    { id: "gallery", label: "Gallery" },
+    { id: "slider", label: "Slider (Lightbox)" },
+    { id: "about", label: "About" },
+    { id: "schedule", label: "Schedule" },
+  ];
+
+  const CTA_MAPPINGS: Record<
+    string,
+    { ctaKey: string; label: string; options: string[] }
+  > = {
+    gallery: {
+      ctaKey: "galleryClick",
+      label: "Gallery Click",
+      options: ["art_piece", "slider", "none"],
+    },
+    collections_list: {
+      ctaKey: "collectionClick",
+      label: "Collection Click",
+      options: ["gallery", "none"],
+    },
+    art_piece: {
+      ctaKey: "artPieceBack",
+      label: "Art Piece Back",
+      options: ["gallery", "collections_list", "slider", "history"],
+    },
+    search_results: {
+      ctaKey: "searchResultClick",
+      label: "Search Click",
+      options: ["art_piece", "slider"],
+    },
+  };
+
+  // ============================================================================
+  // Initialization
+  // ============================================================================
+
+  async function loadData() {
+    try {
+      // Load both pages config and nav config in parallel
+      const [pagesRes, navRes] = await Promise.all([
+        fetch("/api/pages"),
+        fetch("/api/nav"),
+      ]);
+
+      const pagesData: ApiResponse = await pagesRes.json();
+      const navData = await navRes.json();
+
+      pageTypes = pagesData.pageTypes;
+      supportedPages = pagesData.supportedPages;
+      pagesConfig = pagesData.pages;
+      originalPagesConfig = JSON.stringify(pagesConfig);
+
+      navConfig = navData.nav || { showLogo: true, items: [] };
+      originalNavConfig = JSON.stringify(navConfig);
+
+      // Initialize navigation state from loaded config
+      initializeNavState();
+
+      renderHomeSelect();
+      renderTable();
+      renderNavigation();
+      updateSaveButton();
+
+      // Update theme name in header
+      if (themeNameSpan) {
+        themeNameSpan.textContent = pagesData.themeName;
+      }
+    } catch (e) {
+      console.error("Failed to load:", e);
+      window.dispatchEvent(
+        new CustomEvent("artsitemaker:toast", {
+          detail: {
+            title: "Failed to load configuration",
+            variant: "destructive",
+          },
+        }),
+      );
+    }
+  }
+
+  function initializeNavState() {
+    // Load initial nav items and separate core pages from custom items
+    const allItems = navConfig.items || [];
+    const coreHrefs = IMMUTABLE_PAGES.map((p) => p.href);
+    const foundCoreIndices: number[] = [];
+    const customItems: NavItem[] = [];
+
+    allItems.forEach((item: NavItem) => {
+      const coreIndex = coreHrefs.indexOf(item.href);
+      if (coreIndex !== -1) {
+        foundCoreIndices.push(coreIndex);
+        IMMUTABLE_PAGES[coreIndex].label = item.label;
+      } else {
+        customItems.push(item);
+      }
+    });
+
+    if (foundCoreIndices.length === IMMUTABLE_PAGES.length) {
+      corePagesOrder = foundCoreIndices;
+    } else {
+      const missingIndices = IMMUTABLE_PAGES.map((_, i) => i).filter(
+        (i) => !foundCoreIndices.includes(i),
+      );
+      corePagesOrder = [...foundCoreIndices, ...missingIndices];
+    }
+
+    customNavItems = customItems;
+
+    // Attach nav showLogo listener - listen on the hidden input for change events
+    navShowLogoInput?.addEventListener("change", () => {
+      navConfig.showLogo = getShowLogoValue();
+      markChanged();
+    });
+  }
+
+  // ============================================================================
+  // Navigation Rendering
+  // ============================================================================
+
+  function renderNavigation() {
+    renderCorePages();
+    renderCustomNavItems();
+  }
+
+  function renderCorePages() {
+    if (!corePagesContainer) return;
+
+    corePagesContainer.innerHTML = corePagesOrder
+      .map((coreIndex, displayIndex) => {
+        const page = IMMUTABLE_PAGES[coreIndex];
+        const isFirst = displayIndex === 0;
+        const isLast = displayIndex === corePagesOrder.length - 1;
+        return `
+        <div class="card p-3 group transition-all duration-200 hover:shadow-md hover:border-admin-accent/50 cursor-pointer draggable-core-page" 
+             data-core-index="${coreIndex}"
+             draggable="true"
+             data-drag-type="core"
+             data-drag-index="${displayIndex}">
+          <div class="flex items-center gap-3 mb-2">
+            <div class="flex flex-col items-center gap-0.5 p-2 rounded hover:bg-admin-sidebar cursor-grab active:cursor-grabbing transition-colors drag-handle-core">
+              <svg class="w-4 h-4 text-admin-muted group-hover:text-admin-text transition-colors" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                <circle cx="4" cy="4" r="1.5"/>
+                <circle cx="12" cy="4" r="1.5"/>
+                <circle cx="4" cy="8" r="1.5"/>
+                <circle cx="12" cy="8" r="1.5"/>
+                <circle cx="4" cy="12" r="1.5"/>
+                <circle cx="12" cy="12" r="1.5"/>
+              </svg>
+            </div>
+            
+            <div class="flex gap-1">
+              <button type="button" 
+                      class="core-page-move-up p-1.5 rounded hover:bg-admin-sidebar transition-colors ${isFirst ? "opacity-30 cursor-not-allowed" : "cursor-pointer"}" 
+                      data-core-index="${coreIndex}"
+                      ${isFirst ? 'disabled aria-disabled="true"' : ""}
+                      title="Move up"
+                      aria-label="Move up">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+                </svg>
+              </button>
+              <button type="button" 
+                      class="core-page-move-down p-1.5 rounded hover:bg-admin-sidebar transition-colors ${isLast ? "opacity-30 cursor-not-allowed" : "cursor-pointer"}" 
+                      data-core-index="${coreIndex}"
+                      ${isLast ? 'disabled aria-disabled="true"' : ""}
+                      title="Move down"
+                      aria-label="Move down">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+            </div>
+            
+            <span class="text-xs font-mono text-admin-muted">#${displayIndex + 1}</span>
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-admin-accent/10 text-admin-accent border border-admin-accent/20">
+              <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                <path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+              </svg>
+              Core Page
+            </span>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-admin-muted mb-1">Label</label>
+              <input type="text" 
+                     class="w-full core-page-label transition-colors focus:ring-2 focus:ring-admin-accent bg-admin-sidebar border border-admin-border rounded p-2 text-sm" 
+                     value="${page.label || ""}" 
+                     placeholder="e.g., Gallery"
+                     data-core-index="${coreIndex}"
+                     aria-label="Navigation label" />
+              <div class="core-page-label-error text-xs text-red-400 mt-1 hidden"></div>
+            </div>
+            <div>
+              <label class="block text-xs text-admin-muted mb-1">URL</label>
+              <input type="text" 
+                     class="w-full bg-admin-sidebar/50 cursor-not-allowed border border-admin-border rounded p-2 text-sm text-admin-muted" 
+                     value="${page.href}" 
+                     readonly
+                     aria-label="Navigation URL (read-only)"
+                     title="Core page URLs cannot be changed" />
+            </div>
+          </div>
+        </div>
+      `;
+      })
+      .join("");
+
+    attachCorePageListeners();
+    attachCorePageDragListeners();
+  }
+
+  function renderCustomNavItems() {
+    if (!navItemsContainer) return;
+
+    if (navEmptyState) {
+      navEmptyState.classList.toggle("hidden", customNavItems.length > 0);
+    }
+
+    navItemsContainer.innerHTML = customNavItems
+      .map((item, index) => {
+        const isExternal =
+          item.external ||
+          (item.href &&
+            (item.href.startsWith("http://") ||
+              item.href.startsWith("https://")));
+        const labelError = getFieldError(index, "label");
+        const hrefError = getFieldError(index, "href");
+        return `
+        <div class="card p-3 group transition-all duration-200 hover:shadow-md hover:border-admin-accent/50 cursor-pointer draggable-custom-item" 
+             data-custom-index="${index}"
+             draggable="true"
+             data-drag-type="custom"
+             data-drag-index="${index}">
+          <div class="flex items-center gap-3 mb-2">
+            <div class="p-2 rounded hover:bg-admin-sidebar cursor-grab active:cursor-grabbing transition-colors drag-handle-custom" title="Drag to reorder" aria-label="Drag to reorder">
+              <svg class="w-5 h-5 text-admin-muted group-hover:text-admin-text transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
+              </svg>
+            </div>
+            
+            <div class="flex gap-1">
+              <button type="button" 
+                      class="custom-item-move-up p-1.5 rounded hover:bg-admin-sidebar transition-colors ${index === 0 ? "opacity-30 cursor-not-allowed" : "cursor-pointer"}" 
+                      data-custom-index="${index}"
+                      ${index === 0 ? 'disabled aria-disabled="true"' : ""}
+                      title="Move up"
+                      aria-label="Move up">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+                </svg>
+              </button>
+              <button type="button" 
+                      class="custom-item-move-down p-1.5 rounded hover:bg-admin-sidebar transition-colors ${index === customNavItems.length - 1 ? "opacity-30 cursor-not-allowed" : "cursor-pointer"}" 
+                      data-custom-index="${index}"
+                      ${index === customNavItems.length - 1 ? 'disabled aria-disabled="true"' : ""}
+                      title="Move down"
+                      aria-label="Move down">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+            </div>
+            
+            <span class="text-xs text-admin-muted font-mono">#${corePagesOrder.length + index + 1}</span>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <div>
+              <label class="block text-xs text-admin-muted mb-1">Label</label>
+              <input type="text" 
+                     class="w-full custom-nav-item-label transition-colors focus:ring-2 focus:ring-admin-accent bg-admin-sidebar border border-admin-border rounded p-2 text-sm ${labelError ? "border-red-400 focus:ring-red-400" : ""}" 
+                     value="${item.label || ""}" 
+                     placeholder="e.g., Shop"
+                     data-custom-index="${index}"
+                     aria-label="Navigation label"
+                     aria-invalid="${labelError ? "true" : "false"}"
+                     aria-describedby="${labelError ? `custom-label-error-${index}` : ""}" />
+              <div id="custom-label-error-${index}" class="custom-nav-item-label-error text-xs text-red-400 mt-1 ${labelError ? "" : "hidden"}">${labelError || ""}</div>
+            </div>
+            <div>
+              <label class="block text-xs text-admin-muted mb-1">URL</label>
+              <input type="text" 
+                     class="w-full custom-nav-item-href transition-colors focus:ring-2 focus:ring-admin-accent bg-admin-sidebar border border-admin-border rounded p-2 text-sm ${hrefError ? "border-red-400 focus:ring-red-400" : ""}" 
+                     value="${item.href || ""}" 
+                     placeholder="e.g., /shop or https://example.com"
+                     data-custom-index="${index}"
+                     aria-label="Navigation URL"
+                     aria-invalid="${hrefError ? "true" : "false"}"
+                     aria-describedby="${hrefError ? `custom-href-error-${index}` : ""}" />
+              <div id="custom-href-error-${index}" class="custom-nav-item-href-error text-xs text-red-400 mt-1 ${hrefError ? "" : "hidden"}">${hrefError || ""}</div>
+            </div>
+          </div>
+          <div class="flex items-center justify-between mt-2">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" 
+                     class="custom-nav-item-external cursor-pointer w-4 h-4 accent-[var(--admin-accent)]" 
+                     ${isExternal ? "checked" : ""}
+                     data-custom-index="${index}"
+                     aria-label="External link" />
+              <span class="text-xs">External link (opens in new tab)</span>
+            </label>
+            <button type="button" 
+                    class="p-2 text-admin-muted hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors cursor-pointer custom-nav-item-delete" 
+                    data-custom-index="${index}"
+                    aria-label="Delete navigation item">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      `;
+      })
+      .join("");
+
+    attachCustomNavItemListeners();
+    attachCustomItemDragListeners();
+  }
+
+  // ============================================================================
+  // Navigation Event Listeners
+  // ============================================================================
+
+  function attachCorePageListeners() {
+    document.querySelectorAll(".core-page-label").forEach((input) => {
+      input.addEventListener("change", (e) => {
+        const target = e.target as HTMLInputElement;
+        const coreIndex = parseInt(target.dataset.coreIndex || "0");
+        IMMUTABLE_PAGES[coreIndex].label = target.value;
+        markChanged();
+      });
+    });
+
+    document.querySelectorAll(".core-page-move-up").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        const target = e.currentTarget as HTMLButtonElement;
+        if (target.hasAttribute("disabled")) return;
+        const coreIndex = parseInt(target.dataset.coreIndex || "0");
+        const currentPos = corePagesOrder.indexOf(coreIndex);
+        if (currentPos > 0) {
+          [corePagesOrder[currentPos], corePagesOrder[currentPos - 1]] = [
+            corePagesOrder[currentPos - 1],
+            corePagesOrder[currentPos],
+          ];
+          renderCorePages();
+          markChanged();
+        }
+      });
+    });
+
+    document.querySelectorAll(".core-page-move-down").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        const target = e.currentTarget as HTMLButtonElement;
+        if (target.hasAttribute("disabled")) return;
+        const coreIndex = parseInt(target.dataset.coreIndex || "0");
+        const currentPos = corePagesOrder.indexOf(coreIndex);
+        if (currentPos < corePagesOrder.length - 1) {
+          [corePagesOrder[currentPos], corePagesOrder[currentPos + 1]] = [
+            corePagesOrder[currentPos + 1],
+            corePagesOrder[currentPos],
+          ];
+          renderCorePages();
+          markChanged();
+        }
+      });
+    });
+  }
+
+  function attachCorePageDragListeners() {
+    if (!corePagesContainer) return;
+
+    let draggedElement: HTMLElement | null = null;
+
+    document.querySelectorAll(".draggable-core-page").forEach((card) => {
+      const element = card as HTMLElement;
+
+      element.addEventListener("dragstart", (e) => {
+        draggedElement = element;
+        element.setAttribute("data-dragging", "true");
+        if (e.dataTransfer) {
+          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setData("text/plain", "");
+        }
+        setTimeout(() => {
+          element.style.opacity = "0.5";
+        }, 0);
+      });
+
+      element.addEventListener("dragend", () => {
+        element.removeAttribute("data-dragging");
+        element.style.opacity = "";
+        document.querySelectorAll(".drop-zone-active").forEach((zone) => {
+          zone.classList.remove("drop-zone-active");
+        });
+        draggedElement = null;
+      });
+
+      element.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+        if (!draggedElement || draggedElement === element) return;
+
+        const rect = element.getBoundingClientRect();
+        const mouseY = e.clientY;
+        document.querySelectorAll(".drop-zone-active").forEach((zone) => {
+          zone.classList.remove("drop-zone-active");
+        });
+        element.classList.add("drop-zone-active");
+      });
+
+      element.addEventListener("dragleave", () => {
+        element.classList.remove("drop-zone-active");
+      });
+
+      element.addEventListener("drop", (e) => {
+        e.preventDefault();
+        element.classList.remove("drop-zone-active");
+        if (!draggedElement || draggedElement === element) return;
+
+        const draggedCoreIndex = parseInt(
+          draggedElement.dataset.coreIndex || "0",
+        );
+        const dropCoreIndex = parseInt(element.dataset.coreIndex || "0");
+
+        const draggedPos = corePagesOrder.indexOf(draggedCoreIndex);
+        const dropPos = corePagesOrder.indexOf(dropCoreIndex);
+
+        const newOrder = [...corePagesOrder];
+        newOrder.splice(draggedPos, 1);
+        const adjustedDropPos = draggedPos < dropPos ? dropPos - 1 : dropPos;
+        newOrder.splice(adjustedDropPos, 0, draggedCoreIndex);
+
+        corePagesOrder = newOrder;
+        renderCorePages();
+        markChanged();
+      });
+    });
+  }
+
+  function attachCustomNavItemListeners() {
+    document.querySelectorAll(".custom-nav-item-label").forEach((input) => {
+      input.addEventListener("change", (e) => {
+        const target = e.target as HTMLInputElement;
+        const index = parseInt(target.dataset.customIndex || "0");
+        customNavItems[index].label = target.value;
+        validateNavItem(customNavItems[index], index);
+        markChanged();
+      });
+
+      input.addEventListener("blur", () => {
+        renderCustomNavItems();
+      });
+    });
+
+    document.querySelectorAll(".custom-nav-item-href").forEach((input) => {
+      input.addEventListener("change", (e) => {
+        const target = e.target as HTMLInputElement;
+        const index = parseInt(target.dataset.customIndex || "0");
+        customNavItems[index].href = target.value;
+        if (
+          target.value.startsWith("http://") ||
+          target.value.startsWith("https://")
+        ) {
+          customNavItems[index].external = true;
+        }
+        validateNavItem(customNavItems[index], index);
+        markChanged();
+      });
+    });
+
+    document
+      .querySelectorAll(".custom-nav-item-external")
+      .forEach((checkbox) => {
+        checkbox.addEventListener("change", (e) => {
+          const target = e.target as HTMLInputElement;
+          const index = parseInt(target.dataset.customIndex || "0");
+          customNavItems[index].external = target.checked;
+          markChanged();
+        });
+      });
+
+    document.querySelectorAll(".custom-nav-item-delete").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        const target = e.currentTarget as HTMLButtonElement;
+        const index = parseInt(target.dataset.customIndex || "0");
+        customNavItems.splice(index, 1);
+        delete validationErrors[index];
+        const newErrors: typeof validationErrors = {};
+        Object.keys(validationErrors).forEach((key) => {
+          const oldIndex = parseInt(key);
+          if (oldIndex > index) {
+            newErrors[oldIndex - 1] = validationErrors[oldIndex];
+          } else if (oldIndex < index) {
+            newErrors[oldIndex] = validationErrors[oldIndex];
+          }
+        });
+        Object.assign(validationErrors, newErrors);
+        renderCustomNavItems();
+        markChanged();
+      });
+    });
+
+    document.querySelectorAll(".custom-item-move-up").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        const target = e.currentTarget as HTMLButtonElement;
+        if (target.hasAttribute("disabled")) return;
+        const index = parseInt(target.dataset.customIndex || "0");
+        if (index > 0) {
+          [customNavItems[index], customNavItems[index - 1]] = [
+            customNavItems[index - 1],
+            customNavItems[index],
+          ];
+          renderCustomNavItems();
+          markChanged();
+        }
+      });
+    });
+
+    document.querySelectorAll(".custom-item-move-down").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        const target = e.currentTarget as HTMLButtonElement;
+        if (target.hasAttribute("disabled")) return;
+        const index = parseInt(target.dataset.customIndex || "0");
+        if (index < customNavItems.length - 1) {
+          [customNavItems[index], customNavItems[index + 1]] = [
+            customNavItems[index + 1],
+            customNavItems[index],
+          ];
+          renderCustomNavItems();
+          markChanged();
+        }
+      });
+    });
+  }
+
+  function attachCustomItemDragListeners() {
+    if (!navItemsContainer) return;
+
+    let draggedElement: HTMLElement | null = null;
+    let draggedIndex: number = -1;
+
+    document.querySelectorAll(".draggable-custom-item").forEach((card) => {
+      const element = card as HTMLElement;
+
+      element.addEventListener("dragstart", (e) => {
+        draggedElement = element;
+        draggedIndex = parseInt(element.dataset.dragIndex || "0");
+        element.setAttribute("data-dragging", "true");
+        if (e.dataTransfer) {
+          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setData("text/plain", "");
+        }
+        setTimeout(() => {
+          element.style.opacity = "0.5";
+        }, 0);
+      });
+
+      element.addEventListener("dragend", () => {
+        element.removeAttribute("data-dragging");
+        element.style.opacity = "";
+        document.querySelectorAll(".drop-zone-active").forEach((zone) => {
+          zone.classList.remove("drop-zone-active");
+        });
+        draggedElement = null;
+        draggedIndex = -1;
+      });
+
+      element.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+        if (!draggedElement || draggedElement === element) return;
+
+        document.querySelectorAll(".drop-zone-active").forEach((zone) => {
+          zone.classList.remove("drop-zone-active");
+        });
+        element.classList.add("drop-zone-active");
+      });
+
+      element.addEventListener("dragleave", () => {
+        element.classList.remove("drop-zone-active");
+      });
+
+      element.addEventListener("drop", (e) => {
+        e.preventDefault();
+        element.classList.remove("drop-zone-active");
+        if (!draggedElement || draggedElement === element) return;
+
+        const dropIndex = parseInt(element.dataset.dragIndex || "0");
+        const newItems = [...customNavItems];
+        const draggedItem = newItems[draggedIndex];
+
+        newItems.splice(draggedIndex, 1);
+        const insertPos = draggedIndex < dropIndex ? dropIndex : dropIndex + 1;
+        newItems.splice(insertPos - 1, 0, draggedItem);
+
+        customNavItems = newItems;
+        renderCustomNavItems();
+        markChanged();
+      });
+    });
+  }
+
+  addNavItemBtn?.addEventListener("click", () => {
+    customNavItems.push({ label: "", href: "", external: false });
+    renderCustomNavItems();
+    setTimeout(() => {
+      const newInput = navItemsContainer?.querySelector(
+        `[data-custom-index="${customNavItems.length - 1}"].custom-nav-item-label`,
+      ) as HTMLInputElement;
+      newInput?.focus();
+    }, 50);
+  });
+
+  function validateNavItem(
+    item: NavItem,
+    index: number,
+  ): { label?: string; href?: string } {
+    const errors: { label?: string; href?: string } = {};
+
+    if (!item.label.trim()) {
+      errors.label = "Label is required";
+    }
+
+    if (!item.href.trim()) {
+      errors.href = "URL is required";
+    } else if (
+      !item.href.startsWith("/") &&
+      !item.href.startsWith("http://") &&
+      !item.href.startsWith("https://")
+    ) {
+      errors.href = "URL must start with / or http:// or https://";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      validationErrors[index] = errors;
+    } else {
+      delete validationErrors[index];
+    }
+
+    return errors;
+  }
+
+  function getFieldError(
+    index: number,
+    field: "label" | "href",
+  ): string | undefined {
+    return validationErrors[index]?.[field];
+  }
+
+  // ============================================================================
+  // Pages Configuration Rendering
+  // ============================================================================
+
+  let homeSelectListenerAttached = false;
+
+  function renderHomeSelect() {
+    // Build dynamic home options from page types (includes custom pages)
+    const dynamicHomeOptions = pageTypes
+      .filter((pt) => !pt.multiInstance && pagesConfig.enabled[pt.id] === true)
+      .map((pt) => ({ id: pt.id, label: pt.label }));
+
+    // Merge with base options, avoiding duplicates
+    const baseIds = new Set(BASE_HOME_OPTIONS.map((o) => o.id));
+    const additionalOptions = dynamicHomeOptions.filter(
+      (o) => !baseIds.has(o.id),
+    );
+    const allOptions = [...BASE_HOME_OPTIONS, ...additionalOptions];
+
+    // Filter by enabled pages
+    const availableHomeOptions = allOptions.filter(
+      (opt) => pagesConfig.enabled[opt.id] === true,
+    );
+
+    homeSelect.innerHTML = availableHomeOptions
+      .map(
+        (opt) =>
+          `<option value="${opt.id}" ${pagesConfig.homePage === opt.id ? "selected" : ""}>${opt.label}</option>`,
+      )
+      .join("");
+
+    // Only attach listener once
+    if (!homeSelectListenerAttached) {
+      homeSelect.addEventListener("change", () => {
+        pagesConfig.homePage = homeSelect.value;
+        markChanged();
+      });
+      homeSelectListenerAttached = true;
+    }
+  }
+
+  function renderTable() {
+    const visiblePages = pageTypes.filter((pt) =>
+      supportedPages.includes(pt.id),
+    );
+
+    let html = "";
+    for (const page of visiblePages) {
+      const isAvailable = supportedPages.includes(page.id);
+      const isEnabled = pagesConfig.enabled[page.id] === true;
+      const isLastCore = isOnlyEnabledCorePage(page.id);
+      const ctaInfo = CTA_MAPPINGS[page.id];
+      const currentCTA = ctaInfo
+        ? pagesConfig.linking[ctaInfo.ctaKey] || ""
+        : "";
+      const canShowInNav = !page.multiInstance;
+      const showInNav = canShowInNav
+        ? pagesConfig.showInNav?.[page.id] !== false
+        : false;
+
+      // Custom pages always show as available and enabled
+      const isCustomPage = page.isCustom === true;
+      const displayAvailable = isCustomPage ? true : isAvailable;
+      const displayEnabled = isCustomPage ? true : isEnabled;
+
+      html += `
+        <tr class="${displayEnabled ? "" : "opacity-60"} hover:bg-admin-sidebar/30 transition-colors">
+          <td class="p-4">
+            <div class="flex items-center gap-2">
+              <span class="font-medium">${page.label}</span>
+              ${page.isCore ? '<span class="text-[10px] text-admin-accent ml-2 font-semibold">CORE</span>' : ""}
+              ${page.isCustom ? '<span class="text-[10px] text-blue-400 ml-2 font-semibold">CUSTOM</span>' : ""}
+              ${page.isCustom ? `<a href="/content/${page.id}" class="text-xs text-admin-accent hover:underline ml-2">Edit →</a>` : ""}
+            </div>
+          </td>
+
+          <td class="p-4 text-center">
+            <span class="available-badge ${displayAvailable ? "yes" : "no"}">${displayAvailable ? "✓ Yes" : "✗ No"}</span>
+          </td>
+
+          <td class="p-4 text-center">
+            <div 
+              class="toggle-switch mx-auto ${displayEnabled ? "active" : ""} ${isLastCore || (!isAvailable && !isCustomPage) ? "disabled" : ""}"
+              data-page-id="${page.id}"
+              data-action="toggle-enabled"
+              title="${isLastCore ? "Last core page" : displayAvailable ? "Toggle enabled" : "Not available in theme"}"></div>
+          </td>
+
+          <td class="p-4 text-center">
+            ${
+              canShowInNav
+                ? `
+              <input 
+                type="checkbox" 
+                class="nav-checkbox w-4 h-4 accent-[var(--admin-accent)] cursor-pointer"
+                data-page-id="${page.id}"
+                ${!displayEnabled || !displayAvailable ? "disabled" : ""}
+                ${showInNav ? "checked" : ""}
+                title="${!displayEnabled || !displayAvailable ? "Enable page first" : "Show in navigation menu"}"
+              />
+            `
+                : '<span class="text-admin-muted text-xs">—</span>'
+            }
+          </td>
+
+          <td class="p-4">
+            ${
+              ctaInfo
+                ? `
+              <select 
+                class="cta-select" 
+                data-cta-key="${ctaInfo.ctaKey}"
+                ${!displayEnabled || !displayAvailable ? "disabled" : ""}
+              >
+                ${renderCTAOptions(ctaInfo.options, currentCTA)}
+              </select>
+            `
+                : '<span class="text-admin-muted text-xs">—</span>'
+            }
+          </td>
+        </tr>
+      `;
+    }
+
+    tableBody.innerHTML = html;
+
+    tableBody
+      .querySelectorAll('[data-action="toggle-enabled"]')
+      .forEach((el) => {
+        el.addEventListener("click", handleToggleEnabled);
+      });
+
+    tableBody.querySelectorAll(".cta-select").forEach((el) => {
+      el.addEventListener("change", handleCTAChange);
+    });
+
+    tableBody.querySelectorAll(".nav-checkbox").forEach((el) => {
+      el.addEventListener("change", handleNavCheckboxChange);
+    });
+  }
+
+  function renderCTAOptions(options: string[], current: string): string {
+    const optionLabels: Record<string, string> = {
+      art_piece: "Art Piece Page",
+      slider: "Slider (Lightbox)",
+      gallery: "Gallery",
+      collections_list: "Collections List",
+      history: "Browser Back",
+      none: "None",
+    };
+
+    return options
+      .filter(
+        (opt) =>
+          opt === "none" || opt === "history" || supportedPages.includes(opt),
+      )
+      .map(
+        (opt) =>
+          `<option value="${opt}" ${current === opt ? "selected" : ""}>${optionLabels[opt] || opt}</option>`,
+      )
+      .join("");
+  }
+
+  function handleToggleEnabled(e: Event) {
+    const el = e.currentTarget as HTMLElement;
+    if (el.classList.contains("disabled")) return;
+
+    const pageId = el.dataset.pageId!;
+    const isCurrentlyEnabled = pagesConfig.enabled[pageId] === true;
+    pagesConfig.enabled[pageId] = !isCurrentlyEnabled;
+
+    if (!pagesConfig.enabled[pageId] && pagesConfig.showInNav?.[pageId]) {
+      if (!pagesConfig.showInNav) pagesConfig.showInNav = {};
+      pagesConfig.showInNav[pageId] = false;
+    }
+
+    // If the disabled page was the current home page, select a fallback
+    if (!pagesConfig.enabled[pageId] && pagesConfig.homePage === pageId) {
+      const fallbackOrder = ["gallery", "home", "about", "slider", "schedule"];
+      const newHome =
+        fallbackOrder.find(
+          (id) =>
+            pagesConfig.enabled[id] === true && supportedPages.includes(id),
+        ) || "gallery";
+      pagesConfig.homePage = newHome;
+    }
+
+    el.classList.toggle("active");
+    markChanged();
+    renderTable();
+    renderHomeSelect();
+  }
+
+  function handleCTAChange(e: Event) {
+    const select = e.target as HTMLSelectElement;
+    const ctaKey = select.dataset.ctaKey!;
+    pagesConfig.linking[ctaKey] = select.value;
+    markChanged();
+  }
+
+  function handleNavCheckboxChange(e: Event) {
+    const checkbox = e.target as HTMLInputElement;
+    const pageId = checkbox.dataset.pageId!;
+    if (!pagesConfig.showInNav) {
+      pagesConfig.showInNav = {};
+    }
+    pagesConfig.showInNav[pageId] = checkbox.checked;
+    markChanged();
+  }
+
+  function isOnlyEnabledCorePage(pageId: string): boolean {
+    const page = pageTypes.find((p) => p.id === pageId);
+    if (!page?.isCore) return false;
+    const enabledCoreCount = pageTypes.filter(
+      (p) => p.isCore && pagesConfig.enabled[p.id] === true,
+    ).length;
+    return enabledCoreCount === 1 && pagesConfig.enabled[pageId] === true;
+  }
+
+  // ============================================================================
+  // Save Logic
+  // ============================================================================
+
+  function markChanged() {
+    const currentPagesConfig = JSON.stringify(pagesConfig);
+    const currentNavConfig = JSON.stringify({
+      showLogo: getShowLogoValue(),
+      items: [
+        ...corePagesOrder.map((index) => IMMUTABLE_PAGES[index]),
+        ...customNavItems,
+      ],
+    });
+
+    hasChanges =
+      currentPagesConfig !== originalPagesConfig ||
+      currentNavConfig !== originalNavConfig;
+    updateSaveButton();
+  }
+
+  function updateSaveButton() {
+    const shouldEnable = hasChanges && !isSaving;
+    saveBtn.disabled = !shouldEnable;
+    if (shouldEnable) {
+      saveBtn.setAttribute("data-tooltip", "");
+    } else if (!hasChanges) {
+      saveBtn.setAttribute("data-tooltip", "No changes to save");
+    } else {
+      saveBtn.setAttribute("data-tooltip", "");
+    }
+  }
+
+  async function saveConfig() {
+    if (isSaving) return;
+    isSaving = true;
+    saveBtn.disabled = true;
+    saveBtn.setAttribute("data-tooltip", "");
+    saveStatus.textContent = "Saving...";
+    saveStatus.className = "text-sm text-admin-muted";
+
+    try {
+      // Save pages config
+      const pagesRes = await fetch("/api/pages", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          enabled: pagesConfig.enabled,
+          homePage: pagesConfig.homePage,
+          linking: pagesConfig.linking,
+          showInNav: pagesConfig.showInNav,
+        }),
+      });
+
+      if (!pagesRes.ok) {
+        const error = await pagesRes.json();
+        throw new Error(error.error || "Failed to save pages config");
+      }
+
+      // Save nav config
+      const navItems = [
+        ...corePagesOrder.map((index) => IMMUTABLE_PAGES[index]),
+        ...customNavItems,
+      ];
+      const navRes = await fetch("/api/nav", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          showLogo: getShowLogoValue(),
+          items: navItems,
+        }),
+      });
+
+      if (!navRes.ok) {
+        const error = await navRes.json();
+        throw new Error(error.error || "Failed to save navigation config");
+      }
+
+      const pagesResult = await pagesRes.json();
+      const navResult = await navRes.json();
+
+      pagesConfig = pagesResult.pages;
+      originalPagesConfig = JSON.stringify(pagesConfig);
+
+      navConfig = navResult.nav;
+      originalNavConfig = JSON.stringify(navConfig);
+
+      hasChanges = false;
+
+      saveStatus.textContent = "✓ Saved successfully";
+      saveStatus.className = "text-sm text-green-400";
+      setTimeout(() => {
+        saveStatus.textContent = "";
+      }, 3000);
+
+      updateSaveButton();
+      renderTable();
+
+      // Show toast
+      window.dispatchEvent(
+        new CustomEvent("artsitemaker:toast", {
+          detail: {
+            title: "Settings saved",
+            description: "Pages and navigation configuration updated",
+            variant: "success",
+          },
+        }),
+      );
+    } catch (e: any) {
+      saveStatus.textContent = `✗ ${e.message}`;
+      saveStatus.className = "text-sm text-red-400";
+    }
+    isSaving = false;
+    updateSaveButton();
+  }
+
+  // Initialize
+  loadData();
+  saveBtn.addEventListener("click", saveConfig);
+</script>

@@ -1,0 +1,646 @@
+---
+import AdminLayout from '@layouts/AdminLayout.astro';
+import fs from 'fs/promises';
+import path from 'path';
+import yaml from 'js-yaml';
+import { getContentPath, getFilesPath, getThumbnailsPath, getImageBaseUrl } from '../../lib/paths';
+import ArtworkGrid from '../../components/ArtworkGrid.astro';
+import Modal from '../../components/Modal.astro';
+import Button from '../../components/ui/Button.astro';
+
+import { stringToColor } from '../../lib/colors';
+
+// Get paths from centralized config
+const contentPath = getContentPath();
+const filesPath = getFilesPath();
+
+// Use centralized image base URL
+const imageBaseUrl = getImageBaseUrl();
+
+// Load artworks
+let artworks: any[] = [];
+try {
+  const artworksPath = path.join(contentPath, 'artworks');
+  const files = await fs.readdir(artworksPath);
+  
+  for (const file of files) {
+    if (file.endsWith('.yaml')) {
+      const content = await fs.readFile(path.join(artworksPath, file), 'utf-8');
+      const artwork = yaml.load(content) as any;
+      artworks.push(artwork);
+    }
+  }
+  
+  artworks.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+} catch (e) {
+  console.error('Failed to load artworks:', e);
+}
+
+// Load collections for filter
+let collections: any[] = [];
+try {
+  const collectionsPath = path.join(contentPath, 'collections');
+  const files = await fs.readdir(collectionsPath);
+  
+  for (const file of files) {
+    if (file.endsWith('.yaml')) {
+      const content = await fs.readFile(path.join(collectionsPath, file), 'utf-8');
+      const collection = yaml.load(content) as any;
+      collections.push(collection);
+    }
+  }
+} catch (e) {
+  // Collections folder might not exist
+}
+
+// Check for thumbnail existence
+const thumbnailsPath = getThumbnailsPath();
+---
+
+<AdminLayout title="Gallery Manager">
+  <div class="space-y-6">
+    <!-- Toolbar -->
+    <div class="flex items-center justify-between flex-wrap gap-4">
+      <div class="flex items-center gap-4">
+        <a href="/gallery/upload" class="btn btn-primary">📤 Upload</a>
+        <Button id="process-all-btn" variant="secondary">⚡ Process All</Button>
+      </div>
+      
+      <div class="flex items-center gap-4">
+        <!-- Filter -->
+        <select id="collection-filter" class="bg-admin-card">
+          <option value="">In All Collections ({artworks.length})</option>
+          <option value="__uncategorized__">Uncategorized</option>
+          {collections.map((c) => (
+            <option value={c.slug}>{c.title}</option>
+          ))}
+        </select>
+        
+        <!-- Sort -->
+        <select id="sort-select" class="bg-admin-card">
+          <option value="sortOrder">Sort by Order</option>
+          <option value="title">Sort by Title</option>
+          <option value="createdAt">Sort by Date</option>
+        </select>
+      </div>
+    </div>
+    
+    <!-- Collections Management -->
+    <div class="card">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold">📁 Collections</h2>
+      </div>
+      
+      <div id="collections-panel">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-2">
+           <!-- Uncategorized / Default Collection -->
+            <div
+              class="bg-admin-sidebar rounded-lg p-4 flex items-center justify-between border border-transparent hover:border-admin-accent transition-colors cursor-pointer collection-drop-target"
+              data-slug=""
+              data-collection-drop-zone
+              onclick="selectCollection('')"
+              style={`background-image: linear-gradient(135deg, ${stringToColor('uncategorized', 0.1)}, transparent)`}
+            >
+              <div>
+                <div class="font-medium">Uncategorized</div>
+                <div class="text-xs text-admin-muted">{artworks.filter(a => !a.collection).length} artworks</div>
+              </div>
+            </div>
+
+          <!-- Existing collections -->
+          {collections.map((c) => {
+            const count = artworks.filter(a => a.collection === c.slug).length;
+            return (
+              <div
+                class="bg-admin-sidebar rounded-lg p-4 flex items-center justify-between border border-transparent hover:border-admin-accent transition-colors cursor-pointer collection-drop-target group"
+                data-slug={c.slug}
+                data-collection-drop-zone
+                onclick={`selectCollection('${c.slug}')`}
+                style={`background-image: linear-gradient(135deg, ${stringToColor(c.slug, 0.15)}, transparent)`}
+              >
+                <div>
+                  <div class="font-medium">{c.title}</div>
+                  <div class="text-xs text-admin-muted">{count} artwork{count !== 1 ? 's' : ''}</div>
+                </div>
+                <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                   <button 
+                    class="text-admin-muted hover:text-admin-accent text-sm p-1"
+                    onclick={`event.stopPropagation(); editCollection('${c.slug}')`}
+                    title="Edit"
+                  >✏️</button>
+                  <button 
+                    class="text-admin-muted hover:text-red-400 text-sm p-1"
+                    onclick={`event.stopPropagation(); deleteCollection('${c.slug}')`}
+                    title="Delete"
+                  >🗑️</button>
+                </div>
+              </div>
+            );
+          })}
+          
+           <!-- Add New Collection Placeholder -->
+           <button 
+             id="open-add-collection-modal"
+             class="border-2 border-dashed border-admin-muted hover:border-admin-text hover:bg-admin-sidebar/50 rounded-lg p-4 flex items-center justify-center gap-2 text-admin-muted hover:text-admin-text transition-all h-full min-h-[80px]"
+           >
+             <span class="text-xl">+</span>
+             <span>Create Collection</span>
+           </button>
+        </div>
+        
+        <p class="text-xs text-admin-muted mt-4">
+          💡 Drag and drop artworks into collections to organize them. Click a collection to filter the view.
+        </p>
+      </div>
+    </div>
+
+    <!-- Create Collection Modal -->
+    <Modal id="create-collection-modal" title="Create New Collection" showActions={false}>
+      <form id="create-collection-form">
+        <div class="mb-4">
+          <label class="block text-sm text-admin-muted mb-2">Collection Name</label>
+          <input type="text" id="new-collection-name-input" class="w-full bg-admin-sidebar border border-admin-border rounded p-2 text-admin-text" placeholder="e.g. Landscapes, Portraits" required />
+        </div>
+        <div class="flex justify-end gap-3">
+          <Button type="button" variant="secondary" class="close-modal">Cancel</Button>
+          <Button type="submit" variant="primary">Create</Button>
+        </div>
+      </form>
+    </Modal>
+
+    <!-- Edit Collection Modal -->
+    <Modal id="edit-collection-modal" title="Rename Collection" showActions={false}>
+      <form id="edit-collection-form">
+        <input type="hidden" id="edit-collection-slug" />
+        <div class="mb-4">
+          <label class="block text-sm text-admin-muted mb-2">Collection Name</label>
+          <input type="text" id="edit-collection-name-input" class="w-full bg-admin-sidebar border border-admin-border rounded p-2 text-admin-text" required />
+        </div>
+        <div class="flex justify-end gap-3">
+          <Button type="button" variant="secondary" class="close-modal">Cancel</Button>
+          <Button type="submit" variant="primary">Save Changes</Button>
+        </div>
+      </form>
+    </Modal>
+
+    <!-- Delete Collection Modal -->
+    <Modal id="delete-collection-modal" title="Delete Collection" variant="danger" confirmText="Delete">
+      <p class="text-admin-muted">
+        Are you sure you want to delete this collection?
+        <br/><br/>
+        Artworks in this collection will be moved to <strong>Uncategorized</strong>.
+      </p>
+      <!-- Hidden input to store current slug to delete -->
+      <input type="hidden" id="delete-collection-slug" />
+    </Modal>
+
+    <!-- Gallery Grid -->
+    {artworks.length === 0 ? (
+      <div class="card text-center py-16">
+        <p class="text-admin-muted text-lg mb-4">No artworks yet</p>
+        <a href="/gallery/upload" class="btn btn-primary">Upload your first artwork</a>
+      </div>
+    ) : (
+      <div id="artwork-grid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        {artworks.map((artwork) => (
+          <a
+            href={`/gallery/${artwork.slug}`}
+            class="card p-0 overflow-hidden hover:ring-2 hover:ring-admin-accent transition-all group"
+            data-collection={artwork.collection || ''}
+            data-title={artwork.title}
+            data-sort={artwork.sortOrder || 0}
+            data-created={artwork.createdAt || ''}
+            draggable="true"
+            data-artwork-slug={artwork.slug}
+            data-testid="artwork-grid-item"
+          >
+            <div class="aspect-square bg-admin-sidebar flex items-center justify-center relative overflow-hidden">
+              {artwork.processing?.processedAt ? (
+                <img
+                  src={imageBaseUrl
+                    ? `${imageBaseUrl}/thumbnails/${artwork.slug}.png`
+                    : `/thumbnails/${artwork.slug}.png`
+                  }
+                  alt={artwork.title}
+                  class="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                  onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"
+                />
+                <span class="text-4xl hidden items-center justify-center w-full h-full">🖼️</span>
+              ) : (
+                <span class="text-4xl group-hover:scale-110 transition-transform">📷</span>
+              )}
+              
+              {/* Status badges */}
+              <div class="absolute top-2 right-2 flex gap-1">
+                {artwork.published === false && (
+                  <span class="bg-admin-warning text-xs px-1.5 py-0.5 rounded text-black" title="Draft">Draft</span>
+                )}
+                {!artwork.processing?.processedAt && (
+                  <span class="bg-orange-600 text-xs px-1.5 py-0.5 rounded" title="Needs processing">⏳</span>
+                )}
+              </div>
+            </div>
+            <div class="p-3">
+              <div class="font-medium truncate text-sm">{artwork.title}</div>
+              <div class="text-xs text-admin-muted truncate">{artwork.collection || 'Uncategorized'}</div>
+            </div>
+          </a>
+        ))}
+      </div>
+    )}
+    
+    <!-- Stats bar -->
+    <div class="text-sm text-admin-muted text-center">
+      Showing {artworks.length} artworks
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  // Filter and sort functionality
+  const grid = document.getElementById('artwork-grid');
+  const collectionFilter = document.getElementById('collection-filter') as HTMLSelectElement;
+  const sortSelect = document.getElementById('sort-select') as HTMLSelectElement;
+  
+  function updateDisplay() {
+    if (!grid) return;
+    
+    // Use the select box value if it exists, otherwise check for active state in cards if we synced them (optional, but let's stick to the select for now as the source of truth, or sync them)
+    // Actually, let's make the cards update the select.
+    const collection = collectionFilter?.value || '';
+    const sortBy = sortSelect?.value || 'sortOrder';
+    
+    const items = Array.from(grid.children) as HTMLElement[];
+    
+    // Filter
+    items.forEach(item => {
+      const itemCollection = item.dataset.collection || '';
+      // If collection is empty string (Uncategorized), only show items with empty collection
+      // If collection is specific slug, show matches
+      if (collection === '') {
+         // Show all? Or show uncategorized?
+         // The original code was: value="" => All Collections.
+         // But now we have an "Uncategorized" card. 
+         // Let's decide: The "Uncategorized" card should explicitly filter for items with NO collection.
+         // The "All Collections" option in dropdown is useful.
+         // Let's keep the dropdown as "All" default.
+         // When clicking a card, we set the filter to that specific collection.
+         // If clicking "Uncategorized", we need a way to filter for "no collection".
+         // The dropdown currently has value="" for ALL.
+         // We might need a special value for "Uncategorized" in the dropdown?
+         // Or just handle it in the filter logic.
+         // Let's assume we want "Uncategorized" card to show ONLY uncategorized.
+         // We can leave the DROPDOWN as is (All).
+         // But when clicking the Uncategorized card, we should filter to "Uncategorized".
+         item.style.display = ''; 
+      } else if (collection === '__uncategorized__') {
+          if (itemCollection === '') item.style.display = '';
+          else item.style.display = 'none';
+      } else {
+         if (itemCollection !== collection) item.style.display = 'none';
+         else item.style.display = '';
+      }
+    });
+
+    // We originally had "value=''" as All. 
+    // Let's adjust the update logic to handle a specific "all" state if needed, or just standard filtering.
+    // Re-reading original: value="" => All Collections.
+    // I should support that.
+    
+    if (collection === '') {
+        items.forEach(item => item.style.display = '');
+    } else if (collection === '__uncategorized__') {
+        items.forEach(item => {
+             if (!item.dataset.collection) item.style.display = '';
+             else item.style.display = 'none';
+        });
+    } else {
+        items.forEach(item => {
+             if (item.dataset.collection === collection) item.style.display = '';
+             else item.style.display = 'none';
+        });
+    }
+    
+    // Sort
+    const visibleItems = items.filter(item => item.style.display !== 'none');
+    visibleItems.sort((a, b) => {
+      if (sortBy === 'title') {
+        return (a.dataset.title || '').localeCompare(b.dataset.title || '');
+      } else if (sortBy === 'createdAt') {
+        return (b.dataset.created || '').localeCompare(a.dataset.created || '');
+      } else {
+        return Number(a.dataset.sort || 0) - Number(b.dataset.sort || 0);
+      }
+    });
+    
+    visibleItems.forEach(item => grid.appendChild(item));
+    
+    // Update active state of collection cards
+    document.querySelectorAll('.collection-drop-target').forEach(el => {
+       const slug = (el as HTMLElement).dataset.slug;
+       // logical mapping: '' in card dataset means Uncategorized.
+       const isActive = (collection === '__uncategorized__' && slug === '') || (collection === slug && slug !== '');
+       
+       if (isActive) {
+           el.classList.add('border-admin-accent', 'bg-admin-accent/10');
+           el.classList.remove('border-transparent');
+       } else {
+           el.classList.remove('border-admin-accent', 'bg-admin-accent/10');
+           el.classList.add('border-transparent');
+       }
+    });
+  }
+  
+  collectionFilter?.addEventListener('change', updateDisplay);
+  sortSelect?.addEventListener('change', updateDisplay);
+  
+  // Expose for onclick in HTML
+  (window as any).selectCollection = (slug: string) => {
+      if (collectionFilter) {
+          // If slug is empty string, we treat it as Uncategorized for specific filtering
+          // But wait, the dropdown has value="" for ALL.
+          // We need to differentiate ALL vs Uncategorized.
+          // Let's add an option for Uncategorized to the dropdown if it's missing, or just handle it internally.
+          // Ideally, we add <option value="__uncategorized__">Uncategorized</option> to the select logic in HTML.
+          collectionFilter.value = slug === '' ? '__uncategorized__' : slug;
+          // If the option doesn't exist (because we didn't add it to HTML yet), we might need to handle it.
+          // I should probably add that option to the HTML Select first.
+          updateDisplay();
+      }
+  };
+
+  // Process all button
+  document.getElementById('process-all-btn')?.addEventListener('click', async () => {
+    const btn = document.getElementById('process-all-btn') as HTMLButtonElement;
+    btn.disabled = true;
+    btn.textContent = '⏳ Processing...';
+    
+    try {
+      const res = await fetch('/api/process', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}) 
+      });
+      const data = await res.json();
+      window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
+        detail: {
+            title: 'Processing Complete',
+            description: `Processed ${data.processed?.length || 0} images`,
+            variant: 'success'
+        }
+      }));
+      location.reload();
+    } catch (e) {
+      window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
+        detail: {
+            title: 'Processing failed',
+            description: 'An unexpected error occurred.',
+            variant: 'destructive'
+        }
+      }));
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '⚡ Process All';
+    }
+  });
+
+  // Modal handling
+  const createModal = document.getElementById('create-collection-modal') as any;
+  const editModal = document.getElementById('edit-collection-modal') as any;
+  const deleteModal = document.getElementById('delete-collection-modal') as any;
+
+  // Open Create Modal
+  document.getElementById('open-add-collection-modal')?.addEventListener('click', () => {
+      createModal?.open();
+      // Reset form
+      const form = document.getElementById('create-collection-form') as HTMLFormElement;
+      form?.reset();
+      setTimeout(() => document.getElementById('new-collection-name-input')?.focus(), 100);
+  });
+  
+  // Create collection submit
+  document.getElementById('create-collection-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const nameInput = document.getElementById('new-collection-name-input') as HTMLInputElement;
+    const name = nameInput?.value?.trim();
+    
+    if (!name) return;
+    
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    
+    try {
+      const res = await fetch('/api/collections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: name, slug })
+      });
+      
+      if (res.ok) {
+        location.reload();
+      } else {
+        window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
+          detail: {
+            title: 'Failed to create collection',
+            variant: 'destructive'
+          }
+        }));
+      }
+    } catch (e) {
+      window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
+        detail: {
+          title: 'Failed to create collection',
+          variant: 'destructive'
+        }
+      }));
+    }
+  });
+
+  // Edit Collection
+  (window as any).editCollection = (slug: string) => {
+    const title = document.querySelector(`[data-slug="${slug}"] .font-medium`)?.textContent || '';
+    
+    const slugInput = document.getElementById('edit-collection-slug') as HTMLInputElement;
+    const nameInput = document.getElementById('edit-collection-name-input') as HTMLInputElement;
+    
+    if (slugInput) slugInput.value = slug;
+    if (nameInput) nameInput.value = title;
+    
+    editModal?.open();
+    setTimeout(() => nameInput?.focus(), 100);
+  };
+  
+  // Edit submit
+  document.getElementById('edit-collection-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const slug = (document.getElementById('edit-collection-slug') as HTMLInputElement)?.value;
+      const newName = (document.getElementById('edit-collection-name-input') as HTMLInputElement)?.value?.trim();
+      
+      if (!slug || !newName) return;
+
+      try {
+        const res = await fetch('/api/collections', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug, title: newName })
+        });
+        
+        if (res.ok) location.reload();
+        else window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
+          detail: {
+            title: 'Failed to update collection',
+            variant: 'destructive'
+          }
+        }));
+      } catch (e) {
+        window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
+          detail: {
+            title: 'Failed to update collection',
+            variant: 'destructive'
+          }
+        }));
+      }
+  });
+  
+  // Delete Collection
+  (window as any).deleteCollection = (slug: string) => {
+    const input = document.getElementById('delete-collection-slug') as HTMLInputElement;
+    if (input) input.value = slug;
+    deleteModal?.open();
+  };
+  
+  // Delete confirm
+  deleteModal?.addEventListener('confirm', async () => {
+    const slug = (document.getElementById('delete-collection-slug') as HTMLInputElement)?.value;
+    if (!slug) return;
+    
+    try {
+        const res = await fetch('/api/collections', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug })
+        });
+        
+        if (res.ok) location.reload();
+        else window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
+          detail: {
+            title: 'Failed to delete collection',
+            variant: 'destructive'
+          }
+        }));
+    } catch (e) {
+        window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
+          detail: {
+            title: 'Failed to delete collection',
+            variant: 'destructive'
+          }
+        }));
+    }
+  });
+
+  // Drag and Drop
+  const collectionCards = document.querySelectorAll('.collection-drop-target');
+  const artworkCards = document.querySelectorAll('[data-artwork-slug]');
+
+  // Make artwork cards draggable
+  artworkCards.forEach(card => {
+      card.addEventListener('dragstart', (e: any) => {
+          const slug = (card as HTMLElement).dataset.artworkSlug;
+          if (slug) {
+              e.dataTransfer.setData('text/plain', slug);
+              e.dataTransfer.effectAllowed = 'move';
+          }
+      });
+  });
+
+  // Collection cards as drop targets
+  collectionCards.forEach(card => {
+      card.addEventListener('dragover', (e: any) => {
+          e.preventDefault(); // Necessary to allow dropping
+          e.dataTransfer.dropEffect = 'move';
+          card.classList.add('border-admin-accent', 'bg-admin-accent/20');
+      });
+      
+      card.addEventListener('dragleave', () => {
+          // Only remove if it's not the active one?
+          // For simplicity let's just run updateDisplay to reset classes based on selection
+          // But that might be heavy. Just remove generic hover class if we add one.
+          // We used 'border-admin-accent' and 'bg-admin-accent/20' for dragover visual.
+          // The click selection uses 'bg-admin-accent/10'.
+          card.classList.remove('border-admin-accent', 'bg-admin-accent/20');
+          
+          // Restore selection state
+          updateDisplay(); 
+      });
+      
+      card.addEventListener('drop', async (e: any) => {
+          e.preventDefault();
+          const targetSlug = (card as HTMLElement).dataset.slug || ''; // '' = uncategorized
+          const artworkSlug = e.dataTransfer.getData('text/plain');
+          
+          if (!artworkSlug) return;
+          
+          try {
+             // Optimistic update?
+             // Not easy without complex DOM logic. Let's just do API call then reload.
+             // Or at least show a spinner?
+             
+             // We need an endpoint to update just the collection of an artwork.
+             // We have PUT /api/artwork/[slug] which takes full object.
+             // We need to GET, then PUT. Or make a PATCH endpoint. 
+             // Assuming we have to use existing API, let's look at it.
+             // The gallery index.astro doesn't have the artwork data in JS memory fully for PUT.
+             // Wait, we do have `artworks` prop but it's server side.
+             // We need a server endpoint to PATCH.
+             // I'll assume we can create one or use existing if it supports partial updates.
+             // The index.astro server code does `yaml.load`.
+             // The PUT handler in `[slug].astro` expects a full object.
+             
+             // I should probably add a focused helper endpoint for moving artworks or moving dragging.
+             // Or I can just fetch the current artwork data, modify collection, and PUT back.
+             
+             const resStart = await fetch(`/api/artwork/${artworkSlug}.yaml`); // Is that exposed? No.
+             // We can use the existing PUT but we need data.
+             // Actually, let's create a quick API endpoint for this move operation to be safe.
+             // Or just use a client-side trick:
+             // We don't have an endpoint for partial update.
+             // I'll add a new endpoint `api/artwork/move`.
+             
+             const res = await fetch('/api/artwork/move', {
+                 method: 'POST',
+                 headers: { 'Content-Type': 'application/json' },
+                 body: JSON.stringify({ slug: artworkSlug, collection: targetSlug })
+             });
+             
+             if (res.ok) {
+                 // location.reload(); 
+                 // Updating DOM without reload would be nicer
+                 const artworkCard = document.querySelector(`a[href="/gallery/${artworkSlug}"]`) as HTMLElement;
+                 if (artworkCard) {
+                     artworkCard.dataset.collection = targetSlug;
+                     const badge = artworkCard.querySelector('.collection-badge'); // If we have one
+                     // Just re-run filter
+                     updateDisplay();
+                     
+                     // Update counts (hacky or reload)
+                     // Reload is safer for counts
+                     location.reload();
+                 }
+             } else {
+                 window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
+                   detail: {
+                     title: 'Failed to move artwork',
+                     variant: 'destructive'
+                   }
+                 }));
+             }
+          } catch(e) {
+             window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
+               detail: {
+                 title: 'Failed to move artwork',
+                 variant: 'destructive'
+               }
+             }));
+          }
+      });
+  });
+</script>

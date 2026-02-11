@@ -1,0 +1,333 @@
+---
+// components/ProcessingModal.astro
+/**
+ * ProcessingModal Component
+ * 
+ * A modal dialog for displaying detailed image processing information.
+ * Shows stats, unprocessed artworks, processing log, and process controls.
+ */
+
+import Modal from './Modal.astro';
+import Button from './ui/Button.astro';
+import fs from 'fs/promises';
+import path from 'path';
+import yaml from 'js-yaml';
+import { getUserDataPath, getFilesPath, getThumbnailsPath } from '../lib/paths';
+
+// Get paths from centralized config
+const userDataPath = getUserDataPath();
+const filesPath = getFilesPath();
+const thumbnailsPath = getThumbnailsPath();
+
+// Load settings for image configuration
+let settings: any = {};
+try {
+  const settingsFile = path.join(userDataPath, 'settings.yaml');
+  const content = await fs.readFile(settingsFile, 'utf-8');
+  settings = yaml.load(content) as any;
+} catch (e) {
+  // Settings may not exist
+}
+
+// Count files in each folder
+async function countFiles(dir: string): Promise<number> {
+  try {
+    const files = await fs.readdir(dir);
+    return files.filter(f => !f.startsWith('.')).length;
+  } catch {
+    return 0;
+  }
+}
+
+const originalsCount = await countFiles(path.join(filesPath, 'originals'));
+const largeCount = await countFiles(path.join(filesPath, 'large'));
+const mediumCount = await countFiles(path.join(filesPath, 'medium'));
+const smallCount = await countFiles(path.join(filesPath, 'small'));
+const thumbnailsCount = await countFiles(thumbnailsPath);
+
+// Load artworks to find unprocessed
+let artworks: any[] = [];
+let unprocessedArtworks: any[] = [];
+try {
+  const artworksPath = path.join(userDataPath, 'artworks');
+  const files = await fs.readdir(artworksPath);
+  for (const file of files) {
+    if (file.endsWith('.yaml')) {
+      const content = await fs.readFile(path.join(artworksPath, file), 'utf-8');
+      const artwork = yaml.load(content) as any;
+      artworks.push(artwork);
+      if (!artwork.processing?.processedAt) {
+        unprocessedArtworks.push(artwork);
+      }
+    }
+  }
+} catch (e) {
+  // Artworks folder may not exist
+}
+
+// Image settings from settings.yaml
+const imageSettings = settings.images || {
+  sizes: { large: 2400, medium: 1200, small: 600, thumb: 150 },
+  quality: 90,
+  format: 'webp',
+  maxAspectRatio: 3
+};
+
+const processedCount = artworks.length - unprocessedArtworks.length;
+const processingSlugs = artworks.map((artwork) => artwork.slug);
+---
+
+<Modal id="processing-modal" title="Image Processing Queue" size="xl" showActions={false}>
+  <div class="space-y-6">
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div class="bg-admin-sidebar rounded-lg p-3 text-center">
+        <div class="text-2xl font-bold text-admin-accent">{originalsCount}</div>
+        <div class="text-xs text-admin-muted">Originals</div>
+      </div>
+      <div class="bg-admin-sidebar rounded-lg p-3 text-center">
+        <div class="text-2xl font-bold text-admin-success">{largeCount}</div>
+        <div class="text-xs text-admin-muted">Large ({imageSettings.sizes.large}px)</div>
+      </div>
+      <div class="bg-admin-sidebar rounded-lg p-3 text-center">
+        <div class="text-2xl font-bold">{mediumCount}</div>
+        <div class="text-xs text-admin-muted">Medium ({imageSettings.sizes.medium}px)</div>
+      </div>
+      <div class="bg-admin-sidebar rounded-lg p-3 text-center">
+        <div class="text-2xl font-bold">{smallCount}</div>
+        <div class="text-xs text-admin-muted">Small ({imageSettings.sizes.small}px)</div>
+      </div>
+      <div class="bg-admin-sidebar rounded-lg p-3 text-center">
+        <div class="text-2xl font-bold">{thumbnailsCount}</div>
+        <div class="text-xs text-admin-muted">Thumbnails</div>
+      </div>
+    </div>
+
+    <!-- Processing Status -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="bg-admin-sidebar/50 rounded-lg p-3">
+        <div class="text-xl font-bold text-admin-success">{processedCount}</div>
+        <div class="text-xs text-admin-muted">Processed</div>
+      </div>
+      <div class="bg-admin-sidebar/50 rounded-lg p-3">
+        <div class={`text-xl font-bold ${unprocessedArtworks.length > 0 ? 'text-admin-warning' : 'text-admin-success'}`}>
+          {unprocessedArtworks.length}
+        </div>
+        <div class="text-xs text-admin-muted">Pending</div>
+      </div>
+      <div class="bg-admin-sidebar/50 rounded-lg p-3">
+        <div class="text-xl font-bold">{imageSettings.quality}%</div>
+        <div class="text-xs text-admin-muted">Quality</div>
+      </div>
+      <div class="bg-admin-sidebar/50 rounded-lg p-3">
+        <div class="text-xl font-bold uppercase">{imageSettings.format}</div>
+        <div class="text-xs text-admin-muted">Format</div>
+      </div>
+    </div>
+
+    <!-- Action Button -->
+    <div class="flex items-center justify-between">
+      <div class="text-sm text-admin-muted">
+        {unprocessedArtworks.length > 0 ? (
+          <span class="text-admin-warning">{unprocessedArtworks.length} image{unprocessedArtworks.length > 1 ? 's' : ''} waiting to be processed</span>
+        ) : (
+          <span class="text-admin-success">All images processed ✓</span>
+        )}
+      </div>
+      <Button
+        id="modal-process-btn"
+        variant={unprocessedArtworks.length > 0 ? 'primary' : 'secondary'}
+        disabled={unprocessedArtworks.length === 0}
+      >
+        {unprocessedArtworks.length > 0 ? `⚡ Process ${unprocessedArtworks.length} Pending` : 'All Done'}
+      </Button>
+    </div>
+
+    <!-- Unprocessed Artworks -->
+    {unprocessedArtworks.length > 0 && (
+      <div class="border border-admin-border rounded-lg overflow-hidden">
+        <div class="bg-admin-sidebar px-4 py-2 border-b border-admin-border">
+          <h4 class="text-sm font-medium">Awaiting Processing ({unprocessedArtworks.length})</h4>
+        </div>
+        <div class="max-h-32 overflow-y-auto p-2">
+          <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+            {unprocessedArtworks.map(artwork => (
+              <a 
+                href={`/gallery/${artwork.slug}`}
+                class="flex items-center gap-2 p-2 bg-admin-sidebar/50 rounded hover:bg-admin-sidebar transition-colors text-sm"
+              >
+                <span class="text-admin-warning">⏳</span>
+                <span class="truncate">{artwork.title}</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      </div>
+    )}
+
+    <!-- Processing Log -->
+    <div class="border border-admin-border rounded-lg overflow-hidden">
+      <div class="bg-admin-sidebar px-4 py-2 border-b border-admin-border flex items-center justify-between">
+        <h4 class="text-sm font-medium">Processing Log</h4>
+        <button 
+          id="clear-log-btn"
+          class="text-xs text-admin-muted hover:text-admin-text transition-colors"
+          type="button"
+        >
+          Clear
+        </button>
+      </div>
+      <div 
+        id="processing-log-container" 
+        class="bg-admin-sidebar/30 p-3 font-mono text-xs h-32 overflow-y-auto"
+      >
+        <div class="text-admin-muted italic">Ready for processing...</div>
+      </div>
+    </div>
+
+    <!-- Configuration Note -->
+    <p class="text-xs text-admin-muted text-center">
+      Configure processing settings in <a href="/configuration" class="text-admin-accent hover:underline">Configuration → Image Processing</a>
+    </p>
+  </div>
+</Modal>
+
+<!-- Pass SSR data to client -->
+<script define:vars={{ processingSlugs }}>
+  window.__ARTIS_PROCESSING_SLUGS__ = processingSlugs;
+</script>
+
+<!-- Main processing logic (bundled module) -->
+<script>
+  import { processImagesSequentially, getProcessingLog, clearProcessingLog, type ProcessingLogEntry } from '../lib/process-images-client';
+
+  (function() {
+    const processBtn = document.getElementById('modal-process-btn') as HTMLButtonElement | null;
+    const logContainer = document.getElementById('processing-log-container');
+    const clearLogBtn = document.getElementById('clear-log-btn');
+    
+    // Get slugs from SSR-injected data
+    const processingSlugs: string[] = (window as any).__ARTIS_PROCESSING_SLUGS__ || [];
+    
+    type LogType = 'info' | 'success' | 'error';
+    
+    function log(message: string, type: LogType = 'info') {
+      if (!logContainer) return;
+      
+      const colors: Record<LogType, string> = {
+        info: 'text-admin-muted',
+        success: 'text-admin-success',
+        error: 'text-admin-error'
+      };
+      
+      // Remove placeholder if present
+      const placeholder = logContainer.querySelector('.italic');
+      if (placeholder) placeholder.remove();
+      
+      const line = document.createElement('div');
+      line.className = `${colors[type]} mb-1`;
+      line.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logContainer.appendChild(line);
+      logContainer.scrollTo(0, logContainer.scrollHeight);
+    }
+    
+    /**
+     * Load and display processing logs from sessionStorage
+     */
+    function loadStoredLogs() {
+      if (!logContainer) return;
+      
+      const storedLogs = getProcessingLog();
+      if (storedLogs.length === 0) return;
+      
+      // Clear placeholder
+      logContainer.innerHTML = '';
+      
+      // Render each stored log entry
+      storedLogs.forEach((entry: ProcessingLogEntry) => {
+        const colors: Record<LogType, string> = {
+          info: 'text-admin-muted',
+          success: 'text-admin-success',
+          error: 'text-admin-error'
+        };
+        
+        const line = document.createElement('div');
+        line.className = `${colors[entry.type]} mb-1`;
+        line.textContent = `[${entry.timestamp}] ${entry.message}`;
+        logContainer.appendChild(line);
+      });
+      
+      logContainer.scrollTo(0, logContainer.scrollHeight);
+    }
+    
+    // Load stored logs on modal initialization
+    loadStoredLogs();
+    
+    // Clear log button - also clears sessionStorage
+    clearLogBtn?.addEventListener('click', () => {
+      clearProcessingLog();
+      if (logContainer) {
+        logContainer.innerHTML = '<div class="text-admin-muted italic">Log cleared. Ready for processing...</div>';
+      }
+    });
+    
+    // Process button handler
+    processBtn?.addEventListener('click', async () => {
+      if (!processBtn || processBtn.disabled) return;
+
+      processBtn.disabled = true;
+      const originalText = processBtn.textContent || '';
+      processBtn.textContent = '⏳ Processing...';
+      
+      log('Starting batch processing...', 'info');
+      log(`Found ${processingSlugs.length} images to process`, 'info');
+
+      try {
+        if (processingSlugs.length === 0) {
+          log('No images found to process.', 'info');
+          processBtn.disabled = false;
+          processBtn.textContent = originalText;
+          return;
+        }
+
+        const result = await processImagesSequentially({
+          slugs: processingSlugs,
+          showStartToast: true,
+          reloadOnComplete: true,
+          reloadDelayMs: 2000,
+          onItemStart: (slug: string) => {
+            log(`Processing: ${slug}...`, 'info');
+          },
+          onItemSuccess: (slug: string) => {
+            log(`✓ Processed: ${slug}`, 'success');
+          },
+          onItemError: (slug: string, error: string) => {
+            log(`✗ Error: ${slug} - ${error}`, 'error');
+          },
+        });
+
+        log(`Completed! Processed ${result.processedCount} image(s).`, 'success');
+      } catch (e) {
+        const errorMsg = e instanceof Error ? e.message : 'Unknown error';
+        log(`Processing failed: ${errorMsg}`, 'error');
+
+        processBtn.disabled = false;
+        processBtn.textContent = originalText;
+      }
+    });
+    
+    // Listen for external process events
+    window.addEventListener('artsitemaker:process-images', () => {
+      // If modal is open, trigger the process button
+      const modal = document.getElementById('processing-modal');
+      if (
+        modal &&
+        !modal.classList.contains('hidden') &&
+        processBtn &&
+        !processBtn.disabled
+      ) {
+        processBtn.click();
+      }
+    });
+  })();
+</script>

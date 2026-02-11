@@ -1,0 +1,116 @@
+---
+/**
+ * Demo Site Preview Route
+ * Renders site pages with demo-site data and selected theme
+ */
+import path from 'path';
+import fs from 'fs';
+import yaml from 'js-yaml';
+import { generatePreviewScript } from './_preview-inject.js';
+
+// Import site pages
+import SiteIndex from '@artsitemaker/site/pages/index.astro';
+import SiteAbout from '@artsitemaker/site/pages/about.astro';
+import SiteGallery from '@artsitemaker/site/pages/gallery.astro';
+import SiteGallerySlug from '@artsitemaker/site/pages/gallery/[slug].astro';
+import SiteSlideshow from '@artsitemaker/site/pages/slideshow.astro';
+
+// Get path segments
+const { path: pathSegments } = Astro.params;
+const paths = pathSegments ? pathSegments.split('/').filter(Boolean) : [];
+
+// Get theme from query param or use current site theme
+const url = new URL(Astro.request.url);
+let previewTheme: string = url.searchParams.get('theme') || '';
+
+// If no theme specified, read from settings.yaml
+if (!previewTheme) {
+  try {
+    const artSiteMakerRoot = path.resolve(process.cwd(), '../..');
+    const themePath = path.join(artSiteMakerRoot, 'demo-site', 'user-data', 'settings', 'theme.yaml');
+    const settingsPath = path.join(artSiteMakerRoot, 'demo-site', 'user-data', 'settings', 'settings.yaml');
+
+    if (fs.existsSync(themePath)) {
+      const themeContent = fs.readFileSync(themePath, 'utf-8');
+      const themeConfig = yaml.load(themeContent) as any;
+      previewTheme = themeConfig?.theme || themeConfig?.active || '';
+    }
+
+    if (!previewTheme && fs.existsSync(settingsPath)) {
+      const settingsContent = fs.readFileSync(settingsPath, 'utf-8');
+      const settings = yaml.load(settingsContent) as any;
+      previewTheme = settings?.theme?.active || settings?.theme || '';
+    }
+
+    if (!previewTheme) {
+      previewTheme = 'minimalist';
+    }
+  } catch (e) {
+    console.warn('Failed to load theme from settings, using default:', e);
+    previewTheme = 'minimalist';
+  }
+}
+
+// Set up preview context
+const artSiteMakerRoot = path.resolve(process.cwd(), '../..');
+const previewUserDataPath = path.join(artSiteMakerRoot, 'demo-site', 'user-data');
+
+globalThis.__ARTSITEMAKER_PREVIEW__ = {
+  userDataPath: previewUserDataPath,
+  contentPath: previewUserDataPath, // Deprecated but kept for backward compatibility
+  themeName: previewTheme,
+  userAssetsBaseUrl: '/demo-user-assets',
+  contentAssetsBaseUrl: '/demo-user-assets', // Deprecated but kept for backward compatibility
+  imageBaseUrl: '', // Empty string means images are served from root (/, not /demo)
+  mode: 'demo'
+};
+
+// Route to appropriate page
+let PageComponent: any = SiteIndex;
+let pageProps: any = {};
+let currentPath = paths.length === 0 ? '/' : `/${paths.join('/')}`;
+
+if (paths.length === 0) {
+  PageComponent = SiteIndex;
+} else if (paths[0] === 'about') {
+  PageComponent = SiteAbout;
+  currentPath = '/about';
+} else if (paths[0] === 'gallery' && paths.length === 1) {
+  PageComponent = SiteGallery;
+  currentPath = '/gallery';
+} else if (paths[0] === 'gallery' && paths.length === 2) {
+  PageComponent = SiteGallerySlug;
+  pageProps = { slug: paths[1] };
+  currentPath = `/gallery/${paths[1]}`;
+} else if (paths[0] === 'slideshow') {
+  PageComponent = SiteSlideshow;
+  currentPath = '/slideshow';
+} else {
+  // Default to index for unknown paths
+  PageComponent = SiteIndex;
+  currentPath = '/';
+}
+
+// Available themes
+const themes = [
+  { id: 'minimalist', name: 'Minimalist' },
+  { id: 'modern', name: 'Modern' },
+  { id: 'kazya-mazya', name: 'Kazya Mazya' }
+];
+
+// Build theme switcher URL
+function getThemeUrl(themeId: string): string {
+  return `/demo${currentPath}?theme=${themeId}`;
+}
+
+// Serialize data for client-side use
+const previewData = {
+  theme: previewTheme,
+  currentPath: currentPath,
+  themes: themes
+};
+---
+
+<PageComponent {...pageProps} />
+
+<script is:inline set:html={generatePreviewScript(previewData)}></script>

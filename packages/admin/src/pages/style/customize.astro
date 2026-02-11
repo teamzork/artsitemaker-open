@@ -1,0 +1,427 @@
+---
+import AdminLayout from "@layouts/AdminLayout.astro";
+import fs from "fs/promises";
+import path from "path";
+import yaml from "js-yaml";
+import { getContentPath, getThemesPath } from "../../lib/paths";
+import { getSettingsFilePath } from "../../lib/config-paths";
+import Button from "../../components/ui/Button.astro";
+
+// Load current theme
+const themesPath = getThemesPath();
+const contentPath = getContentPath();
+
+// Get active theme from settings
+let activeTheme = "modern";
+try {
+  const content = await fs.readFile(getSettingsFilePath(), "utf-8");
+  const settings = yaml.load(content) as any;
+  activeTheme = settings.theme || "modern";
+} catch (e) {}
+
+// Load theme config
+let themeConfig: any = {};
+try {
+  const themePath = path.join(themesPath, activeTheme, "theme.yaml");
+  const content = await fs.readFile(themePath, "utf-8");
+  themeConfig = yaml.load(content) as any;
+} catch (e) {
+  console.error("Failed to load theme:", e);
+}
+---
+
+<AdminLayout title={`Customize: ${themeConfig.name || activeTheme}`}>
+  <div slot="header-actions" class="flex items-center gap-3">
+    <span id="save-status" class="text-sm text-admin-muted"></span>
+    <Button
+      type="submit"
+      form="theme-form"
+      id="save-theme-btn"
+      variant="accent"
+      disabled
+      tooltip="No changes to save"
+      tooltipSide="bottom"
+    >
+      💾 Save Theme
+    </Button>
+  </div>
+  <form id="theme-form" class="space-y-8 max-w-4xl -mt-8">
+    <input type="hidden" name="themeName" value={activeTheme} />
+
+    <!-- Top bar -->
+    <div
+      class="flex items-center justify-between sticky top-[56px] lg:top-[56px] bg-admin-bg py-3 z-10 border-b border-admin-border -mx-4 px-4 lg:-mx-6 lg:px-6 !mt-0"
+    >
+      <a href="/style/themes" class="text-admin-muted hover:text-admin-text"
+        >View All Themes →</a
+      >
+    </div>
+
+    <!-- Identity Kit Info Banner -->
+    <div class="card bg-admin-sidebar border-admin-accent">
+      <h3 class="font-semibold mb-2">
+        💡 Looking for colors, fonts, or backgrounds?
+      </h3>
+      <p class="text-sm text-admin-muted">
+        These are now part of your <a
+          href="/settings#identity-kit"
+          class="text-admin-accent hover:underline font-medium">Identity Kit</a
+        > on the Settings page — they persist across theme changes!
+      </p>
+    </div>
+
+    <!-- Layout -->
+    <div class="card">
+      <h2 class="text-lg font-semibold mb-6">Layout</h2>
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-6">
+        <div>
+          <label class="block text-sm text-admin-muted mb-2"
+            >Gallery Style</label
+          >
+          <select name="layout.gallery" class="w-full bg-admin-sidebar">
+            <option
+              value="justified"
+              selected={themeConfig.layout?.gallery === "justified"}
+              >Justified</option
+            >
+            <option
+              value="grid"
+              selected={themeConfig.layout?.gallery === "grid"}>Grid</option
+            >
+            <option
+              value="masonry"
+              selected={themeConfig.layout?.gallery === "masonry"}
+              >Masonry</option
+            >
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm text-admin-muted mb-2">Row Height</label>
+          <input
+            type="number"
+            name="layout.galleryRowHeight"
+            value={themeConfig.layout?.galleryRowHeight || 140}
+            class="w-full"
+          />
+        </div>
+        <div>
+          <label class="block text-sm text-admin-muted mb-2">Gap (px)</label>
+          <input
+            type="number"
+            name="layout.galleryGap"
+            value={themeConfig.layout?.galleryGap || 25}
+            class="w-full"
+          />
+        </div>
+        <div>
+          <label class="block text-sm text-admin-muted mb-2"
+            >Corner Radius</label
+          >
+          <input
+            type="number"
+            name="layout.cornerRadius"
+            value={themeConfig.layout?.cornerRadius || 12}
+            class="w-full"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="card">
+      <h2 class="text-lg font-semibold mb-6">Navigation</h2>
+      <p class="text-sm text-admin-muted mb-4">
+        Navigation colors use your Identity Kit accent color.
+      </p>
+      <div class="grid grid-cols-2 gap-6">
+        <div>
+          <label class="block text-sm text-admin-muted mb-2">Style</label>
+          <select name="nav.style" class="w-full bg-admin-sidebar">
+            <option value="pills" selected={themeConfig.nav?.style === "pills"}
+              >Pills</option
+            >
+            <option
+              value="underline"
+              selected={themeConfig.nav?.style === "underline"}
+              >Underline</option
+            >
+            <option
+              value="minimal"
+              selected={themeConfig.nav?.style === "minimal"}>Minimal</option
+            >
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm text-admin-muted mb-2">Position</label>
+          <select name="nav.position" class="w-full bg-admin-sidebar">
+            <option
+              value="top-left"
+              selected={themeConfig.nav?.position === "top-left"}
+              >Top Left</option
+            >
+            <option
+              value="top-center"
+              selected={themeConfig.nav?.position === "top-center"}
+              >Top Center</option
+            >
+            <option
+              value="top-right"
+              selected={themeConfig.nav?.position === "top-right"}
+              >Top Right</option
+            >
+            <option value="left" selected={themeConfig.nav?.position === "left"}
+              >Sidebar (Left)</option
+            >
+            <option
+              value="right"
+              selected={themeConfig.nav?.position === "right"}
+              >Sidebar (Right)</option
+            >
+          </select>
+        </div>
+      </div>
+    </div>
+    <!-- Gallery Item -->
+    <div class="card">
+      <h2 class="text-lg font-semibold mb-6">Gallery Items</h2>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm text-admin-muted mb-2"
+            >Border Radius</label
+          >
+          <input
+            type="number"
+            name="galleryItem.borderRadius"
+            value={themeConfig.galleryItem?.borderRadius || 30}
+            class="w-full"
+          />
+        </div>
+        <div>
+          <label class="block text-sm text-admin-muted mb-2">Hover Effect</label
+          >
+          <select
+            name="galleryItem.hoverEffect"
+            class="w-full bg-admin-sidebar"
+          >
+            <option
+              value="lift"
+              selected={themeConfig.galleryItem?.hoverEffect === "lift"}
+              >Lift</option
+            >
+            <option
+              value="glow"
+              selected={themeConfig.galleryItem?.hoverEffect === "glow"}
+              >Glow</option
+            >
+            <option
+              value="none"
+              selected={themeConfig.galleryItem?.hoverEffect === "none"}
+              >None</option
+            >
+          </select>
+        </div>
+        <div class="flex items-center gap-3">
+          <input
+            type="checkbox"
+            name="galleryItem.shadow"
+            id="shadow"
+            checked={themeConfig.galleryItem?.shadow !== false}
+            class="w-5 h-5"
+          />
+          <label for="shadow">Show Shadow</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Carousel -->
+    <div class="card">
+      <h2 class="text-lg font-semibold mb-6">Carousel Thumbnails</h2>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div>
+          <label class="block text-sm text-admin-muted mb-2">Shape</label>
+          <select
+            name="carousel.thumbnailShape"
+            class="w-full bg-admin-sidebar"
+          >
+            <option
+              value="circle"
+              selected={themeConfig.carousel?.thumbnailShape === "circle"}
+              >Circle</option
+            >
+            <option
+              value="square"
+              selected={themeConfig.carousel?.thumbnailShape === "square"}
+              >Square</option
+            >
+            <option
+              value="rounded"
+              selected={themeConfig.carousel?.thumbnailShape === "rounded"}
+              >Rounded</option
+            >
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm text-admin-muted mb-2">Size (px)</label>
+          <input
+            type="number"
+            name="carousel.thumbnailSize"
+            value={themeConfig.carousel?.thumbnailSize || 80}
+            class="w-full"
+          />
+        </div>
+        <div>
+          <label class="block text-sm text-admin-muted mb-2">Gap (px)</label>
+          <input
+            type="number"
+            name="carousel.gap"
+            value={themeConfig.carousel?.gap || 12}
+            class="w-full"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- Theme Preview Info -->
+    <div class="card bg-admin-sidebar">
+      <h3 class="font-semibold mb-2">💡 Theme Preview Image</h3>
+      <p class="text-sm text-admin-muted">
+        To add a preview image for your theme, place a <code
+          class="bg-admin-bg px-1 rounded">preview.png</code
+        > file (recommended: 800×450px) in your theme's assets folder:
+      </p>
+      <code class="block mt-2 bg-admin-bg px-3 py-2 rounded text-sm">
+        themes/your-theme/assets/preview.png
+      </code>
+    </div>
+
+  </form>
+</AdminLayout>
+
+<style>
+  /* Color picker styling */
+  .color-picker-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .color-input {
+    width: 48px;
+    height: 40px;
+    padding: 2px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 2px solid var(--admin-border);
+    background: var(--admin-sidebar);
+    flex-shrink: 0;
+  }
+
+  .color-input::-webkit-color-swatch-wrapper {
+    padding: 2px;
+  }
+
+  .color-input::-webkit-color-swatch {
+    border-radius: 4px;
+    border: none;
+  }
+
+  .color-text {
+    flex: 1;
+    font-family: monospace;
+    font-size: 13px;
+    min-width: 0;
+  }
+</style>
+
+<script>
+  import { createFormController } from "../../lib/form-save-handler";
+
+  const form = document.getElementById("theme-form") as HTMLFormElement;
+  const saveBtn = document.getElementById(
+    "save-theme-btn",
+  ) as HTMLButtonElement | null;
+  const saveStatus = document.getElementById("save-status");
+
+  // Sync color inputs with text displays
+  document.querySelectorAll(".color-input").forEach((input) => {
+    input.addEventListener("input", (e) => {
+      const target = e.target as HTMLInputElement;
+      const textInput = target.parentElement?.querySelector(
+        ".color-text",
+      ) as HTMLInputElement;
+      if (textInput) textInput.value = target.value;
+    });
+  });
+
+  if (!form || !saveBtn) {
+    console.error("Theme form or save button not found");
+  } else {
+    const controller = createFormController({
+      form,
+      saveButton: saveBtn,
+      statusElement: saveStatus,
+      successToast: {
+        title: "Theme saved",
+        description: "Your customization has been applied.",
+        variant: "success",
+      },
+      errorToast: (err) => ({
+        title: "Save failed",
+        description: err.message,
+        variant: "destructive",
+      }),
+      saveFn: async (formData: FormData) => {
+        const themeName = String(formData.get("themeName") || "");
+        if (!themeName) {
+          throw new Error("Missing theme name");
+        }
+
+        const data: any = {};
+
+        // Parse dot notation into nested objects
+        for (const [key, value] of formData.entries()) {
+          if (key === "themeName") continue;
+
+          const keys = key.split(".");
+          let current = data;
+
+          for (let i = 0; i < keys.length - 1; i++) {
+            if (!current[keys[i]]) current[keys[i]] = {};
+            current = current[keys[i]];
+          }
+
+          const finalKey = keys[keys.length - 1];
+
+          // Type conversions
+          if (
+            key.includes("Height") ||
+            key.includes("Gap") ||
+            key.includes("Radius") ||
+            key.includes("Size") ||
+            key.includes("Width")
+          ) {
+            current[finalKey] = Number(value);
+          } else if (key === "galleryItem.shadow") {
+            current[finalKey] = true;
+          } else {
+            current[finalKey] = value;
+          }
+        }
+
+        // Handle unchecked checkboxes
+        if (!formData.has("galleryItem.shadow")) {
+          if (!data.galleryItem) data.galleryItem = {};
+          data.galleryItem.shadow = false;
+        }
+
+        return fetch("/api/theme", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ themeName, updates: data }),
+        });
+      },
+    });
+
+    controller.initialize();
+  }
+</script>

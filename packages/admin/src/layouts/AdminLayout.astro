@@ -1,0 +1,338 @@
+---
+import BaseLayout from "./BaseLayout.astro";
+import Sidebar from "@components/Sidebar.astro";
+import { Toaster } from "@components/ui/Toast";
+import Button from "@components/ui/Button.astro";
+import QuickActionsDropdown from "@components/ui/QuickActionsDropdown.astro";
+import SecretsVaultModal from "@components/SecretsVault/SecretsVaultModal.astro";
+import Modal from "@components/Modal.astro";
+import LockClosed from "../components/icons/LockClosed.astro";
+import LockOpen from "../components/icons/LockOpen.astro";
+import {
+  getProjectState,
+  getStateLabel,
+  getStateBadgeColor,
+  isUsingDemoContent,
+} from "../lib/state-manager";
+
+interface Props {
+  title: string;
+  currentPath?: string;
+}
+
+const { title, currentPath = Astro.url.pathname } = Astro.props;
+
+// Check project state
+const projectState = getProjectState();
+const stateLabel = getStateLabel(projectState);
+const stateBadgeColor = getStateBadgeColor(projectState);
+const usingDemo = isUsingDemoContent();
+
+// Redirect to onboarding if first run (unless already on onboarding page)
+if (
+  projectState === "FIRST_RUN" &&
+  !Astro.url.pathname.startsWith("/onboarding")
+) {
+  return Astro.redirect("/onboarding");
+}
+---
+
+<BaseLayout title={title}>
+  <div class="flex min-h-screen">
+    <!-- Sidebar -->
+    <Sidebar currentPath={currentPath} />
+
+    <!-- Main content -->
+    <div class="flex-1 lg:ml-64">
+      <!-- Top bar (hidden on mobile, mobile has its own in sidebar) -->
+      <header
+        class="sticky top-0 z-40 bg-admin-bg border-b border-admin-border px-4 lg:px-6 py-4 mt-14 lg:mt-0"
+      >
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <h1 class="text-xl font-semibold line-clamp-2">{title}</h1>
+            <slot name="header-badge" />
+            {
+              usingDemo && (
+                <span class="px-2 py-0.5 text-xs bg-blue-500/20 text-blue-400 rounded-full border border-blue-500/30">
+                  Demo Mode
+                </span>
+              )
+            }
+          </div>
+          <div class="flex items-center gap-2">
+            <!-- Page-specific actions slot -->
+            <slot name="header-actions" />
+
+            <!-- Quick Actions Dropdown -->
+            <QuickActionsDropdown />
+
+            <!-- Preview Site button -->
+            <Button
+              variant="secondary"
+              size="sm"
+              class="!bg-admin-card !text-admin-muted hover:!text-admin-text hover:!bg-admin-sidebar whitespace-nowrap"
+              onclick="window.open('/preview', '_blank')"
+            >
+              <span>👁️</span>
+              <span class="hidden sm:inline">Preview</span>
+            </Button>
+
+            <!-- Publish button (primary action) -->
+            <Button
+              id="header-publish-btn"
+              variant="primary"
+              size="sm"
+              class="whitespace-nowrap"
+            >
+              <span>🚀</span>
+              <span class="hidden sm:inline">Publish</span>
+            </Button>
+
+            <!-- Vault Lock Icon with Status Badge -->
+            <button
+              data-vault-badge="app"
+              class="relative p-2 rounded-lg hover:bg-admin-sidebar transition-colors"
+              title="Secrets Vault: Checking..."
+              onclick="window.openSecretsVault?.()"
+            >
+              <LockClosed
+                class="vault-lock-icon w-5 h-5 text-gray-400"
+                data-vault-icon="closed"
+              />
+              <LockOpen
+                class="vault-lock-icon w-5 h-5 text-gray-400 hidden"
+                data-vault-icon="open"
+              />
+              <span
+                data-vault-indicator="app"
+                class="absolute top-1 right-1 w-2 h-2 rounded-full bg-gray-500/20"
+              ></span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Content -->
+      <main class="p-4 lg:p-6">
+        <slot />
+      </main>
+    </div>
+  </div>
+</BaseLayout>
+
+<!-- Publish Modal (available on all pages) -->
+<Modal id="publish-modal" title="Publish Changes" size="xl" showActions={false}>
+  <div class="space-y-6">
+    <p class="text-sm text-admin-muted">
+      Choose how you'd like to publish your updates. Git publishing commits
+      content, files, and thumbnails. For advanced configuration, visit the <a
+        href="/deployment"
+        class="text-admin-accent hover:underline">Deployment</a
+      > page.
+    </p>
+
+    <div class="grid gap-4 md:grid-cols-2">
+      <article
+        class="border border-admin-border rounded-xl p-4 bg-admin-sidebar"
+      >
+        <header class="flex items-start justify-between gap-4">
+          <div>
+            <h3 class="text-base font-semibold">Publish to Git</h3>
+            <p class="text-sm text-admin-muted mt-1">
+              Commit and push changes to your repository.
+            </p>
+          </div>
+          <span class="text-xs text-admin-muted uppercase tracking-widest"
+            >Git</span
+          >
+        </header>
+        <div class="mt-4 space-y-3">
+          <div>
+            <label class="block text-sm text-admin-muted mb-2"
+              >Commit Message</label
+            >
+            <input
+              type="text"
+              id="publish-commit-message"
+              class="w-full"
+              placeholder="Update content"
+              value="Update content"
+            />
+          </div>
+          <div class="flex flex-wrap items-center gap-3">
+            <button id="modal-publish-git-btn" class="btn btn-primary"
+              >🚀 Publish to Git</button
+            >
+            <span
+              id="modal-publish-status"
+              class="text-sm text-admin-muted hidden"
+              aria-live="polite"></span>
+          </div>
+        </div>
+      </article>
+
+      <article
+        class="border border-admin-border rounded-xl p-4 bg-admin-sidebar"
+      >
+        <header class="flex items-start justify-between gap-4">
+          <div>
+            <h3 class="text-base font-semibold">Build & Download Zip</h3>
+            <p class="text-sm text-admin-muted mt-1">
+              Build the static site and download the output.
+            </p>
+          </div>
+          <span class="text-xs text-admin-muted uppercase tracking-widest"
+            >Zip</span
+          >
+        </header>
+        <div class="mt-4 flex flex-wrap items-center gap-3">
+          <button id="modal-build-zip-btn" class="btn btn-secondary"
+            >📦 Build & Download</button
+          >
+          <span
+            id="modal-build-zip-status"
+            class="text-sm text-admin-muted hidden"
+            aria-live="polite"></span>
+        </div>
+      </article>
+
+      <article
+        class="border border-admin-border rounded-xl p-4 bg-admin-sidebar opacity-60"
+      >
+        <header class="flex items-start justify-between gap-4">
+          <div>
+            <h3 class="text-base font-semibold">Publish via SFTP</h3>
+            <p class="text-sm text-admin-muted mt-1">
+              Sync builds to a configured SFTP server.
+            </p>
+          </div>
+          <span class="text-xs text-admin-muted uppercase tracking-widest"
+            >SFTP</span
+          >
+        </header>
+        <div class="mt-4 flex items-center gap-3">
+          <button class="btn btn-secondary" disabled aria-disabled="true"
+            >Coming Soon</button
+          >
+          <span class="text-sm text-admin-muted"
+            >Configure server credentials first.</span
+          >
+        </div>
+      </article>
+
+      <article
+        class="border border-admin-border rounded-xl p-4 bg-admin-sidebar opacity-60"
+      >
+        <header class="flex items-start justify-between gap-4">
+          <div>
+            <h3 class="text-base font-semibold">Publish via SSH</h3>
+            <p class="text-sm text-admin-muted mt-1">
+              Deploy over SSH to a custom server.
+            </p>
+          </div>
+          <span class="text-xs text-admin-muted uppercase tracking-widest"
+            >SSH</span
+          >
+        </header>
+        <div class="mt-4 flex items-center gap-3">
+          <button class="btn btn-secondary" disabled aria-disabled="true"
+            >Coming Soon</button
+          >
+          <span class="text-sm text-admin-muted">Setup required.</span>
+        </div>
+      </article>
+    </div>
+
+    <div class="flex justify-end">
+      <button type="button" class="btn btn-secondary close-modal">Close</button>
+    </div>
+  </div>
+</Modal>
+
+<!-- Unsaved Changes Modal (available on all pages) -->
+<Modal
+  id="unsaved-changes-modal"
+  title="Unsaved changes"
+  confirmText="Leave page"
+  closeText="Stay on page"
+  variant="danger"
+>
+  <p class="text-sm text-admin-muted">
+    You have unsaved changes. If you leave this page now, those changes will be lost.
+  </p>
+</Modal>
+
+<!-- Secrets Vault Modal (global access) -->
+<SecretsVaultModal />
+
+<!-- Update lock badge when vault state changes -->
+<script>
+  window.addEventListener('secrets-vault:state-change', (e) => {
+    const { state } = (e as CustomEvent).detail;
+    const badges = document.querySelectorAll('[data-vault-badge]');
+
+    badges.forEach((badge) => {
+      const indicator = badge.querySelector('[data-vault-indicator]');
+      const closedIcon = badge.querySelector('[data-vault-icon="closed"]');
+      const openIcon = badge.querySelector('[data-vault-icon="open"]');
+
+      if (!closedIcon || !openIcon) return;
+
+      // Update badge styling based on state
+      badge.classList.remove('bg-green-500/20', 'bg-orange-500/20', 'bg-gray-500/20');
+      indicator?.classList.remove('bg-green-500/20', 'bg-orange-500/20', 'bg-gray-500/20');
+      closedIcon.classList.remove('text-green-400', 'text-orange-400', 'text-gray-400');
+      openIcon.classList.remove('text-green-400', 'text-orange-400', 'text-gray-400');
+
+      switch (state) {
+        case 'unlocked':
+          badge.classList.add('bg-green-500/20');
+          indicator?.classList.add('bg-green-500/20');
+          closedIcon.classList.add('hidden');
+          openIcon.classList.remove('hidden');
+          openIcon.classList.add('text-green-400');
+          (badge as HTMLElement).title = 'Secrets Vault: Unlocked';
+          break;
+        case 'locked':
+          badge.classList.add('bg-gray-500/20');
+          indicator?.classList.add('bg-gray-500/20');
+          openIcon.classList.add('hidden');
+          closedIcon.classList.remove('hidden');
+          closedIcon.classList.add('text-gray-400');
+          (badge as HTMLElement).title = 'Secrets Vault: Locked';
+          break;
+        case 'not-initialized':
+          badge.classList.add('bg-orange-500/20');
+          indicator?.classList.add('bg-orange-500/20');
+          openIcon.classList.add('hidden');
+          closedIcon.classList.remove('hidden');
+          closedIcon.classList.add('text-orange-400');
+          (badge as HTMLElement).title = 'Secrets Vault: Not Set Up';
+          break;
+      }
+    });
+  });
+</script>
+
+<Toaster client:load />
+
+<script>
+  (function () {
+    // Publish modal handling
+    const publishBtn = document.getElementById("header-publish-btn");
+    const publishModal = document.getElementById("publish-modal");
+
+    publishBtn?.addEventListener("click", () => {
+      (publishModal as any)?.open();
+    });
+
+    // Close modal when clicking close button
+    const closeButtons = document.querySelectorAll(".close-modal");
+    closeButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        (publishModal as any)?.close();
+      });
+    });
+  })();
+</script>

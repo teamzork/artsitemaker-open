@@ -1,0 +1,271 @@
+---
+import AdminLayout from "@layouts/AdminLayout.astro";
+import Modal from "../../components/Modal.astro";
+import Button from "../../components/ui/Button.astro";
+---
+
+<AdminLayout title="Tools">
+    <div class="space-y-8 max-w-4xl">
+        <!-- Backups -->
+        <div id="backups" class="card">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h2 class="text-lg font-semibold">📦 Content Backups</h2>
+                    <p class="text-sm text-admin-muted">
+                        Download or restore archived backups of your content.
+                    </p>
+                </div>
+                <Button
+                    type="button"
+                    id="create-backup-btn"
+                    variant="secondary"
+                >
+                    <span class="mr-2">⚡</span> Create Backup
+                </Button>
+            </div>
+
+            <div id="backup-list" class="space-y-2">
+                <div class="text-center py-8 text-admin-muted">
+                    Loading backups...
+                </div>
+            </div>
+
+            <p class="text-xs text-admin-muted mt-4">
+                Backups include all your artwork YAML files and settings. Images
+                are not included to save space.
+            </p>
+        </div>
+
+        <Modal
+            id="restore-backup-modal"
+            title="Restore Backup"
+            confirmText="Restore Backup"
+            variant="danger"
+        >
+            <p class="text-sm text-admin-muted mb-4">
+                Restoring a backup will replace your current content. A new
+                backup will be created automatically before restoring.
+            </p>
+            <div
+                id="restore-backup-status"
+                class="text-sm hidden mb-4"
+                aria-live="polite"
+            >
+            </div>
+            <input type="hidden" id="restore-backup-filename" />
+        </Modal>
+
+        <!-- Setup Wizard -->
+        <div id="setup" class="card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-lg font-semibold">🧙 Setup Wizard</h2>
+                    <p class="text-sm text-admin-muted">
+                        Configure or troubleshoot your installation.
+                    </p>
+                </div>
+                <a href="/tools/setup" class="btn btn-secondary"
+                    >Open Wizard →</a
+                >
+            </div>
+        </div>
+
+        <!-- Migrations -->
+        <div id="migrations" class="card bg-admin-sidebar/50">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-lg font-semibold text-admin-muted">
+                        🔄 Migrations
+                    </h2>
+                    <p class="text-sm text-admin-muted">
+                        Tools for migrating data between storage systems and
+                        formats.
+                    </p>
+                </div>
+                <span
+                    class="text-xs text-admin-muted bg-admin-bg px-2 py-1 rounded"
+                    >Coming Soon</span
+                >
+            </div>
+        </div>
+    </div>
+</AdminLayout>
+
+<script>
+    const backupList = document.getElementById("backup-list");
+    const restoreBackupModal = document.getElementById("restore-backup-modal");
+    const restoreBackupStatus = document.getElementById("restore-backup-status");
+    const restoreBackupFilename = document.getElementById(
+        "restore-backup-filename",
+    ) as HTMLInputElement | null;
+
+    function formatBytes(bytes: number) {
+        if (!bytes) return "0 B";
+        const k = 1024;
+        const sizes = ["B", "KB", "MB"];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
+    }
+
+    // Create backup button
+    document
+        .getElementById("create-backup-btn")
+        ?.addEventListener("click", async () => {
+            const btn = document.getElementById(
+                "create-backup-btn",
+            ) as HTMLButtonElement;
+            btn.disabled = true;
+            btn.textContent = "⏳ Creating...";
+
+            try {
+                const res = await fetch("/api/backup", { method: "POST" });
+                if (res.ok) {
+                    window.dispatchEvent(
+                        new CustomEvent("artsitemaker:toast", {
+                            detail: {
+                                title: "Backup created successfully",
+                                variant: "success",
+                            },
+                        }),
+                    );
+                    loadBackups();
+                } else {
+                    window.dispatchEvent(
+                        new CustomEvent("artsitemaker:toast", {
+                            detail: {
+                                title: "Backup failed",
+                                variant: "destructive",
+                            },
+                        }),
+                    );
+                }
+            } catch (e) {
+                window.dispatchEvent(
+                    new CustomEvent("artsitemaker:toast", {
+                        detail: {
+                            title: "Backup failed",
+                            variant: "destructive",
+                        },
+                    }),
+                );
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "⚡ Create Backup";
+            }
+        });
+
+    // Restore backup modal handlers
+    (window as any).restoreBackup = (filename: string) => {
+        if (restoreBackupFilename) restoreBackupFilename.value = filename;
+        (restoreBackupModal as any)?.open();
+    };
+
+    restoreBackupModal?.addEventListener("close", () => {
+        if (restoreBackupStatus) {
+            restoreBackupStatus.classList.add("hidden");
+            restoreBackupStatus.textContent = "";
+        }
+    });
+
+    restoreBackupModal?.addEventListener("confirm", async () => {
+        const filename = restoreBackupFilename?.value;
+        if (!filename) return;
+
+        const confirmBtn = restoreBackupModal.querySelector(
+            ".confirm-modal",
+        ) as HTMLButtonElement | null;
+
+        if (confirmBtn) {
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = "Restoring...";
+        }
+
+        if (restoreBackupStatus) {
+            restoreBackupStatus.textContent = "Restoring backup...";
+            restoreBackupStatus.className = "text-sm text-admin-muted";
+            restoreBackupStatus.classList.remove("hidden");
+        }
+
+        try {
+            const res = await fetch(
+                `/api/backup/${encodeURIComponent(filename)}`,
+                { method: "POST" },
+            );
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.error || "Restore failed");
+            }
+
+            if (restoreBackupStatus) {
+                restoreBackupStatus.textContent = `✓ Backup restored! Pre-restore backup: ${data.backupFile || "yes"}`;
+                restoreBackupStatus.className = "text-sm text-green-400";
+            }
+
+            window.dispatchEvent(
+                new CustomEvent("artsitemaker:toast", {
+                    detail: {
+                        title: "Backup restored successfully",
+                        variant: "success",
+                    },
+                }),
+            );
+
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        } catch (e: any) {
+            if (restoreBackupStatus) {
+                restoreBackupStatus.textContent = `✗ ${e.message}`;
+                restoreBackupStatus.className = "text-sm text-red-400";
+            }
+            if (confirmBtn) {
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = "Restore Backup";
+            }
+        }
+    });
+
+    // Load backups
+    async function loadBackups() {
+        try {
+            const res = await fetch("/api/backup");
+            const backups = await res.json();
+
+            if (!backupList) return;
+
+            if (!backups.length) {
+                backupList.innerHTML =
+                    '<div class="text-center py-8 text-admin-muted">No backups yet. Create your first backup above.</div>';
+                return;
+            }
+
+            backupList.innerHTML = backups
+                .map(
+                    (b: any) => `
+        <div class="flex items-center justify-between p-3 bg-admin-sidebar rounded-lg">
+          <div class="flex items-center gap-3">
+            <div class="text-2xl">📦</div>
+            <div>
+              <div class="font-medium text-sm">${new Date(b.createdAt).toLocaleDateString()} ${new Date(b.createdAt).toLocaleTimeString()}</div>
+              <div class="text-xs text-admin-muted">${b.filename} • ${formatBytes(b.size)}</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="restoreBackup('${b.filename}')" class="btn btn-sm btn-secondary" title="Restore" aria-label="Restore backup">Restore</button>
+            <a href="/api/backup/${b.filename}" class="btn btn-sm btn-secondary" download title="Download" aria-label="Download backup">⬇️</a>
+          </div>
+        </div>
+      `,
+                )
+                .join("");
+        } catch (e) {
+            if (backupList) {
+                backupList.innerHTML =
+                    '<div class="text-center py-8 text-red-400">Failed to load backups</div>';
+            }
+        }
+    }
+
+    loadBackups();
+</script>

@@ -1,0 +1,344 @@
+---
+import '../styles/global.css';
+import { loadTheme, loadIdentityKit, generateCSSVariables, generateFontFaces } from '@lib/theme';
+import { getSettingsPath } from '@lib/paths';
+
+interface Props {
+  title: string;
+  description?: string;
+  keywords?: string[];
+  ogImage?: string;
+}
+
+import fs from 'fs/promises';
+import yaml from 'js-yaml';
+
+// Load settings for theme and SEO
+let activeTheme = 'modern';
+let seoDescription = '';
+let seoKeywords: string[] = [];
+let siteTitle = '';
+let siteUrl = '';
+
+try {
+  const settingsPath = getSettingsPath();
+  let settingsContent;
+  try {
+    settingsContent = await fs.readFile(settingsPath, 'utf-8');
+  } catch (e) {}
+
+  if (settingsContent) {
+    const settings = yaml.load(settingsContent) as any;
+    
+    // Get theme
+    if (globalThis.__ARTSITEMAKER_PREVIEW__?.themeName) {
+      activeTheme = globalThis.__ARTSITEMAKER_PREVIEW__.themeName;
+    } else if (settings.theme) {
+      activeTheme = settings.theme;
+    }
+    
+    // Get SEO metadata
+    seoDescription = settings.seo?.description || '';
+    seoKeywords = settings.seo?.keywords || [];
+    siteTitle = settings.site?.title || '';
+    siteUrl = settings.site?.url || '';
+  }
+} catch (e) {
+  console.warn('Could not load settings:', e);
+}
+
+// Use passed props, then SEO settings, then fallbacks
+const { title, description: propDescription, keywords: propKeywords, ogImage: propOgImage } = Astro.props;
+const description = propDescription || seoDescription || 'Original artwork by Dimka';
+const keywords = propKeywords || seoKeywords;
+const pageTitle = siteTitle ? `${title} | ${siteTitle}` : title;
+
+// Load theme configuration
+let themeCSS = '';
+let fontFacesCSS = '';
+let identityKit: any = {};
+let shouldLoadInter = false;
+
+try {
+  const theme = await loadTheme(activeTheme);
+  identityKit = await loadIdentityKit();
+  themeCSS = generateCSSVariables(theme, identityKit);
+  
+  // Load Content Folder fonts for font lookup
+  const { getContentFolderFonts } = await import('@lib/fonts');
+  const contentFolderFonts = await getContentFolderFonts();
+  fontFacesCSS = generateFontFaces(identityKit, contentFolderFonts);
+  const resolveFontFamily = (font: any, fallback = ''): string => {
+    if (!font) return fallback;
+    if (typeof font === 'string') return font;
+    if (typeof font === 'object' && font.family) return font.family;
+    return fallback;
+  };
+  const headingFont = resolveFontFamily(identityKit?.fonts?.heading, theme.fonts?.heading?.family || '');
+  const bodyFont = resolveFontFamily(identityKit?.fonts?.body, theme.fonts?.body?.family || '');
+  const interRegex = /(^|,)\s*["']?Inter["']?(\s|,|$)/i;
+  shouldLoadInter = interRegex.test(headingFont) || interRegex.test(bodyFont);
+
+  // Check for missing assets (development only)
+  if (import.meta.env.DEV) {
+    const { checkIdentityKitAssets, getSetupMessage } = await import('@lib/asset-checker');
+    const assetCheck = checkIdentityKitAssets(identityKit);
+
+    if (!assetCheck.hasLogo && !assetCheck.hasCustomFonts) {
+      // Brand new site, show setup message once
+      console.log(getSetupMessage());
+    } else if (assetCheck.warnings.length > 0) {
+      // Show specific warnings
+      assetCheck.warnings.forEach(w => console.warn(`⚠️  ${w}`));
+    }
+  }
+} catch (e) {
+  // Use defaults if theme not found
+  console.warn(`Theme ${activeTheme} not found, using defaults`, e);
+}
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    {keywords.length > 0 && <meta name="keywords" content={keywords.join(', ')} />}
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <title>{pageTitle}</title>
+    
+    <!-- Open Graph / Social Media -->
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    {siteUrl && <meta property="og:url" content={siteUrl} />}
+    {propOgImage && <meta property="og:image" content={propOgImage} />}
+    <meta property="og:type" content="website" />
+    
+    <!-- Theme CSS Variables -->
+    <style set:html={themeCSS}></style>
+
+    <!-- Dynamic Font Faces (Identity Kit) -->
+    {fontFacesCSS && <style set:html={fontFacesCSS}></style>}
+
+    {shouldLoadInter && (
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      />
+    )}
+
+    <!-- Theme Styles -->
+    <link rel="stylesheet" href={`/themes/${activeTheme}/styles.css`} />
+  </head>
+  <body>
+    <div class="page-wrapper">
+      <slot />
+    </div>
+
+    {import.meta.env.DEV && (
+      <>
+        <aside id="dev-custom-page-toast" class="dev-custom-page-toast" aria-live="polite">
+          <div class="dev-custom-page-toast-body">
+            <div class="dev-custom-page-toast-title" data-toast-title>Custom pages updated</div>
+            <div class="dev-custom-page-toast-message" data-toast-message>
+              Reload routes to pick up the latest changes.
+            </div>
+          </div>
+          <div class="dev-custom-page-toast-actions">
+            <button type="button" class="dev-custom-page-toast-button" data-toast-reload>
+              Reload routes
+            </button>
+            <a class="dev-custom-page-toast-link" href="#" data-toast-open>
+              Open page
+            </a>
+            <button type="button" class="dev-custom-page-toast-dismiss" data-toast-dismiss aria-label="Dismiss">
+              Dismiss
+            </button>
+          </div>
+        </aside>
+
+        <script type="module">
+          const toast = document.getElementById('dev-custom-page-toast');
+          const titleEl = toast?.querySelector('[data-toast-title]');
+          const messageEl = toast?.querySelector('[data-toast-message]');
+          const reloadBtn = toast?.querySelector('[data-toast-reload]');
+          const openLink = toast?.querySelector('[data-toast-open]');
+          const dismissBtn = toast?.querySelector('[data-toast-dismiss]');
+
+          let reloadTimer = null;
+
+          function setVisible(next) {
+            if (!toast) return;
+            toast.classList.toggle('is-visible', next);
+          }
+
+          function triggerReload(targetPath) {
+            if (targetPath) {
+              sessionStorage.setItem('artsitemaker:open-after-reload', targetPath);
+            }
+            window.location.reload();
+          }
+
+          function showToast(payload = {}) {
+            if (!toast) return;
+            const { slug, action } = payload;
+            const isRemoval = action === 'unlink';
+            const status = isRemoval ? 'Custom page removed' : 'Custom page updated';
+            const path = slug ? `/${slug}` : '';
+
+            if (titleEl) titleEl.textContent = status;
+            if (messageEl) {
+              messageEl.textContent = path
+                ? `${path} is ready. Reload routes to activate it.`
+                : 'Reload routes to pick up the latest changes.';
+            }
+
+            if (openLink) {
+              if (path && !isRemoval) {
+                openLink.textContent = `Open ${path}`;
+                openLink.dataset.target = path;
+                openLink.classList.remove('is-hidden');
+              } else {
+                openLink.classList.add('is-hidden');
+              }
+            }
+
+            setVisible(true);
+
+            if (reloadTimer) window.clearTimeout(reloadTimer);
+            if (action === 'add' || action === 'unlink') {
+              reloadTimer = window.setTimeout(() => triggerReload(), 1200);
+            }
+          }
+
+          if (reloadBtn) {
+            reloadBtn.addEventListener('click', () => triggerReload());
+          }
+
+          if (openLink) {
+            openLink.addEventListener('click', (event) => {
+              event.preventDefault();
+              const targetPath = openLink.dataset.target;
+              if (targetPath) {
+                triggerReload(targetPath);
+              }
+            });
+          }
+
+          if (dismissBtn) {
+            dismissBtn.addEventListener('click', () => {
+              if (reloadTimer) window.clearTimeout(reloadTimer);
+              setVisible(false);
+            });
+          }
+
+          const pendingPath = sessionStorage.getItem('artsitemaker:open-after-reload');
+          if (pendingPath) {
+            sessionStorage.removeItem('artsitemaker:open-after-reload');
+            if (window.location.pathname !== pendingPath) {
+              window.location.assign(pendingPath);
+            }
+          }
+
+          if (import.meta.hot) {
+            import.meta.hot.on('artsitemaker:custom-pages', (data) => {
+              showToast(data || {});
+            });
+          }
+        </script>
+      </>
+    )}
+  </body>
+</html>
+
+<style is:global>
+  .dev-custom-page-toast {
+    position: fixed;
+    left: 24px;
+    bottom: 24px;
+    max-width: 420px;
+    width: calc(100% - 48px);
+    padding: 16px;
+    display: grid;
+    gap: 12px;
+    border: 1px solid var(--color-accent);
+    border-radius: 16px;
+    background: var(--color-background);
+    color: var(--color-text);
+    box-shadow: 0 16px 36px color-mix(in srgb, var(--color-text) 18%, transparent);
+    transform: translateY(12px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 180ms ease, transform 180ms ease;
+    z-index: 9999;
+  }
+
+  .dev-custom-page-toast.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  .dev-custom-page-toast-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .dev-custom-page-toast-message {
+    font-size: 0.9rem;
+    color: var(--color-text);
+  }
+
+  .dev-custom-page-toast-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .dev-custom-page-toast-button,
+  .dev-custom-page-toast-link,
+  .dev-custom-page-toast-dismiss {
+    border-radius: 999px;
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    text-decoration: none;
+    border: 1px solid var(--color-accent);
+    background: var(--color-accent);
+    color: var(--color-background);
+    cursor: pointer;
+    transition: transform 150ms ease, box-shadow 150ms ease;
+  }
+
+  .dev-custom-page-toast-link {
+    background: transparent;
+    color: var(--color-accent);
+  }
+
+  .dev-custom-page-toast-dismiss {
+    background: transparent;
+    color: var(--color-text);
+  }
+
+  .dev-custom-page-toast-button:hover,
+  .dev-custom-page-toast-link:hover,
+  .dev-custom-page-toast-dismiss:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px color-mix(in srgb, var(--color-text) 14%, transparent);
+  }
+
+  .dev-custom-page-toast-link.is-hidden {
+    display: none;
+  }
+
+  @media (max-width: 600px) {
+    .dev-custom-page-toast {
+      left: 16px;
+      bottom: 16px;
+      width: calc(100% - 32px);
+    }
+  }
+</style>

@@ -1,0 +1,725 @@
+/* packages/site/public/themes/kazya-mazya/styles.css */
+
+
+/* Kazya Mazya Theme - Pure Styling
+*
+* This theme uses pure CSS styling without embedded content assets.
+* For the authentic Kazya Mazya appearance:
+* 1. Install recommended fonts from themes/recommended-assets/kazya-mazya/
+* 2. Configure Identity Kit in user-data/settings.yaml
+*
+* See: themes/recommended-assets/README.md
+*/
+
+
+/* ============================================================================
+BACKGROUND
+============================================================================ */
+
+body {
+    background-color: var(--color-background, #cbcbc6);
+    background-image: var(--background-texture, none);
+    background-repeat: var(--background-repeat, repeat);
+    background-attachment: fixed;
+    background-size: var(--background-size, auto);
+    min-height: 100vh;
+    color: var(--color-text, #323232);
+}
+
+
+/* Inner shadow overlay for depth */
+
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    box-shadow: inset 1px 1px 150px #222222;
+    pointer-events: none;
+    z-index: 0;
+}
+
+
+/* Ensure content is above the shadow overlay */
+
+body>* {
+    position: relative;
+    z-index: 1;
+}
+
+
+/* Slideshow - transparent to show body background image */
+
+.slideshow-container {
+    background: transparent !important;
+}
+
+.slideshow-container .artwork-title {
+    color: var(--color-text-inverted, #e0e0e0);
+}
+
+.slideshow-container .more-info-btn {
+    color: var(--color-text-inverted, #e0e0e0);
+}
+
+.slideshow-container .carousel-container {
+    background: rgba(30, 30, 30, 0.4) !important;
+}
+
+
+/* ============================================================================
+HEADER / LOGO
+============================================================================ */
+
+
+/* Logo underlayer - dark rectangle with rounded bottom corners */
+
+.header-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    height: auto;
+}
+
+.logo-link {
+    position: absolute;
+    top: 0;
+    left: 63px;
+    z-index: 1001;
+    display: block;
+    background: var(--color-background-alt, #323232);
+    border-radius: 0 0 20px 20px;
+    padding: 12px 16px;
+    /* Larger padding - increased by ~10px */
+    box-shadow: 1px 1px 2px var(--color-background-alt, #323232);
+    border: none !important;
+}
+
+.logo-link:hover {
+    border: none !important;
+    transform: scale(1.02);
+}
+
+.logo-image {
+    display: block;
+    height: auto;
+    width: 114px;
+    filter: none;
+}
+
+@media (max-width: 720px) {
+    .logo-link {
+        left: 10px;
+        border-radius: 0 0 12px 12px;
+        padding: 6px 10px;
+        box-shadow: none;
+    }
+    .logo-image {
+        width: 60px;
+        /* Larger on mobile - was 44px */
+        height: auto;
+    }
+}
+
+
+/* ============================================================================
+NAVIGATION BAR
+============================================================================ */
+
+.nav-bar {
+    position: relative;
+    width: 100%;
+    height: 20px;
+    line-height: 20px;
+    background: rgba(50, 50, 50, 0.85) !important;
+    /* 85% opacity */
+    display: flex;
+    justify-content: flex-end;
+    padding-right: 63px;
+}
+
+.nav-items {
+    display: flex;
+    height: 100%;
+}
+
+.nav-item {
+    height: 20px;
+    line-height: 20px;
+    padding: 0 12px;
+    color: var(--color-text-muted, #a4a4a0);
+    font-size: 12px;
+    text-decoration: none;
+    transition: background 0.2s ease, color 0.2s ease;
+    border: none !important;
+    display: flex;
+    align-items: center;
+}
+
+.nav-item:visited {
+    color: var(--color-text-muted, #a4a4a0);
+}
+
+.nav-item:hover {
+    background: var(--color-text-muted, #a4a4a0);
+    color: var(--color-background-alt, #323232);
+    border: none !important;
+}
+
+.nav-item.active {
+    background: var(--color-accent, #efb600);
+    color: var(--color-background-alt, #323232);
+}
+
+.nav-item.active:visited {
+    color: var(--color-background-alt, #323232);
+}
+
+@media (max-width: 720px) {
+    .nav-bar {
+        height: 30px;
+        line-height: 30px;
+        padding-right: 10px;
+    }
+    .nav-item {
+        height: 30px;
+        line-height: 30px;
+    }
+}
+
+
+/* Header spacer to push content below fixed header */
+
+.header-spacer {
+    height: 20px;
+}
+
+@media (max-width: 720px) {
+    .header-spacer {
+        height: 30px;
+    }
+}
+
+
+/* ============================================================================
+CONTENT AREA
+============================================================================ */
+
+
+/* Gallery page - extra top padding for logo clearance */
+
+.gallery-container {
+    padding-top: 70px;
+    padding-left: 38px;
+    padding-right: 38px;
+    padding-bottom: 40px;
+}
+
+
+/* Justified gallery - MUST have font-size:0 and line-height:0 
+to eliminate whitespace between inline-block items */
+
+.justified-gallery {
+    padding-top: 70px;
+    padding-left: 38px;
+    padding-right: 38px;
+    padding-bottom: 40px;
+    font-size: 0;
+    line-height: 0;
+    text-align: left;
+}
+
+@media (max-width: 720px) {
+    .gallery-container {
+        padding: 30px 12px 40px 12px;
+    }
+    .justified-gallery {
+        padding: 30px 12px 40px 12px;
+    }
+}
+
+
+/* ============================================================================
+ABOUT PAGE
+============================================================================ */
+
+.about-content {
+    padding: 80px 40px 30px;
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 400px 1fr;
+    gap: 60px;
+    align-items: start;
+}
+
+.about-photo-wrapper {
+    position: sticky;
+    top: 100px;
+}
+
+.about-photo {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border-radius: var(--corner-radius, 12px);
+}
+
+.about-text {
+    font-size: 14px;
+    line-height: 1.8;
+}
+
+.about-text h1,
+.about-title {
+    font-size: 18px;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin: 0 0 20px 0;
+    color: var(--color-text);
+}
+
+.about-text h2 {
+    color: var(--color-accent);
+    font-size: 1.2rem;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+}
+
+.about-text p {
+    margin-bottom: 1rem;
+}
+
+.about-text a {
+    color: var(--color-accent);
+}
+
+.about-text ul {
+    list-style: none;
+    padding: 0;
+}
+
+.about-text li {
+    margin-bottom: 0.5rem;
+}
+
+@media (max-width: 720px) {
+    .about-content {
+        padding: 30px 20px 20px;
+        grid-template-columns: 1fr;
+        gap: 30px;
+    }
+    .about-photo-wrapper {
+        position: static;
+    }
+    .about-photo {
+        max-width: 250px;
+        margin: 0 auto;
+    }
+}
+
+
+/* ============================================================================
+GALLERY ITEMS
+============================================================================ */
+
+.gallery-item {
+    border-radius: 30px !important;
+    border: 2px solid #000000 !important;
+    box-shadow: 1px 1px 5px #656565 !important;
+    transition: transform 250ms ease-out, box-shadow 250ms ease-out, border-radius 250ms ease-out !important;
+    text-decoration: none;
+    /* Use outline for hover effect to prevent layout shift */
+    outline: 2px solid transparent;
+    outline-offset: -2px;
+}
+
+.gallery-item img {
+    border-radius: 26px !important;
+    transition: border-radius 250ms ease-out;
+}
+
+.gallery-item:hover {
+    /* Keep border same size, use outline for the accent color effect */
+    border-color: #000000 !important;
+    outline: 3px solid var(--color-accent, #efb600);
+    outline-offset: -1px;
+    box-shadow: 1px 1px 10px #656565 !important;
+    border-radius: 9px !important;
+    transform: scale(1.03) !important;
+}
+
+.gallery-item:hover img {
+    border-radius: 3px !important;
+}
+
+.gallery-item .caption {
+    background: var(--color-background-alt, #323232) !important;
+    border-radius: 0 0 26px 26px;
+}
+
+.gallery-item:hover .caption {
+    border-radius: 0 0 3px 3px;
+}
+
+@media (max-width: 720px) {
+    .gallery-item {
+        border-radius: 12px !important;
+        border-width: 2px !important;
+    }
+    .gallery-item img {
+        border-radius: 8px !important;
+    }
+    .gallery-item .caption {
+        display: none !important;
+    }
+}
+
+
+/* ============================================================================
+SLIDESHOW
+============================================================================ */
+
+.slideshow-container {
+    background: transparent;
+    /* Slideshow uses full viewport height, body texture shows through */
+}
+
+.main-image-wrapper {
+    padding: 15px 80px;
+}
+
+.main-image img {
+    border-radius: 12px;
+    box-shadow: 2px 2px 20px rgba(0, 0, 0, 0.5);
+}
+
+
+/* Title area */
+
+.title-area {
+    padding: 10px 10px;
+}
+
+.artwork-title {
+    font-family: var(--font-heading, sans-serif);
+    font-weight: 100;
+    font-size: 20px;
+    color: var(--color-text, #323232);
+}
+
+
+/* Slideshow title needs light text on dark background */
+
+.slideshow-container .artwork-title {
+    color: var(--color-text-inverted, #e0e0e0);
+}
+
+
+/* Carousel container */
+
+.carousel-container {
+    padding: 12px 10px;
+    background: rgba(0, 0, 0, 0.35);
+    border-top: none;
+}
+
+.carousel-track {
+    gap: 12px;
+    padding: 5px 10px;
+}
+
+
+/* Carousel nav arrows - centered with semi-transparent bg */
+
+.carousel-nav {
+    background: rgba(0, 0, 0, 0.35) !important;
+    border-radius: 6px;
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.carousel-nav:hover {
+    background: rgba(0, 0, 0, 0.55) !important;
+}
+
+
+/* Carousel thumbnails */
+
+.carousel-thumb {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    border: 3px solid #666;
+    overflow: hidden;
+    transition: border-color 0.2s ease, transform 0.2s ease;
+    background: #323232;
+}
+
+.carousel-thumb:hover {
+    border-color: #a4a4a0;
+}
+
+.carousel-thumb.active {
+    border-color: var(--color-accent, #efb600);
+    border-width: 3px;
+    transform: scale(1.1);
+}
+
+
+/* Footer toggle button for slideshow - arrow flips when open */
+
+.footer-toggle::before {
+    border-bottom-color: var(--color-accent, #efb600) !important;
+}
+
+.footer-toggle.open::before {
+    transform: translate(-50%, -50%) rotate(180deg) !important;
+}
+
+@media (max-width: 840px) {
+    .footer-toggle {
+        display: none;
+    }
+}
+
+
+/* ============================================================================
+ARTWORK DETAIL PAGE
+============================================================================ */
+
+.artwork-detail {
+    padding-top: 40px;
+    padding-bottom: 60px;
+}
+
+
+/* Back to gallery button - circle under logo */
+
+.back-to-gallery {
+    position: fixed;
+    top: 100px;
+    /* Moved lower to account for larger logo padding */
+    left: 80px;
+    z-index: 100;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(50, 50, 50, 0.25);
+    color: #a4a4a0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    border: none !important;
+}
+
+.back-to-gallery:hover {
+    background: rgba(50, 50, 50, 0.4);
+    color: var(--color-accent, #efb600);
+    border: none !important;
+}
+
+
+/* Prev/Next navigation - slideshow style */
+
+.artwork-nav-btn {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 100;
+    background: rgba(50, 50, 50, 0.25);
+    color: #666;
+    padding: 25px 14px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    border: none !important;
+}
+
+.artwork-nav-btn:hover {
+    background: rgba(50, 50, 50, 0.45);
+    color: #333;
+    border: none !important;
+}
+
+.artwork-nav-btn.disabled {
+    opacity: 0.15;
+}
+
+.artwork-nav-prev {
+    left: 15px;
+}
+
+.artwork-nav-next {
+    right: 15px;
+}
+
+
+/* Clickable main image */
+
+.artwork-main-image {
+    cursor: zoom-in;
+    transition: opacity 0.2s ease;
+}
+
+.artwork-main-image:hover {
+    opacity: 0.95;
+}
+
+
+/* Tags - hashtag style, subtle */
+
+.tags-container {
+    margin-top: 12px;
+}
+
+.tag {
+    font-size: 11px;
+    color: #888;
+    opacity: 0.7;
+}
+
+.tag:hover {
+    opacity: 1;
+    color: var(--color-link, #057565);
+}
+
+@media (max-width: 768px) {
+    .back-to-gallery {
+        top: 55px;
+        /* Adjusted for mobile logo */
+        left: 80px;
+        width: 28px;
+        height: 28px;
+    }
+    .artwork-nav-btn {
+        padding: 18px 10px;
+    }
+    .artwork-nav-prev {
+        left: 5px;
+    }
+    .artwork-nav-next {
+        right: 5px;
+    }
+}
+
+
+/* ============================================================================
+LINKS
+============================================================================ */
+
+a {
+    color: var(--color-link, #057565);
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+a:hover {
+    color: var(--color-link-hover, #efb600);
+    border-bottom: 1px dashed var(--color-link-hover, #efb600);
+}
+
+a:visited {
+    color: var(--color-link-visited, #057565);
+}
+
+
+/* ============================================================================
+SELECTION
+============================================================================ */
+
+::selection {
+    background: var(--color-accent, #efb600);
+    color: var(--color-text-inverted, #323232);
+}
+
+::-moz-selection {
+    background: var(--color-accent, #efb600);
+    color: var(--color-text-inverted, #323232);
+}
+
+
+/* ============================================================================
+FOOTER
+============================================================================ */
+
+.footer-container {
+    background: var(--color-background-alt, #323232);
+    color: var(--color-text-inverted, #95968a);
+}
+
+
+/* Footer headings need to contrast against dark background */
+
+.footer-heading {
+    color: var(--color-text-inverted, #95968a) !important;
+}
+
+.footer-container a {
+    color: var(--color-accent, #efb600);
+}
+
+.footer-container a:hover {
+    color: var(--color-accent, #efb600);
+    border-bottom: 1px dashed var(--color-accent, #efb600);
+}
+
+
+/* Remove footer divider line */
+
+.footer-divider {
+    border-top: none;
+}
+
+
+/* ============================================================================
+FULLSCREEN MODAL
+============================================================================ */
+
+.fullscreen-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.95);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: zoom-out;
+}
+
+.fullscreen-modal img {
+    max-width: 95vw;
+    max-height: 95vh;
+    object-fit: contain;
+}
+
+.fullscreen-close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    color: white;
+    font-size: 30px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease;
+}
+
+.fullscreen-close:hover {
+    color: var(--color-accent, #efb600);
+}

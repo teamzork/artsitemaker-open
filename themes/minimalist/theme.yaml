@@ -1,0 +1,88 @@
+name: Minimalist
+version: 1.0.0
+author: ArtSiteMaker
+description: Pure black and white aesthetic with maximum whitespace and typographic focus
+supported_pages:
+  - home
+  - gallery
+  - slider
+  - art_piece
+  - about
+  - article
+  - contact
+  - service
+layout:
+  gallery: grid
+  galleryColumns: 5
+  galleryColumnsMobile: 3
+  galleryGap: 1
+  cornerRadius: 0
+  maxContentWidth: 1200
+colors:
+  background: '#ffffff'
+  backgroundAlt: '#000000'
+  text: '#000000'
+  textMuted: '#666666'
+  accent: '#000000'
+  border: '#000000'
+  shadow: rgba(0, 0, 0, 0)
+  textLight: '#ffffff'
+  link: '#000000'
+fonts:
+  heading:
+    family: sans-serif
+    file: null
+    weight: 400
+    recommendedFont: DimkaSans
+  body:
+    family: sans-serif
+    file: null
+    weight: 400
+    recommendedFont: DimkaSans
+  mono:
+    family: monospace
+    file: null
+    weight: 400
+background:
+  type: solid
+  solid: '#ffffff'
+galleryItem:
+  border: 1px solid #000000
+  borderRadius: 0
+  shadow: false
+  shadowColor: rgba(0, 0, 0, 0)
+  shadowBlur: 0
+  shadowOffset:
+    - 0
+    - 0
+  hoverEffect: none
+  hoverBorder: 4px solid #000000
+carousel:
+  thumbnailShape: square
+  thumbnailSize: 60
+  thumbnailBorder: 1px solid #000000
+  activeBorder: 4px solid #000000
+  gap: 1
+  arrowStyle: minimal
+nav:
+  style: minimal
+  position: top-right
+  backgroundColor: '#ffffff'
+  activeColor: '#000000'
+logo:
+  file: null
+  width: 100
+  position: top-left
+artworkDetail:
+  imageMaxHeight: 80vh
+  showBorder: true
+  metaPosition: below
+footer:
+  backgroundColor: '#000000'
+  showCredits: true
+sections:
+  tabStyle: square
+  activeTabBg: '#ffffff'
+  activeTabText: '#000000'
+  inactiveTabBg: '#000000'
+  inactiveTabText: '#ffffff'

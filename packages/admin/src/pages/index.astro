@@ -1,0 +1,735 @@
+---
+import AdminLayout from '@layouts/AdminLayout.astro';
+import fs from 'fs/promises';
+import path from 'path';
+import yaml from 'js-yaml';
+import { getContentPath, getFilesPath, getThumbnailsPath, getImageBaseUrl } from '../lib/paths';
+import ProcessingModal from '../components/ProcessingModal.astro';
+import ServicesModal from '../components/ServicesModal.astro';
+
+// Get paths from centralized config
+const contentPath = getContentPath();
+const filesPath = getFilesPath();
+const thumbnailsPath = getThumbnailsPath();
+
+// Use centralized image base URL
+const imageBaseUrl = getImageBaseUrl();
+
+// Load artworks
+let artworks: any[] = [];
+try {
+  const artworksPath = path.join(contentPath, 'artworks');
+  const files = await fs.readdir(artworksPath);
+  
+  for (const file of files) {
+    if (file.endsWith('.yaml')) {
+      const content = await fs.readFile(path.join(artworksPath, file), 'utf-8');
+      const artwork = yaml.load(content) as any;
+      artworks.push(artwork);
+    }
+  }
+  
+  artworks.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+} catch (e) {
+  console.error('Failed to load artworks:', e);
+}
+
+// Count files helper
+async function countFiles(dir: string): Promise<number> {
+  try {
+    const files = await fs.readdir(dir);
+    return files.filter(f => !f.startsWith('.')).length;
+  } catch {
+    return 0;
+  }
+}
+
+// Image counts
+const originalsCount = await countFiles(path.join(filesPath, 'originals'));
+const processedCount = await countFiles(path.join(filesPath, 'large'));
+const thumbnailsCount = await countFiles(thumbnailsPath);
+
+// Calculate stats
+const stats = {
+  totalArtworks: artworks.length,
+  collections: 1, // TODO: Load from collections folder
+  published: artworks.filter(a => a.published !== false).length,
+  drafts: artworks.filter(a => a.published === false).length,
+  unprocessed: artworks.filter(a => !a.processing?.processedAt).length,
+};
+---
+
+<AdminLayout title="Dashboard">
+  <div class="space-y-8" data-testid="dashboard">
+    <!-- Quick Stats -->
+    <div class="quick-stats grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4" data-testid="dashboard-stats">
+      <div class="card relative" data-testid="stat-total-artworks">
+        <div class="flex items-start justify-between">
+          <div class="flex-1">
+            <div class="text-3xl font-bold text-admin-accent">{stats.totalArtworks}</div>
+            <div class="text-admin-muted text-sm mt-1">Total Artworks</div>
+          </div>
+          <span class="text-2xl opacity-60">🖼️</span>
+        </div>
+      </div>
+      <div class="card relative" data-testid="stat-collections">
+        <div class="flex items-start justify-between">
+          <div class="flex-1">
+            <div class="text-3xl font-bold">{stats.collections}</div>
+            <div class="text-admin-muted text-sm mt-1">Collections</div>
+          </div>
+          <span class="text-2xl opacity-60">📚</span>
+        </div>
+      </div>
+      <div class="card relative" data-testid="stat-published">
+        <div class="flex items-start justify-between">
+          <div class="flex-1">
+            <div class="text-3xl font-bold text-admin-success">{stats.published}</div>
+            <div class="text-admin-muted text-sm mt-1">Published</div>
+          </div>
+          <span class="text-2xl opacity-60">✅</span>
+        </div>
+      </div>
+      <div class="card relative" data-testid="stat-drafts">
+        <div class="flex items-start justify-between">
+          <div class="flex-1">
+            <div class="text-3xl font-bold">{stats.drafts}</div>
+            <div class="text-admin-muted text-sm mt-1">Drafts</div>
+          </div>
+          <span class="text-2xl opacity-60">📝</span>
+        </div>
+      </div>
+      <div class="card relative" data-testid="stat-unprocessed">
+        <div class="flex items-start justify-between">
+          <div class="flex-1">
+            <div class="text-3xl font-bold text-admin-warning">{stats.unprocessed}</div>
+            <div class="text-admin-muted text-sm mt-1">Unprocessed</div>
+          </div>
+          <span class="text-2xl opacity-60">⚠️</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <!-- Services Status -->
+      <div class="card">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-semibold">Development Services</h2>
+          <button id="view-services-details" class="text-admin-accent text-sm hover:underline">Manage →</button>
+        </div>
+        <div id="services-status" class="space-y-3">
+          <p class="text-admin-muted text-sm">Loading services...</p>
+        </div>
+      </div>
+
+      <!-- System Info -->
+      <div class="card">
+        <h2 class="text-lg font-semibold mb-4">System Info</h2>
+        <div class="grid grid-cols-1 gap-4 text-sm">
+          <div>
+            <span class="text-admin-muted">Content Path:</span>
+            <span class="ml-2 font-mono text-xs">{contentPath}</span>
+          </div>
+          <div>
+            <span class="text-admin-muted">Theme:</span>
+            <span class="ml-2" id="current-theme-name">Loading...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Artworks Preview -->
+    <div class="card" data-testid="recent-artworks">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold">Recent Artworks</h2>
+        <a href="/gallery" class="text-admin-accent text-sm hover:underline">View All →</a>
+      </div>
+      
+      {artworks.length === 0 ? (
+        <p class="text-admin-muted">No artworks found. Upload some images to get started.</p>
+      ) : (
+        <div class="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
+          {artworks.slice(0, 16).map((artwork) => (
+            <a 
+              href={`/gallery/${artwork.slug}`}
+              class="aspect-square bg-admin-sidebar rounded-lg overflow-hidden hover:ring-2 hover:ring-admin-accent transition-all flex items-center justify-center"
+              title={artwork.title}
+            >
+              {artwork.processing?.processedAt ? (
+                <img 
+                  src={imageBaseUrl
+                    ? `${imageBaseUrl}/thumbnails/${artwork.slug}.png`
+                    : `/thumbnails/${artwork.slug}.png`
+                  }
+                  alt={artwork.title}
+                  class="w-full h-full object-cover"
+                  onerror="this.style.display='none';this.nextElementSibling.style.display='block';"
+                />
+                <span class="text-2xl hidden">🖼️</span>
+              ) : (
+                <span class="text-2xl">📷</span>
+              )}
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+
+    <!-- Image Processing -->
+    <div class="card">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold">Image Processing</h2>
+        <button id="open-processing-details" class="text-admin-accent text-sm hover:underline">
+          View queue details →
+        </button>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="p-4 bg-admin-sidebar rounded-lg text-center">
+          <div class="text-2xl font-bold">{originalsCount}</div>
+          <div class="text-sm text-admin-muted">Originals</div>
+        </div>
+        <div class="p-4 bg-admin-sidebar rounded-lg text-center">
+          <div class="text-2xl font-bold text-admin-success">{processedCount}</div>
+          <div class="text-sm text-admin-muted">Processed</div>
+        </div>
+        <div class="p-4 bg-admin-sidebar rounded-lg text-center">
+          <div class={`text-2xl font-bold ${stats.unprocessed > 0 ? 'text-admin-warning' : 'text-admin-success'}`}>{stats.unprocessed}</div>
+          <div class="text-sm text-admin-muted">Pending</div>
+        </div>
+        <div class="p-4 bg-admin-sidebar rounded-lg text-center">
+          <div class="text-2xl font-bold">{thumbnailsCount}</div>
+          <div class="text-sm text-admin-muted">Thumbnails</div>
+        </div>
+      </div>
+      <div class="mt-4 flex items-center justify-between">
+        <div class="text-sm">
+          {stats.unprocessed > 0 ? (
+            <span class="text-admin-warning">Processing {stats.unprocessed} image{stats.unprocessed > 1 ? 's' : ''}...</span>
+          ) : stats.totalArtworks > 0 ? (
+            <span class="text-admin-success">All images ready ✓</span>
+          ) : (
+            <span class="text-admin-muted">Upload artwork images to get started</span>
+          )}
+        </div>
+        {stats.unprocessed > 0 && (
+          <button id="quick-process-btn" class="btn btn-secondary btn-sm">⚡ Process Now</button>
+        )}
+      </div>
+    </div>
+
+    <!-- Processing Modal -->
+    <ProcessingModal />
+
+    <!-- Services Modal -->
+    <ServicesModal />
+  </div>
+  
+
+  </AdminLayout>
+
+<script>
+  import { processImagesWithToasts } from '../lib/process-images-client';
+
+  // Extend HTMLElement for custom modal methods
+  interface ModalElement extends HTMLElement {
+    open: () => void;
+    close: () => void;
+  }
+
+  // Quick process button handler (dashboard card)
+  document.getElementById('quick-process-btn')?.addEventListener('click', async () => {
+    const btn = document.getElementById('quick-process-btn') as HTMLButtonElement | null;
+    if (!btn) return;
+    btn.disabled = true;
+    const originalText = btn.textContent || '';
+    btn.textContent = '⏳ Processing...';
+
+    try {
+      await processImagesWithToasts({
+        showStartToast: true,
+        reloadOnComplete: true,
+        reloadDelayMs: 1500,
+      });
+    } catch (e) {
+      btn.disabled = false;
+      btn.textContent = '⚡ Retry';
+    }
+  });
+
+  // Open processing modal
+  document.getElementById('open-processing-details')?.addEventListener('click', () => {
+    const modal = document.getElementById('processing-modal') as ModalElement | null;
+    if (modal && typeof modal.open === 'function') {
+      modal.open();
+    }
+  });
+
+  // Publish modal logic - uses elements from AdminLayout
+  const publishModal = document.getElementById('publish-modal') as ModalElement | null;
+  const publishBtn = document.getElementById('header-publish-btn');
+  const publishStatus = document.getElementById('modal-publish-status');
+  const buildZipStatus = document.getElementById('modal-build-zip-status');
+  const commitMessageInput = document.getElementById('publish-commit-message') as HTMLInputElement | null;
+  const publishGitBtn = document.getElementById('modal-publish-git-btn') as HTMLButtonElement | null;
+  const buildZipBtn = document.getElementById('modal-build-zip-btn') as HTMLButtonElement | null;
+  
+  // New elements for Git state
+  const gitCard = document.querySelector('article:has(#modal-publish-git-btn)');
+  const gitHeader = gitCard?.querySelector('h3');
+  const gitDesc = gitCard?.querySelector('p');
+
+  function resetStatus(el: HTMLElement | null) {
+    if (!el) return;
+    el.textContent = '';
+    el.className = 'text-sm text-admin-muted hidden';
+  }
+
+  // Check Git Status
+  async function checkGitStatus() {
+    if (!publishGitBtn) return;
+    
+    try {
+      publishGitBtn.disabled = true;
+      publishGitBtn.textContent = 'Checking Status...';
+      
+      const res = await fetch('/api/git-status');
+      const data = await res.json();
+      
+      if (!data.isRepo) {
+         // Case 1: Not a repo
+         if (gitHeader) gitHeader.textContent = 'Initialize Repository';
+         if (gitDesc) gitDesc.textContent = 'Git repository not found. Initialize to start publishing.';
+         publishGitBtn.textContent = '⚠️ Git Not Initialized';
+         publishGitBtn.disabled = true; // For now disable, could lead to init flow later
+         publishGitBtn.title = 'Run "git init" in your project root to enable this feature.';
+      } else if (!data.hasRemote) {
+         // Case 2: Repo but no remote
+         if (gitHeader) gitHeader.textContent = 'Commit Locally';
+         if (gitDesc) gitDesc.textContent = 'No remote configured. Changes will be committed locally only.';
+         publishGitBtn.textContent = '💾 Commit Locally';
+         publishGitBtn.disabled = false;
+         publishGitBtn.classList.remove('btn-primary');
+         publishGitBtn.classList.add('btn-secondary');
+      } else {
+         // Case 3: Ready
+         if (gitHeader) gitHeader.textContent = 'Publish to Git';
+         if (gitDesc) gitDesc.textContent = 'Commit and push changes to your repository.';
+         publishGitBtn.textContent = '🚀 Publish to Git';
+         publishGitBtn.disabled = false;
+         publishGitBtn.classList.add('btn-primary');
+         publishGitBtn.classList.remove('btn-secondary');
+      }
+    } catch (e) {
+      console.error('Failed to check git status', e);
+      publishGitBtn.textContent = '❌ Error';
+    }
+  }
+
+  publishBtn?.addEventListener('click', () => {
+    if (publishModal && typeof publishModal.open === 'function') {
+      publishModal.open();
+    }
+    checkGitStatus(); // Check every time modal opens
+  });
+
+  publishModal?.addEventListener('close', () => {
+    resetStatus(publishStatus);
+    resetStatus(buildZipStatus);
+
+    // Reset button state slightly to avoid flickering next open if cached
+    if (publishGitBtn) {
+      publishGitBtn.disabled = false;
+    }
+
+    if (buildZipBtn) {
+      buildZipBtn.disabled = false;
+      buildZipBtn.textContent = '📦 Build & Download';
+    }
+  });
+
+  publishGitBtn?.addEventListener('click', async () => {
+    if (publishGitBtn) {
+      publishGitBtn.disabled = true;
+      publishGitBtn.textContent = '⏳ Working...';
+    }
+
+    if (publishStatus) {
+      publishStatus.textContent = 'Processing...';
+      publishStatus.className = 'text-sm text-admin-muted';
+      publishStatus.classList.remove('hidden');
+    }
+
+    try {
+      const message = commitMessageInput?.value || 'Update content';
+      const res = await fetch('/api/publish', {
+        method: 'POST',
+        body: JSON.stringify({ message }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        if (publishStatus) {
+          if (data.commit) {
+            const shortHash = data.commit.substring(0, 7);
+            const action = data.pushed ? 'Published' : 'Committed';
+            publishStatus.textContent = `✓ ${action} (${shortHash})`;
+            publishStatus.className = 'text-sm text-green-400';
+          } else {
+            publishStatus.textContent = data.message || 'No changes to publish';
+            publishStatus.className = 'text-sm text-admin-muted';
+          }
+          publishStatus.classList.remove('hidden');
+        }
+      } else {
+        throw new Error('Action failed');
+      }
+    } catch (e) {
+      if (publishStatus) {
+        publishStatus.textContent = '✗ Operation failed';
+        publishStatus.className = 'text-sm text-red-400';
+        publishStatus.classList.remove('hidden');
+      }
+    } finally {
+      // Re-trigger status check to reset button label correctly
+      checkGitStatus();
+    }
+  });
+
+  buildZipBtn?.addEventListener('click', async () => {
+    if (buildZipBtn) {
+      buildZipBtn.disabled = true;
+      buildZipBtn.textContent = '⏳ Building...';
+    }
+
+    if (buildZipStatus) {
+      buildZipStatus.textContent = 'Building static site...';
+      buildZipStatus.className = 'text-sm text-admin-muted';
+      buildZipStatus.classList.remove('hidden');
+    }
+
+    try {
+      const res = await fetch('/api/build-zip', { method: 'POST' });
+
+      if (!res.ok) {
+        let message = 'Build failed.';
+        try {
+          const data = await res.json();
+          if (data?.error) message = data.error;
+        } catch {
+          // ignore JSON parse errors
+        }
+        throw new Error(message);
+      }
+
+      const blob = await res.blob();
+      const disposition = res.headers.get('Content-Disposition') || '';
+      const match = disposition.match(/filename=\"?([^\";]+)\"?/);
+      const filename = match?.[1] || 'artsitemaker-site.zip';
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      if (buildZipStatus) {
+        buildZipStatus.textContent = '✓ Download started';
+        buildZipStatus.className = 'text-sm text-green-400';
+        buildZipStatus.classList.remove('hidden');
+      }
+
+      window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
+        detail: {
+          title: 'Build Complete',
+          description: 'Your site has been built and the download has started.',
+          variant: 'success'
+        }
+      }));
+    } catch (e) {
+      if (buildZipStatus) {
+        buildZipStatus.textContent = '✗ Build failed';
+        buildZipStatus.className = 'text-sm text-red-400';
+        buildZipStatus.classList.remove('hidden');
+      }
+      
+      window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
+        detail: {
+          title: 'Build Failed',
+          description: 'There was an error building your site. Please check the logs.',
+          variant: 'destructive'
+        }
+      }));
+    } finally {
+      if (buildZipBtn) {
+        buildZipBtn.disabled = false;
+        buildZipBtn.textContent = '📦 Build & Download';
+      }
+    }
+  });
+
+  // Service status types
+  interface ServiceStatus {
+    id: string;
+    name: string;
+    status: 'running' | 'stopped' | 'error' | 'starting';
+    pid?: number;
+    uptime?: number;
+    port?: number;
+    lastError?: string;
+    healthStatus?: 'healthy' | 'unhealthy' | 'unknown';
+  }
+
+  // Format uptime
+  function formatUptime(seconds: number): string {
+    if (seconds < 60) return `${seconds}s`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m`;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours}h ${mins}m`;
+  }
+
+  // Render compact service card for dashboard
+  function renderCompactServiceCard(service: ServiceStatus): string {
+    const statusIcons = {
+      running: '🟢',
+      stopped: '⚫',
+      starting: '🟡',
+      error: '🔴',
+    };
+
+    const statusClasses = {
+      running: 'text-green-400',
+      stopped: 'text-admin-muted',
+      starting: 'text-yellow-400',
+      error: 'text-red-400',
+    };
+
+    const healthClass = service.healthStatus === 'healthy' ? 'bg-green-500 shadow-[0_0_12px_rgba(34,197,94,0.6)] animate-pulse-glow' : 
+                        service.healthStatus === 'unhealthy' ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]' : 'bg-admin-muted';
+
+    const uptimeText = service.uptime ? formatUptime(service.uptime) : '';
+
+    return `
+      <div class="service-item flex items-center justify-between py-3 px-4 bg-admin-sidebar rounded-lg border-l-4 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 ${
+        service.status === 'running' ? 'border-green-500' :
+        service.status === 'error' ? 'border-red-500' :
+        service.status === 'starting' ? 'border-yellow-400' :
+        'border-admin-muted'
+      }">
+        <div class="flex items-center gap-3">
+          <span class="text-sm font-medium">${service.name}</span>
+          ${service.healthStatus && service.status === 'running' 
+            ? `<span class="w-2 h-2 rounded-full ${healthClass}"></span>` 
+            : ''}
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-admin-muted">${uptimeText}</span>
+          <span class="text-xs ${statusClasses[service.status]} flex items-center gap-1">
+            <span class="${service.status === 'starting' ? 'animate-pulse-bounce' : ''}">${statusIcons[service.status]}</span>
+            ${service.status}
+          </span>
+          ${service.port ? `<a href="http://localhost:${service.port}" target="_blank" class="text-xs text-admin-accent hover:underline ml-1 cursor-pointer transition-colors duration-200 hover:text-admin-text" title="Open service in browser">:${service.port}</a>` : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  // Handle service actions from dashboard
+  async function handleServiceAction(action: string, serviceId: string, button: HTMLButtonElement) {
+    button.disabled = true;
+    const originalText = button.textContent;
+    button.textContent = '⏳';
+
+    try {
+      const res = await fetch(`/api/services/${serviceId}/${action}`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+
+      if (data.success || data.status) {
+        await loadServicesStatus();
+      } else {
+        window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
+          detail: {
+            title: `Failed to ${action} service`,
+            variant: 'destructive'
+          }
+        }));
+      }
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
+        detail: {
+          title: `Error: ${error}`,
+          variant: 'destructive'
+        }
+      }));
+    } finally {
+      button.disabled = false;
+      button.textContent = originalText || '';
+    }
+  }
+
+  // Load services status with enhanced display
+  async function loadServicesStatus() {
+    try {
+      const res = await fetch('/api/services');
+      const data = await res.json();
+      const container = document.getElementById('services-status');
+
+      if (!container || !data.services) return;
+
+      if (data.services.length === 0) {
+        container.innerHTML = '<p class="text-admin-muted text-sm">No services configured</p>';
+        return;
+      }
+
+      container.innerHTML = data.services.map(renderCompactServiceCard).join('');
+    } catch (e) {
+      const container = document.getElementById('services-status');
+      if (container) {
+        container.innerHTML = '<p class="text-admin-muted text-sm">Services unavailable</p>';
+      }
+    }
+  }
+
+  loadServicesStatus();
+  let pollInterval = setInterval(loadServicesStatus, 5000);
+
+  // Stop polling when page is inactive to save resources
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      clearInterval(pollInterval);
+    } else {
+      loadServicesStatus(); // Update immediately when visible
+      clearInterval(pollInterval);
+      pollInterval = setInterval(loadServicesStatus, 5000);
+    }
+  });
+
+  // Open services modal
+  document.getElementById('view-services-details')?.addEventListener('click', () => {
+    if (typeof (window as any).openServicesModal === 'function') {
+      (window as any).openServicesModal();
+    }
+  });
+
+  // Add keyboard support and animations
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes pulse-glow {
+      0%, 100% {
+        box-shadow: 0 0 12px rgba(34, 197, 94, 0.6);
+        opacity: 1;
+      }
+      50% {
+        box-shadow: 0 0 20px rgba(34, 197, 94, 0.8);
+        opacity: 0.8;
+      }
+    }
+
+    @keyframes pulse-bounce {
+      0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+      50% {
+        opacity: 0.6;
+        transform: scale(0.95);
+      }
+    }
+
+    .animate-pulse-glow {
+      animation: pulse-glow 2s ease-in-out infinite;
+    }
+
+    .animate-pulse-bounce {
+      display: inline-block;
+      animation: pulse-bounce 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .animate-pulse-glow,
+      .animate-pulse-bounce,
+      .service-item:hover {
+        animation: none !important;
+        transform: none !important;
+      }
+    }
+
+    #view-services-details {
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    #view-services-details:hover {
+      color: var(--admin-text);
+    }
+
+    #view-services-details:focus-visible {
+      outline: 2px solid var(--admin-accent);
+      outline-offset: 2px;
+      border-radius: 0.25rem;
+    }
+  `;
+  document.head.appendChild(style);
+  
+  // Auto-backup check (run once on load)
+  async function checkAutoBackup() {
+    try {
+      // 1. Get backup list
+      const res = await fetch('/api/backup');
+      if (!res.ok) return;
+      const backups = await res.json();
+      
+      const now = new Date().getTime();
+      const oneWeek = 7 * 24 * 60 * 60 * 1000;
+      
+      let needsBackup = false;
+      
+      if (!backups.length) {
+        needsBackup = true;
+      } else {
+        const lastBackupTime = new Date(backups[0].createdAt).getTime();
+        if (now - lastBackupTime > oneWeek) {
+          needsBackup = true;
+        }
+      }
+      
+      if (needsBackup) {
+        console.log('Triggering auto-backup...');
+        const backupRes = await fetch('/api/backup', { method: 'POST' });
+        if (backupRes.ok) {
+            // Show a subtle toast notification
+            window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
+              detail: {
+                title: 'Weekly content backup created',
+                variant: 'success'
+              }
+            }));
+        }
+      }
+    } catch (e) {
+      console.error('Auto-backup check failed:', e);
+    }
+  }
+  
+  // Wait a bit after load to not slow down TTI
+  setTimeout(checkAutoBackup, 2000);
+
+  // Fetch and display current theme name
+  fetch('/api/pages')
+    .then(res => res.json())
+    .then(data => {
+      const themeNameEl = document.getElementById('current-theme-name');
+      if (themeNameEl && data.themeName) {
+        themeNameEl.textContent = data.themeName;
+      }
+    })
+    .catch(e => console.error('Failed to fetch theme name', e));
+
+</script>

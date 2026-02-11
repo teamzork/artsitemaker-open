@@ -1,0 +1,53 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+.astro/
+
+# Test coverage
+coverage/
+test-results/
+playwright-report/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# User-specific configuration
+artis.config.yaml
+
+# OS files
+.DS_Store
+backups/
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Debug logs
+npm-debug.log*
+pnpm-debug.log*
+
+# Site-specific content (use content-example as template)
+# During development with external content repo (e.g., kazyamazya-content),
+# the content/ folder is either a symlink or specified via CONTENT_PATH env var
+/content/
+/user-data*
+
+# Processed files (generated during image processing)
+/files/
+
+# Processed images (optional - can be regenerated)
+# files/large/
+# files/medium/
+# files/small/
+
+# Synced themes (generated from /themes source)
+packages/site/public/themes/
+
+.shared/ui-ux-pro-max/scripts/__pycache__/

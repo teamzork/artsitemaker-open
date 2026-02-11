@@ -1,0 +1,85 @@
+name: Nimbus
+version: 1.0.0
+author: ArtSiteMaker
+description: Retro-futurist cloud whites with bold typography and warm circuits
+supported_pages:
+  - home
+  - gallery
+  - slider
+  - art_piece
+  - about
+  - collections_list
+  - article
+  - schedule
+  - contact
+  - search_results
+  - service
+layout:
+  gallery: masonry
+  galleryRowHeight: 300
+  galleryGap: 22
+  cornerRadius: 16
+  maxContentWidth: 1600
+colors:
+  background: '#f6f3ee'
+  backgroundAlt: '#3a2f2a'
+  text: '#2f2622'
+  textMuted: '#7c6b61'
+  accent: '#d24b4b'
+  accentHover: '#2f6fd6'
+  border: '#d8cfc3'
+  shadow: rgba(58, 47, 42, 0.25)
+  textLight: '#f6f3ee'
+  link: '#2f6fd6'
+  linkHover: '#d24b4b'
+fonts:
+  heading:
+    family: sans-serif
+    file: null
+    weight: 800
+    recommendedFont: Orbitron
+  body:
+    family: sans-serif
+    file: null
+    weight: 400
+    recommendedFont: Space Grotesk
+  mono:
+    family: monospace
+    file: null
+    weight: 400
+background:
+  type: solid
+  solid: '#f6f3ee'
+galleryItem:
+  border: '2px solid #d8cfc3'
+  borderRadius: 16
+  shadow: true
+  shadowColor: rgba(58, 47, 42, 0.25)
+  shadowBlur: 22
+  shadowOffset:
+    - 0
+    - 10
+  hoverEffect: lift
+carousel:
+  thumbnailShape: square
+  thumbnailSize: 86
+  thumbnailBorder: '2px solid #d8cfc3'
+  activeBorder: '3px solid #d24b4b'
+  gap: '12'
+  arrowStyle: floating
+nav:
+  style: pills
+  position: top-right
+  backgroundColor: '#f6f3ee'
+  activeColor: '#d24b4b'
+logo:
+  file: null
+  width: 128
+  position: top-left
+artworkDetail:
+  imageMaxHeight: 80vh
+  showBorder: true
+  metaPosition: side
+footer:
+  backgroundColor: '#3a2f2a'
+  showCredits: true

@@ -1,0 +1,4312 @@
+---
+import AdminLayout from "@layouts/AdminLayout.astro";
+import fs from "fs/promises";
+
+import path from "path";
+import yaml from "js-yaml";
+import {
+  getContentPath,
+  getThemesPath,
+  getFilesPath,
+  getThumbnailsPath,
+  getImageStorageMode,
+  getSiteName,
+  getRepoPath,
+  getR2PublicUrl,
+  getR2BucketName,
+  getR2ProjectPrefix,
+} from "../../lib/paths";
+import {
+  getSettingsFilePath,
+  getProjectConfigPath,
+  getImageHostingConfigPath,
+} from "../../lib/config-paths";
+import {
+  getProjectStateDetails,
+  getStateLabel,
+  getStateBadgeColor,
+  isUsingDemoContent,
+} from "../../lib/state-manager";
+import {
+  mergeDeployConfig,
+  readLegacyDeploymentConfig,
+} from "../../lib/deployment-config";
+import Modal from "../../components/Modal.astro";
+import Button from "../../components/ui/Button.astro";
+import Combobox from "../../components/ui/Combobox.astro";
+import LockClosed from "../../components/icons/LockClosed.astro";
+import LockOpen from "../../components/icons/LockOpen.astro";
+import SecretsVault from "../../components/SecretsVault/SecretsVault.astro";
+import { Toggle } from "../../components/ui/Toggle";
+import { getApexDomain, isApexDomain } from "../../lib/domain-utils";
+
+// Load current settings
+const contentPath = getContentPath();
+const themesPath = getThemesPath();
+const filesPath = getFilesPath();
+const thumbnailsPath = getThumbnailsPath();
+const repoRoot = getRepoPath();
+const defaultUserDataRoot = repoRoot
+  ? path.join(repoRoot, "user-data")
+  : path.join(process.cwd(), "user-data");
+
+let settings: any = {};
+let projectConfig: any = {};
+let imageHostingConfig: any = {};
+
+// Load settings from settings/settings.yaml
+try {
+  const content = await fs.readFile(getSettingsFilePath(), "utf-8");
+  settings = yaml.load(content) as any;
+} catch (e) {
+  console.error("Failed to load settings:", e);
+}
+
+// Load project configuration from configuration/project-configuration.yaml
+try {
+  const content = await fs.readFile(getProjectConfigPath(), "utf-8");
+  projectConfig = yaml.load(content) as any;
+} catch (e) {
+  // Project config may not exist yet
+}
+
+// Load image hosting config from configuration/image-hosting.yaml
+try {
+  const content = await fs.readFile(getImageHostingConfigPath(), "utf-8");
+  imageHostingConfig = yaml.load(content) as any;
+} catch (e) {
+  // Image hosting config may not exist yet
+}
+
+// Merge settings for backward compatibility with template
+// Auth, Git, and Images now come from projectConfig, storage from imageHostingConfig
+settings = {
+  ...settings,
+  auth: projectConfig.auth || settings.auth,
+  git: projectConfig.git || settings.git,
+  images: projectConfig.images || settings.images,
+  imageStorage: imageHostingConfig.imageStorage,
+  r2: imageHostingConfig.r2,
+  external: imageHostingConfig.external,
+  site: {
+    ...settings.site,
+    ...(projectConfig.site || {}),
+  },
+};
+
+// Count files helper
+async function countFiles(dir: string): Promise<number> {
+  try {
+    const files = await fs.readdir(dir);
+    return files.filter((f) => !f.startsWith(".")).length;
+  } catch {
+    return 0;
+  }
+}
+
+// Get first image for example URL
+async function getFirstImage(): Promise<string | null> {
+  try {
+    const largeDir = path.join(filesPath, "large");
+    const files = await fs.readdir(largeDir);
+    const imageFile = files.find(
+      (f) => f.endsWith(".webp") || f.endsWith(".jpg") || f.endsWith(".png"),
+    );
+    return imageFile || null;
+  } catch {
+    return null;
+  }
+}
+
+// Image counts
+const originalsCount = await countFiles(path.join(filesPath, "originals"));
+const processedCount = await countFiles(path.join(filesPath, "large"));
+const thumbnailsCount = await countFiles(thumbnailsPath);
+const firstImage = await getFirstImage();
+
+// Project state
+const stateDetails = getProjectStateDetails();
+const stateLabel = getStateLabel(stateDetails.state);
+const stateBadgeColor = getStateBadgeColor(stateDetails.state);
+const usingDemoContent = isUsingDemoContent();
+const imageStorage: "local" | "r2" | "external" = getImageStorageMode() as
+  | "local"
+  | "r2"
+  | "external";
+
+// R2 Configuration (from artis.config.yaml with env var fallback)
+const r2PublicUrl = getR2PublicUrl();
+const r2BucketName = getR2BucketName();
+const r2ProjectFolder = getR2ProjectPrefix();
+
+// Example image URL for R2/External
+const r2ProjectPrefix = r2ProjectFolder;
+const exampleImageUrl = firstImage
+  ? imageStorage === "r2"
+    ? `${r2PublicUrl}/${r2ProjectPrefix}/large/${firstImage}`
+    : `${r2PublicUrl}/large/${firstImage}`
+  : imageStorage === "r2"
+    ? `${r2PublicUrl}/${r2ProjectPrefix}/large/example-artwork.webp`
+    : `${r2PublicUrl}/large/example-artwork.webp`;
+
+// External hosting config
+const externalBaseUrl = settings?.images?.external?.baseUrl || "";
+const externalPathPrefix = settings?.images?.external?.pathPrefix || "";
+
+// Load artis.config.yaml directly (bypass cache) to get current userDataPath
+let configUserDataPath = "";
+try {
+  const repoRoot = getRepoPath();
+  const rootConfigPath = repoRoot
+    ? path.join(repoRoot, "artis.config.yaml")
+    : path.join(process.cwd(), "artis.config.yaml");
+
+  try {
+    const configContent = await fs.readFile(rootConfigPath, "utf-8");
+    const config = yaml.load(configContent) as any;
+    // Prefer userDataPath, fallback to contentPath for backwards compat
+    configUserDataPath = config?.userDataPath || config?.contentPath || "";
+  } catch (err) {
+    console.warn("Could not read root artis.config.yaml:", err);
+  }
+} catch (e) {
+  console.error("Failed to get repo path:", e);
+}
+
+// Prefer settings.yaml value to keep two-way sync with the UI form
+const settingsUserDataPath =
+  settings?.userDataPath || settings?.contentPath || "";
+// Use settings value if available, then config value, then runtime path
+const editableContentPath =
+  settingsUserDataPath || configUserDataPath || contentPath;
+
+const legacyDeployment = await readLegacyDeploymentConfig();
+const resolvedDeploy = mergeDeployConfig(
+  projectConfig.deploy as Record<string, unknown> | undefined,
+  legacyDeployment || undefined,
+);
+const customDomainProjectName =
+  (resolvedDeploy?.cloudflarePages as Record<string, unknown> | undefined)
+    ?.projectName || "";
+
+// Custom Domain config (from project-configuration.yaml → deploy.cloudflarePages.customDomain)
+let customDomainEnabled = false;
+let customDomainDomain = "";
+let customDomainAddWww = false;
+let customDomainHostingTarget: "cloudflare_pages" | "elsewhere" = "cloudflare_pages";
+let customDomainDnsStatus = "not_configured";
+let customDomainLastChecked: string | null = null;
+let customDomainErrorMessage: string | null = null;
+
+const cd = resolvedDeploy?.cloudflarePages?.customDomain as
+  | Record<string, unknown>
+  | undefined;
+if (cd) {
+  customDomainEnabled = !!cd.enabled;
+  customDomainDomain = (cd.domain as string) || "";
+  customDomainAddWww = !!cd.addWww;
+  customDomainHostingTarget = cd.hostingTarget === "elsewhere" ? "elsewhere" : "cloudflare_pages";
+  customDomainDnsStatus = (cd.dns_status as string) || "not_configured";
+  customDomainLastChecked = (cd.last_checked as string) || null;
+  customDomainErrorMessage = (cd.error_message as string) || null;
+}
+
+const customDomainApex = getApexDomain(customDomainDomain);
+const customDomainIsApex = !!customDomainDomain && isApexDomain(customDomainDomain);
+const customDomainWwwPreview = customDomainApex ? `www.${customDomainApex}` : "www.example.com";
+
+function resolveConfigPath(base: string | null, rawPath: string): string {
+  if (!rawPath) return "";
+  if (path.isAbsolute(rawPath)) return rawPath;
+  return path.resolve(base ?? process.cwd(), rawPath);
+}
+
+async function isProjectRoot(dirPath: string): Promise<boolean> {
+  try {
+    await fs.access(path.join(dirPath, "settings", "settings.yaml"));
+    await fs.access(path.join(dirPath, "configuration", "project-configuration.yaml"));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function listProjectFolders(rootPath: string): Promise<string[]> {
+  try {
+    const entries = await fs.readdir(rootPath, { withFileTypes: true });
+    const dirs = entries.filter((entry) => entry.isDirectory()).map((entry) =>
+      path.join(rootPath, entry.name),
+    );
+    const results: string[] = [];
+    for (const dir of dirs) {
+      if (await isProjectRoot(dir)) {
+        results.push(dir);
+      }
+    }
+    return results;
+  } catch {
+    return [];
+  }
+}
+
+async function listImmediateFolders(rootPath: string): Promise<string[]> {
+  try {
+    const entries = await fs.readdir(rootPath, { withFileTypes: true });
+    return entries
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => path.join(rootPath, entry.name));
+  } catch {
+    return [];
+  }
+}
+
+const resolvedConfigPath = configUserDataPath
+  ? resolveConfigPath(repoRoot, configUserDataPath)
+  : "";
+const resolvedSettingsPath = settingsUserDataPath
+  ? resolveConfigPath(repoRoot, settingsUserDataPath)
+  : "";
+const identifiedRoots = new Set<string>();
+if (defaultUserDataRoot) identifiedRoots.add(defaultUserDataRoot);
+if (resolvedConfigPath) identifiedRoots.add(resolvedConfigPath);
+if (resolvedSettingsPath) identifiedRoots.add(resolvedSettingsPath);
+
+const detectedProjects = new Set<string>();
+const normalizedUserDataRoot = path.resolve(defaultUserDataRoot);
+function isWithinUserDataRoot(candidate: string): boolean {
+  const relative = path.relative(normalizedUserDataRoot, path.resolve(candidate));
+  return !!relative && !relative.startsWith("..") && !path.isAbsolute(relative);
+}
+
+for (const root of identifiedRoots) {
+  if (!root) continue;
+  if (root === defaultUserDataRoot) {
+    const allFolders = await listImmediateFolders(root);
+    allFolders.forEach((folder) => detectedProjects.add(folder));
+  } else {
+    const projects = await listProjectFolders(root);
+    projects
+      .filter((project) => isWithinUserDataRoot(project))
+      .forEach((project) => detectedProjects.add(project));
+  }
+  if (await isProjectRoot(root) && isWithinUserDataRoot(root)) {
+    detectedProjects.add(root);
+  }
+}
+
+const comboboxOptions = Array.from(detectedProjects)
+  .sort()
+  .map((projectPath) => ({
+    label: projectPath,
+    value: projectPath,
+  }));
+---
+
+<AdminLayout title="Configuration">
+  <!-- Vault status lock icon in header -->
+  <a
+    href="#secrets-vault"
+    slot="header-badge"
+    class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-colors"
+    data-vault-badge="config"
+    title="Secrets Vault Status"
+  >
+    <LockClosed
+      class="vault-lock-icon w-4 h-4 text-gray-400"
+      data-vault-icon="closed"
+    />
+    <LockOpen
+      class="vault-lock-icon w-4 h-4 text-gray-400 hidden"
+      data-vault-icon="open"
+    />
+  </a>
+
+  <!-- Save button in header -->
+  <Button
+    type="submit"
+    form="config-form"
+    id="config-save-btn"
+    slot="header-actions"
+    variant="primary"
+    disabled>Save Configuration</Button
+  >
+
+  <form id="config-form" class="space-y-8 max-w-4xl">
+    <!-- Status bar -->
+    <div class="flex items-center gap-4">
+      <span id="save-status" class="text-sm text-admin-muted"></span>
+    </div>
+
+    <!-- 1. User Content -->
+    <div id="content-location" class="card bg-admin-sidebar/50 scroll-mt-24">
+      <h2 class="text-lg font-semibold mb-4">📁 User Content</h2>
+      <div class="space-y-4">
+        <div>
+          <div class="space-y-2">
+            <div class="flex items-center gap-3">
+              <div class="flex-1 min-w-0">
+                <Combobox
+                  id="content-path"
+                  name="userDataPath"
+                  value={editableContentPath}
+                  label="Content Folder"
+                  placeholder="/path/to/content or ~/Documents/my-site/content"
+                  description="Use absolute path (/Users/artist/content), home directory (~/Documents/my-site), or relative path (../my-content)"
+                  options={comboboxOptions}
+                  inputClass="px-3 py-2 bg-admin-bg rounded text-sm font-mono border border-admin-border focus:border-admin-accent focus:outline-none"
+                  emptyLabel="No detected folders"
+                />
+              </div>
+              <Button
+                type="button"
+                id="refresh-content-path-btn"
+                variant="secondary"
+                size="sm"
+                tooltip="Reload value from settings.yaml"
+                tooltipSide="bottom"
+                class="refresh-content-path-btn"
+              >
+                <span class="refresh-icon" aria-hidden="true">↻</span>
+                <span data-button-label>Refresh</span>
+              </Button>
+              <span
+                id="path-validation-indicator"
+                class="text-sm whitespace-nowrap hidden"></span>
+            </div>
+            <div id="path-validation-message" class="text-sm hidden"></div>
+            <div id="content-path-sync" class="text-xs text-yellow-400 hidden">
+              <span id="content-path-sync-text"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Exclusion Info -->
+        <div class="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+          <div class="flex items-start gap-2">
+            <span class="text-blue-400">ℹ️</span>
+            <div class="text-xs text-admin-muted">
+              <p class="mb-1">
+                <strong>Content is excluded from the ArtSiteMaker repo.</strong> Your artworks,
+                settings, and customizations are safely separated from the ArtSiteMaker engine.
+              </p>
+              {
+                imageStorage === "local" && (
+                  <p class="text-yellow-500">
+                    The <code>/files</code> folder is excluded from both ArtSiteMaker
+                    and your content repo to avoid large binaries in git.
+                  </p>
+                )
+              }
+            </div>
+          </div>
+        </div>
+
+        <div class="flex gap-3 pt-2">
+          <button
+            type="button"
+            id="import-content-btn"
+            class="btn btn-secondary text-sm"
+          >
+            📥 Import Content
+          </button>
+          <button
+            type="button"
+            id="restore-defaults-btn"
+            class="btn btn-secondary text-sm"
+          >
+            🔄 Restore Defaults
+          </button>
+        </div>
+        <p class="text-xs text-admin-muted">
+          Import content from another folder or restore to the default
+          placeholder content.
+        </p>
+
+        <!-- Advanced Paths (collapsed by default) -->
+        <details class="text-sm">
+          <summary class="cursor-pointer text-admin-muted hover:text-admin-text"
+            >Advanced: All Paths</summary
+          >
+          <div class="mt-3 space-y-2 pl-4 border-l-2 border-admin-border">
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-admin-muted w-16">Themes:</span>
+              <code
+                class="text-xs bg-admin-bg px-2 py-1 rounded overflow-x-auto"
+                >{themesPath}</code
+              >
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-admin-muted w-16">Files:</span>
+              <code
+                class="text-xs bg-admin-bg px-2 py-1 rounded overflow-x-auto"
+                >{filesPath}</code
+              >
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-admin-muted w-16">ArtSiteMaker:</span>
+              <code
+                class="text-xs bg-admin-bg px-2 py-1 rounded overflow-x-auto"
+                >{repoRoot}</code
+              >
+            </div>
+          </div>
+        </details>
+      </div>
+    </div>
+
+    <!-- 2. Image Hosting -->
+    <div id="image-hosting" class="card scroll-mt-24">
+      <h2 class="text-lg font-semibold mb-2">📷 Image Hosting</h2>
+      <p class="text-sm text-admin-muted mb-6">
+        Choose where your artwork images are stored and served from.
+      </p>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <!-- Local Storage -->
+        <label class="storage-method-card" data-storage-method="local">
+          <input
+            type="radio"
+            name="imageStorage"
+            value="local"
+            class="hidden"
+            checked={imageStorage === "local"}
+          />
+          <div
+            class={`p-4 bg-admin-sidebar rounded-lg border-2 cursor-pointer hover:border-admin-border transition-colors relative storage-card ${imageStorage === "local" ? "border-admin-accent" : "border-transparent"}`}
+            data-storage="local"
+          >
+            <div class="text-2xl mb-2">💾</div>
+            <div class="font-semibold">Local Storage</div>
+            <p class="text-xs text-admin-muted mt-1">
+              Images stored in /files folder
+            </p>
+            <span
+              class={`storage-checkmark absolute top-2 right-2 text-green-500 ${imageStorage === "local" ? "" : "hidden"}`}
+              data-checkmark="local">✓</span
+            >
+          </div>
+        </label>
+
+        <!-- External URL -->
+        <label class="storage-method-card" data-storage-method="external">
+          <input
+            type="radio"
+            name="imageStorage"
+            value="external"
+            class="hidden"
+            checked={imageStorage === "external"}
+          />
+          <div
+            class={`p-4 bg-admin-sidebar rounded-lg border-2 cursor-pointer hover:border-admin-border transition-colors relative storage-card ${imageStorage === "external" ? "border-admin-accent" : "border-transparent"}`}
+            data-storage="external"
+          >
+            <div class="text-2xl mb-2">🌐</div>
+            <div class="font-semibold">External Server</div>
+            <p class="text-xs text-admin-muted mt-1">Custom image server URL</p>
+            <span
+              class={`storage-checkmark absolute top-2 right-2 text-green-500 ${imageStorage === "external" ? "" : "hidden"}`}
+              data-checkmark="external">✓</span
+            >
+          </div>
+        </label>
+
+        <!-- R2/Object Storage -->
+        <label class="storage-method-card" data-storage-method="r2">
+          <input
+            type="radio"
+            name="imageStorage"
+            value="r2"
+            class="hidden"
+            checked={imageStorage === "r2"}
+          />
+          <div
+            class={`p-4 bg-admin-sidebar rounded-lg border-2 cursor-pointer hover:border-admin-border transition-colors relative storage-card ${imageStorage === "r2" ? "border-admin-accent" : "border-transparent"}`}
+            data-storage="r2"
+          >
+            <div class="text-2xl mb-2">☁️</div>
+            <div class="font-semibold">Cloudflare R2</div>
+            <p class="text-xs text-admin-muted mt-1">
+              Fast CDN-backed cloud storage
+            </p>
+            <span
+              class={`storage-checkmark absolute top-2 right-2 text-green-500 ${imageStorage === "r2" ? "" : "hidden"}`}
+              data-checkmark="r2">✓</span
+            >
+          </div>
+        </label>
+      </div>
+
+      <!-- R2 Settings Panel (shown when R2 selected) -->
+      <div
+        id="r2-settings"
+        class={`bg-admin-sidebar/50 rounded-lg p-4 ${imageStorage !== "r2" ? "hidden" : ""}`}
+      >
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-medium">R2 Configuration</h3>
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              id="sync-r2-btn"
+              class="btn btn-primary text-sm"
+              disabled={imageStorage !== "r2"}
+            >
+              ☁️ Sync Images
+            </button>
+            <button
+              type="button"
+              id="test-r2-btn"
+              class="btn btn-secondary text-sm">🔗 Test Connection</button
+            >
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="block text-sm text-admin-muted mb-1">Public URL</label
+            >
+            <input
+              type="text"
+              name="r2.publicUrl"
+              value={r2PublicUrl}
+              placeholder="https://images.example.com"
+              class="w-full px-3 py-2 bg-admin-bg border border-admin-border rounded text-sm"
+            />
+          </div>
+          <div>
+            <label class="block text-sm text-admin-muted mb-1"
+              >Project Folder</label
+            >
+            <input
+              type="text"
+              name="r2.projectFolder"
+              value={r2ProjectFolder}
+              placeholder="my-portfolio"
+              class="w-full px-3 py-2 bg-admin-bg border border-admin-border rounded text-sm"
+            />
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <label class="block text-sm text-admin-muted mb-1">Bucket Name</label>
+          <input
+            type="text"
+            name="r2.bucketName"
+            value={r2BucketName}
+            placeholder="artist-portfolios"
+            class="w-full px-3 py-2 bg-admin-bg border border-admin-border rounded text-sm"
+          />
+          <p class="text-xs text-admin-muted mt-1">
+            One bucket can be shared by multiple projects using different
+            project folders.
+          </p>
+        </div>
+
+        <div class="bg-admin-bg rounded-lg p-3 mb-4">
+          <div class="text-xs text-admin-muted mb-1">Example Image URL:</div>
+          <code class="text-xs text-blue-400 break-all">{exampleImageUrl}</code>
+        </div>
+
+        <div class="flex items-center gap-2 text-sm text-admin-muted">
+          <span>⚠️</span>
+          <span
+            >Configure Account ID, Access Key ID, and Secret Access Key in the <a
+              href="#secrets-vault"
+              class="text-blue-400 hover:underline">Secrets Vault</a
+            > below.</span
+          >
+        </div>
+
+        <div id="r2-status" class="text-sm mt-3"></div>
+      </div>
+
+      <!-- External Server Settings (shown when external selected) -->
+      <div
+        id="external-settings"
+        class={`bg-admin-sidebar/50 rounded-lg p-4 ${imageStorage !== "external" ? "hidden" : ""}`}
+      >
+        <h3 class="font-medium mb-4">External Server Configuration</h3>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="block text-sm text-admin-muted mb-1">Base URL</label>
+            <input
+              type="text"
+              name="external.baseUrl"
+              value={externalBaseUrl}
+              placeholder="https://images.example.com"
+              class="w-full px-3 py-2 bg-admin-bg border border-admin-border rounded text-sm"
+            />
+          </div>
+          <div>
+            <label class="block text-sm text-admin-muted mb-1"
+              >Path Prefix</label
+            >
+            <input
+              type="text"
+              name="external.pathPrefix"
+              value={externalPathPrefix}
+              placeholder="/my-art"
+              class="w-full px-3 py-2 bg-admin-bg border border-admin-border rounded text-sm"
+            />
+          </div>
+        </div>
+
+        <div class="bg-admin-bg rounded-lg p-3 mb-4">
+          <div class="text-xs text-admin-muted mb-1">Example Image URL:</div>
+          <code class="text-xs text-blue-400 break-all"
+            >{externalBaseUrl}{externalPathPrefix}/large/{
+              firstImage || "example-artwork.webp"
+            }</code
+          >
+        </div>
+
+        <p class="text-xs text-admin-muted">
+          Images must be manually synced to your external server. ArtSiteMaker will use
+          the Base URL + Path Prefix + variant folder (large/medium/thumb) +
+          filename to construct image URLs.
+        </p>
+      </div>
+
+      <!-- Local Storage Info (shown when local selected) -->
+      <div
+        id="local-storage-info"
+        class={`bg-admin-sidebar/50 rounded-lg p-4 ${imageStorage !== "local" ? "hidden" : ""}`}
+      >
+        <div class="flex items-center gap-3">
+          <span class="text-green-500">✓</span>
+          <div>
+            <h3 class="font-medium">Local Storage Active</h3>
+            <p class="text-sm text-admin-muted">
+              Images stored at: <code
+                class="bg-admin-bg px-2 py-0.5 rounded text-xs"
+                >{filesPath}</code
+              >
+            </p>
+          </div>
+        </div>
+        <p class="text-xs text-admin-muted mt-3">
+          Note: The /files folder is excluded from both the ArtSiteMaker repo and your
+          content repo to avoid bloating git history.
+        </p>
+      </div>
+    </div>
+
+    <!-- Storage Diagnostics -->
+    <div id="storage-diagnostics" class="card scroll-mt-24">
+      <div class="flex flex-col gap-4 mb-4 lg:flex-row lg:items-start lg:justify-between">
+        <div class="flex-1 lg:max-w-[65%]">
+          <h2 class="text-lg font-semibold mb-1">🧪 Storage Diagnostics</h2>
+          <p class="text-sm text-admin-muted">
+            Review resolved storage mode and storage configuration. Use the
+            check to validate the active storage connection.
+          </p>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <Button
+            type="button"
+            id="storage-diagnostics-refresh"
+            variant="secondary"
+            size="sm"
+            class="whitespace-nowrap"
+          >
+            ↻ Refresh
+          </Button>
+          <Button
+            type="button"
+            id="storage-diagnostics-check"
+            variant="primary"
+            size="sm"
+            class="whitespace-nowrap"
+          >
+            🔎 Run R2 Check
+          </Button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-admin-sidebar rounded-lg p-4">
+          <div class="text-xs text-admin-muted">Storage Mode</div>
+          <div
+            id="diagnostics-storage-mode"
+            class="text-sm font-semibold"
+          >
+            —
+          </div>
+          <div id="diagnostics-storage-base" class="text-xs text-admin-muted mt-1">
+          </div>
+        </div>
+        <div class="bg-admin-sidebar rounded-lg p-4" data-storage-section="r2">
+          <div class="text-xs text-admin-muted">Secrets Vault</div>
+          <div id="diagnostics-vault-status" class="text-sm font-semibold">—</div>
+          <div id="diagnostics-vault-missing" class="text-xs text-admin-muted mt-1">
+          </div>
+        </div>
+        <div class="bg-admin-sidebar rounded-lg p-4" data-storage-section="r2">
+          <div class="text-xs text-admin-muted">R2 Config</div>
+          <div id="diagnostics-r2-config-status" class="text-sm font-semibold">—</div>
+          <div
+            id="diagnostics-r2-config-missing"
+            class="text-xs text-admin-muted mt-1"
+          >
+          </div>
+        </div>
+        <div class="bg-admin-sidebar rounded-lg p-4" data-storage-section="local">
+          <div class="text-xs text-admin-muted">Local Paths</div>
+          <div class="text-xs text-admin-muted mt-2">
+            Files:
+            <span id="diagnostics-local-files-path" class="text-admin-text">—</span>
+          </div>
+          <div class="text-xs text-admin-muted mt-1">
+            Thumbnails:
+            <span id="diagnostics-local-thumbnails-path" class="text-admin-text">—</span>
+          </div>
+        </div>
+        <div class="bg-admin-sidebar rounded-lg p-4" data-storage-section="local">
+          <div class="text-xs text-admin-muted">Local Status</div>
+          <div id="diagnostics-local-status" class="text-sm font-semibold">—</div>
+          <div
+            id="diagnostics-local-missing"
+            class="text-xs text-admin-muted mt-1"
+          >
+          </div>
+        </div>
+        <div class="bg-admin-sidebar rounded-lg p-4" data-storage-section="local">
+          <div class="text-xs text-admin-muted">User Data Structure</div>
+          <div id="diagnostics-user-data-status" class="text-sm font-semibold">—</div>
+          <div
+            id="diagnostics-user-data-summary"
+            class="text-xs text-admin-muted mt-1"
+          >
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4" data-storage-section="r2">
+        <div class="bg-admin-sidebar rounded-lg p-4">
+          <div class="text-xs text-admin-muted">Bucket Name</div>
+          <div id="diagnostics-r2-bucket" class="text-sm font-medium">—</div>
+        </div>
+        <div class="bg-admin-sidebar rounded-lg p-4">
+          <div class="text-xs text-admin-muted">Public URL</div>
+          <div
+            id="diagnostics-r2-public-url"
+            class="text-sm font-medium break-all"
+          >
+            —
+          </div>
+        </div>
+        <div class="bg-admin-sidebar rounded-lg p-4">
+          <div class="text-xs text-admin-muted">Project Prefix</div>
+          <div id="diagnostics-r2-prefix" class="text-sm font-medium">—</div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4" data-storage-section="local">
+        <div class="bg-admin-sidebar rounded-lg p-4">
+          <div class="text-xs text-admin-muted">Variant Counts</div>
+          <div id="diagnostics-local-variant-counts" class="text-sm font-medium">
+            —
+          </div>
+        </div>
+        <div class="bg-admin-sidebar rounded-lg p-4">
+          <div class="text-xs text-admin-muted">Thumbnails Count</div>
+          <div
+            id="diagnostics-local-thumbnails-count"
+            class="text-sm font-medium"
+          >
+            —
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        <div class="bg-admin-sidebar rounded-lg p-4">
+          <div class="text-xs text-admin-muted">Image Base URL</div>
+          <div
+            id="diagnostics-image-base-url"
+            class="text-sm font-medium break-all"
+          >
+            —
+          </div>
+        </div>
+      </div>
+
+      <div
+        id="storage-diagnostics-status"
+        class="text-sm text-admin-muted mt-4"
+        aria-live="polite"
+      >
+      </div>
+      <div
+        id="storage-diagnostics-check-result"
+        class="text-sm mt-2"
+        aria-live="polite"
+      >
+      </div>
+
+      <details class="mt-4">
+        <summary class="cursor-pointer text-sm text-admin-muted">
+          Raw diagnostics JSON
+        </summary>
+        <pre
+          id="storage-diagnostics-json"
+          class="mt-2 text-xs bg-admin-bg border border-admin-border rounded p-3 overflow-x-auto"
+        ></pre>
+      </details>
+
+      <p class="text-xs text-admin-muted mt-3">
+        Secrets are never displayed. Storage checks validate the active storage
+        mode (R2 uses a signed list request; local verifies folders and counts).
+      </p>
+    </div>
+
+    <!-- Image Processing -->
+    <div id="image-processing" class="card scroll-mt-24">
+      <h2 class="text-lg font-semibold mb-6">🖼️ Image Processing</h2>
+
+      <!-- Stats and Process Button -->
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+        <div class="p-4 bg-admin-sidebar rounded-lg text-center">
+          <div class="text-2xl font-bold">{originalsCount}</div>
+          <div class="text-sm text-admin-muted">Originals</div>
+        </div>
+        <div class="p-4 bg-admin-sidebar rounded-lg text-center">
+          <div class="text-2xl font-bold text-admin-success">
+            {processedCount}
+          </div>
+          <div class="text-sm text-admin-muted">Processed</div>
+        </div>
+        <div class="p-4 bg-admin-sidebar rounded-lg text-center">
+          <div class="text-2xl font-bold">{thumbnailsCount}</div>
+          <div class="text-sm text-admin-muted">Thumbnails</div>
+        </div>
+      </div>
+
+      <div class="mb-6">
+        <button type="button" id="process-all-btn" class="btn btn-secondary"
+          >⚡ Process All Images</button
+        >
+      </div>
+
+      <!-- Size Settings -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+        <div>
+          <label class="block text-sm text-admin-muted mb-2">Large (px)</label>
+          <input
+            type="number"
+            name="images.sizes.large"
+            value={settings.images?.sizes?.large || 2400}
+            class="w-full"
+          />
+        </div>
+        <div>
+          <label class="block text-sm text-admin-muted mb-2">Medium (px)</label>
+          <input
+            type="number"
+            name="images.sizes.medium"
+            value={settings.images?.sizes?.medium || 1200}
+            class="w-full"
+          />
+        </div>
+        <div>
+          <label class="block text-sm text-admin-muted mb-2">Small (px)</label>
+          <input
+            type="number"
+            name="images.sizes.small"
+            value={settings.images?.sizes?.small || 600}
+            class="w-full"
+          />
+        </div>
+        <div>
+          <label class="block text-sm text-admin-muted mb-2">Thumb (px)</label>
+          <input
+            type="number"
+            name="images.sizes.thumb"
+            value={settings.images?.sizes?.thumb || 150}
+            class="w-full"
+          />
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm text-admin-muted mb-2"
+            >Quality (75-100)</label
+          >
+          <input
+            type="range"
+            name="images.quality"
+            min="75"
+            max="100"
+            value={settings.images?.quality || 90}
+            class="w-full"
+          />
+          <span id="quality-value" class="text-sm text-admin-muted"
+            >{settings.images?.quality || 90}%</span
+          >
+        </div>
+        <div>
+          <label class="block text-sm text-admin-muted mb-2"
+            >Max Aspect Ratio</label
+          >
+          <input
+            type="number"
+            name="images.maxAspectRatio"
+            step="0.1"
+            value={settings.images?.maxAspectRatio || 3}
+            class="w-full"
+          />
+        </div>
+      </div>
+
+      <div class="mt-4 pt-4 border-t border-admin-border">
+        <label class="block text-sm text-admin-muted mb-2"
+          >New Artwork Position</label
+        >
+        <select name="gallery.newArtworkOrder" class="w-full bg-admin-sidebar">
+          <option
+            value="end"
+            selected={!settings.gallery?.newArtworkOrder ||
+              settings.gallery?.newArtworkOrder === "end"}
+            >Add to end (newest last)</option
+          >
+          <option
+            value="beginning"
+            selected={settings.gallery?.newArtworkOrder === "beginning"}
+            >Add to beginning (newest first)</option
+          >
+        </select>
+        <p class="text-xs text-admin-muted mt-1">
+          Controls where newly uploaded artworks appear in the gallery.
+        </p>
+      </div>
+    </div>
+
+    <!-- 4. Project State -->
+    <div
+      id="project-state"
+      class="card bg-gradient-to-r from-admin-sidebar/80 to-admin-sidebar/40 scroll-mt-24"
+    >
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-lg font-semibold">🏠 Project State</h2>
+          <p class="text-sm text-admin-muted">
+            Current status and lifecycle of your portfolio
+          </p>
+        </div>
+        <span
+          class={`px-3 py-1 text-sm rounded-full border ${
+            stateBadgeColor === "green"
+              ? "bg-green-500/20 text-green-400 border-green-500/30"
+              : stateBadgeColor === "blue"
+                ? "bg-blue-500/20 text-blue-400 border-blue-500/30"
+                : stateBadgeColor === "orange"
+                  ? "bg-orange-500/20 text-orange-400 border-orange-500/30"
+                  : stateBadgeColor === "yellow"
+                    ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
+                    : "bg-gray-500/20 text-gray-400 border-gray-500/30"
+          }`}
+        >
+          {stateLabel}
+        </span>
+      </div>
+
+      {
+        usingDemoContent && (
+          <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-4">
+            <div class="flex items-center gap-3">
+              <span class="text-2xl">🎨</span>
+              <div class="flex-1">
+                <h4 class="font-medium text-blue-400">Demo Content Active</h4>
+                <p class="text-sm text-admin-muted">
+                  You're viewing demo content. Replace with your own content to
+                  go live.
+                </p>
+              </div>
+              <a href="/content" class="btn btn-secondary text-sm">
+                Manage Content →
+              </a>
+            </div>
+          </div>
+        )
+      }
+
+      {
+        stateDetails.imageIssue && (
+          <div class="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mb-4">
+            <div class="flex items-center gap-2 text-sm">
+              <span class="text-red-400">⚠️</span>
+              <span class="text-red-400">{stateDetails.imageIssue}</span>
+            </div>
+          </div>
+        )
+      }
+
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm mb-4">
+        <div class="bg-admin-bg rounded-lg p-3 text-center">
+          <div
+            class={stateDetails.hasSettings
+              ? "text-green-500"
+              : "text-yellow-500"}
+          >
+            {stateDetails.hasSettings ? "✓" : "○"}
+          </div>
+          <div class="text-admin-muted">Settings</div>
+        </div>
+        <div class="bg-admin-bg rounded-lg p-3 text-center">
+          <div
+            class={stateDetails.hasArtworks
+              ? "text-green-500"
+              : "text-yellow-500"}
+          >
+            {stateDetails.hasArtworks ? "✓" : "○"}
+          </div>
+          <div class="text-admin-muted">Artworks</div>
+        </div>
+        <div class="bg-admin-bg rounded-lg p-3 text-center">
+          <div
+            class={stateDetails.hasTheme ? "text-green-500" : "text-yellow-500"}
+          >
+            {stateDetails.hasTheme ? "✓" : "○"}
+          </div>
+          <div class="text-admin-muted">Theme</div>
+        </div>
+        <div class="bg-admin-bg rounded-lg p-3 text-center">
+          <div
+            class={stateDetails.hasFilesFolder
+              ? "text-green-500"
+              : "text-yellow-500"}
+          >
+            {stateDetails.hasFilesFolder ? "✓" : "○"}
+          </div>
+          <div class="text-admin-muted">Files</div>
+        </div>
+        <div class="bg-admin-bg rounded-lg p-3 text-center">
+          <div
+            class={stateDetails.hasWorkingImages
+              ? "text-green-500"
+              : "text-red-500"}
+          >
+            {stateDetails.hasWorkingImages ? "✓" : "✗"}
+          </div>
+          <div class="text-admin-muted">Images</div>
+        </div>
+      </div>
+
+      {/* Theme Info */}
+      {
+        stateDetails.themeInfo && (
+          <div class="bg-admin-bg rounded-lg p-3 flex items-center gap-3">
+            <span class="text-lg">
+              {stateDetails.themeInfo.source === "builtin"
+                ? "🏛️"
+                : stateDetails.themeInfo.source === "custom"
+                  ? "🎨"
+                  : stateDetails.themeInfo.source === "repo"
+                    ? "📦"
+                    : "❓"}
+            </span>
+            <div class="flex-1">
+              <div class="font-medium text-sm">
+                {stateDetails.themeInfo.name}
+              </div>
+              <div class="text-xs text-admin-muted">
+                {stateDetails.themeInfo.source === "builtin" &&
+                  "Built-in theme (read-only)"}
+                {stateDetails.themeInfo.source === "custom" && "Custom theme"}
+                {stateDetails.themeInfo.source === "repo" &&
+                  "External theme repository"}
+                {stateDetails.themeInfo.source === "none" && "Theme not found"}
+              </div>
+            </div>
+            <a
+              href="/style/customize"
+              class="text-xs text-blue-400 hover:underline"
+            >
+              Customize →
+            </a>
+          </div>
+        )
+      }
+    </div>
+
+    <!-- 5. Authentication -->
+    <div id="authentication" class="card border-admin-accent scroll-mt-24">
+      <h2 class="text-lg font-semibold mb-2">🔐 Authentication</h2>
+      <p class="text-sm text-admin-muted mb-6">
+        Configure how administrators log in to this panel.
+      </p>
+
+      <!-- Auth Method Selector -->
+      <div class="mb-6">
+        <label class="block text-sm text-admin-muted mb-3"
+          >Authentication Method</label
+        >
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- No Auth -->
+          <label class="auth-method-card" data-auth-method="none">
+            <input
+              type="radio"
+              name="auth.method"
+              value="none"
+              class="hidden"
+              checked={!settings.auth?.method ||
+                settings.auth?.method === "none"}
+            />
+            <div
+              class="p-4 bg-admin-sidebar rounded-lg border-2 border-transparent cursor-pointer hover:border-admin-border transition-colors"
+            >
+              <div class="text-2xl mb-2">🔓</div>
+              <div class="font-semibold">No Authentication</div>
+              <p class="text-xs text-admin-muted mt-1">
+                Open access (not recommended for production)
+              </p>
+            </div>
+          </label>
+
+          <!-- Basic Auth -->
+          <label class="auth-method-card" data-auth-method="basic">
+            <input
+              type="radio"
+              name="auth.method"
+              value="basic"
+              class="hidden"
+              checked={settings.auth?.method === "basic"}
+            />
+            <div
+              class="p-4 bg-admin-sidebar rounded-lg border-2 border-transparent cursor-pointer hover:border-admin-border transition-colors"
+            >
+              <div class="text-2xl mb-2">🔑</div>
+              <div class="font-semibold">Basic Auth</div>
+              <p class="text-xs text-admin-muted mt-1">
+                Username & password login
+              </p>
+            </div>
+          </label>
+
+          <!-- GitHub OAuth -->
+          <label class="auth-method-card" data-auth-method="github">
+            <input
+              type="radio"
+              name="auth.method"
+              value="github"
+              class="hidden"
+              checked={settings.auth?.method === "github"}
+            />
+            <div
+              class="p-4 bg-admin-sidebar rounded-lg border-2 border-transparent cursor-pointer hover:border-admin-border transition-colors"
+            >
+              <div class="text-2xl mb-2">🐙</div>
+              <div class="font-semibold">GitHub OAuth</div>
+              <p class="text-xs text-admin-muted mt-1">
+                Sign in with GitHub account
+              </p>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Basic Auth Settings -->
+      <div id="auth-basic-settings" class="auth-settings space-y-4 hidden">
+        <div class="bg-admin-sidebar rounded-lg p-4">
+          <h3 class="font-medium mb-4">Basic Authentication Setup</h3>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm text-admin-muted mb-2">Username</label
+              >
+              <input
+                type="text"
+                id="account-username"
+                name="auth.basic.username"
+                value={settings.auth?.basic?.username || "admin"}
+                class="w-full"
+                autocomplete="username"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm text-admin-muted mb-2"
+                >Current Password</label
+              >
+              <input
+                type="password"
+                id="current-password"
+                placeholder="Enter current password to make changes"
+                class="w-full"
+                autocomplete="current-password"
+              />
+            </div>
+          </div>
+
+          <div class="border-t border-admin-border pt-4 mt-4">
+            <label class="block text-sm text-admin-muted mb-2"
+              >New Password</label
+            >
+            <input
+              type="password"
+              id="new-password"
+              placeholder="Leave empty to keep current, or enter to set new"
+              class="w-full"
+              autocomplete="new-password"
+            />
+            <div id="account-password-strength" class="mt-2 text-xs"></div>
+
+            <div class="mt-3">
+              <label class="block text-sm text-admin-muted mb-2"
+                >Confirm New Password</label
+              >
+              <input
+                type="password"
+                id="confirm-password"
+                placeholder="Confirm new password"
+                class="w-full"
+                autocomplete="new-password"
+              />
+              <div id="password-match" class="mt-1 text-xs"></div>
+            </div>
+          </div>
+
+          <div class="bg-admin-card rounded-lg p-3 mt-4 text-sm">
+            <div class="font-medium mb-2">Password Requirements:</div>
+            <ul class="text-admin-muted space-y-1 text-xs grid grid-cols-2">
+              <li id="req-length" class="flex items-center gap-2">
+                <span class="req-icon">○</span> At least 8 characters
+              </li>
+              <li id="req-upper" class="flex items-center gap-2">
+                <span class="req-icon">○</span> Uppercase letter
+              </li>
+              <li id="req-lower" class="flex items-center gap-2">
+                <span class="req-icon">○</span> Lowercase letter
+              </li>
+              <li id="req-number" class="flex items-center gap-2">
+                <span class="req-icon">○</span> Number
+              </li>
+              <li id="req-special" class="flex items-center gap-2">
+                <span class="req-icon">○</span> Special character (!@#$%^&*)
+              </li>
+            </ul>
+          </div>
+
+          <div class="flex items-center gap-4 mt-4">
+            <button
+              type="button"
+              id="save-account-btn"
+              class="btn btn-primary"
+              disabled
+            >
+              🔒 Update Credentials
+            </button>
+            <span id="account-status" class="text-sm text-admin-muted"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- GitHub OAuth Settings -->
+      <div id="auth-github-settings" class="auth-settings space-y-4 hidden">
+        <div class="bg-admin-sidebar rounded-lg p-4">
+          <h3 class="font-medium mb-4">GitHub OAuth Setup</h3>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm text-admin-muted mb-2"
+                >GitHub Client ID</label
+              >
+              <input
+                type="text"
+                name="auth.github.clientId"
+                value={settings.auth?.github?.clientId || ""}
+                class="w-full font-mono text-sm"
+                placeholder="Ov23li..."
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm text-admin-muted mb-2"
+                >GitHub Client Secret</label
+              >
+              <input
+                type="password"
+                name="auth.github.clientSecret"
+                value={settings.auth?.github?.clientSecret || ""}
+                class="w-full font-mono text-sm"
+                placeholder="••••••••••••••••"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm text-admin-muted mb-2"
+                >Allowed GitHub Usernames</label
+              >
+              <input
+                type="text"
+                name="auth.github.allowedUsers"
+                value={settings.auth?.github?.allowedUsers || ""}
+                class="w-full"
+                placeholder="username1, username2"
+              />
+              <p class="text-xs text-admin-muted mt-1">
+                Comma-separated list. Leave empty to allow any GitHub user.
+              </p>
+            </div>
+
+            <div>
+              <label class="block text-sm text-admin-muted mb-2"
+                >Callback URL</label
+              >
+              <div class="flex gap-2">
+                <input
+                  type="text"
+                  id="github-callback-url"
+                  value={`${settings.site?.adminUrl || "http://localhost:4321"}/auth/callback`}
+                  class="w-full font-mono text-sm bg-admin-card"
+                  readonly
+                />
+                <button
+                  type="button"
+                  id="copy-callback-url"
+                  class="btn btn-secondary text-sm">Copy</button
+                >
+              </div>
+              <p class="text-xs text-admin-muted mt-1">
+                Add this URL to your GitHub OAuth App settings.
+              </p>
+            </div>
+          </div>
+
+          <div class="bg-admin-card rounded-lg p-4 mt-4">
+            <h4 class="font-medium mb-2">📖 Setup Guide</h4>
+            <ol class="text-sm text-admin-muted space-y-2">
+              <li>
+                1. Go to <a
+                  href="https://github.com/settings/developers"
+                  target="_blank"
+                  class="text-admin-accent hover:underline"
+                  >GitHub Developer Settings</a
+                >
+              </li>
+              <li>2. Click "New OAuth App"</li>
+              <li>3. Set Homepage URL to your site URL</li>
+              <li>
+                4. Set Authorization callback URL to the callback URL above
+              </li>
+              <li>5. Copy Client ID and Client Secret here</li>
+              <li>6. Save settings and test login</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+
+      <!-- No Auth Warning -->
+      <div id="auth-none-settings" class="auth-settings">
+        <div
+          class="bg-admin-warning/10 border border-admin-warning rounded-lg p-4"
+        >
+          <div class="flex items-start gap-3">
+            <span class="text-2xl">⚠️</span>
+            <div>
+              <h4 class="font-medium text-admin-warning">
+                No Authentication Enabled
+              </h4>
+              <p class="text-sm text-admin-muted mt-1">
+                Anyone who knows this admin URL can access and modify your site.
+                This is suitable for local development only.
+              </p>
+              <p class="text-sm text-admin-muted mt-2">
+                For production, choose <strong>Basic Auth</strong> or <strong
+                  >GitHub OAuth</strong
+                > above.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <!-- 7. Git Integration -->
+  <div id="git" class="card max-w-4xl mt-8 scroll-mt-24">
+    <h2 class="text-lg font-semibold mb-6">🐙 Git Integration</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm text-admin-muted mb-2">Remote</label>
+        <input
+          type="text"
+          name="git.remote"
+          value={settings.git?.remote || "origin"}
+          class="w-full"
+        />
+      </div>
+      <div>
+        <label class="block text-sm text-admin-muted mb-2">Branch</label>
+        <input
+          type="text"
+          name="git.branch"
+          value={settings.git?.branch || "main"}
+          class="w-full"
+        />
+      </div>
+      <div>
+        <label class="block text-sm text-admin-muted mb-2">Commit Prefix</label>
+        <input
+          type="text"
+          name="git.commitPrefix"
+          value={settings.git?.commitPrefix || "[ArtSiteMaker]"}
+          class="w-full"
+        />
+      </div>
+      <div class="flex items-center gap-3 pt-6">
+        <input
+          type="checkbox"
+          name="git.autoCommit"
+          id="autoCommit"
+          checked={settings.git?.autoCommit}
+          class="w-5 h-5"
+        />
+        <label for="autoCommit" class="text-sm">Auto-commit on save</label>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8. Custom Domain -->
+  <div id="custom-domain" class="card max-w-4xl mt-8 scroll-mt-24">
+    <h2 class="text-lg font-semibold mb-2">🌐 Custom Domain</h2>
+    <p class="text-admin-muted mb-6">
+      Point a custom domain at your deployed gallery site.
+    </p>
+    <div
+      id="custom-domain-help-data"
+      class="hidden"
+      data-project-name={customDomainProjectName}
+    ></div>
+
+    <div class="space-y-5">
+      <!-- Enable toggle -->
+      <label class="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          id="custom-domain-enabled"
+          class="w-5 h-5 accent-primary"
+          checked={customDomainEnabled}
+        />
+        <span class="text-sm font-medium">Use custom domain</span>
+      </label>
+
+      <!-- Fields (shown when enabled) -->
+      <div id="custom-domain-fields" class={`space-y-5 ${customDomainEnabled ? "" : "hidden"}`}>
+        <!-- SUMMARY MODE (shown when configured) -->
+        <div id="custom-domain-summary" class={`flex items-center gap-3 p-3 bg-admin-sidebar rounded-lg ${customDomainDomain ? "" : "hidden"}`}>
+          <div class="flex-1 flex items-center gap-3">
+            <span id="custom-domain-summary-domain" class="text-sm font-medium">{customDomainDomain}</span>
+            <span id="custom-domain-summary-hosting" class="text-xs px-2 py-1 rounded bg-admin-bg text-admin-muted">{customDomainHostingTarget === "cloudflare_pages" ? "Cloudflare Pages" : "Manual DNS"}</span>
+            <span
+              id="custom-domain-summary-status"
+              class={`text-xs px-2 py-1 rounded ${
+                customDomainDnsStatus === "active"
+                  ? "bg-green-500/10 text-green-400"
+                  : customDomainDnsStatus === "pending"
+                    ? "bg-yellow-500/10 text-yellow-400"
+                    : customDomainDnsStatus === "error"
+                      ? "bg-red-500/10 text-red-400"
+                      : "bg-admin-bg text-admin-muted"
+              }`}
+            >
+              {customDomainDnsStatus === "active"
+                ? "Active"
+                : customDomainDnsStatus === "pending"
+                  ? "Pending"
+                  : customDomainDnsStatus === "error"
+                    ? "Error"
+                    : "Not configured"}
+            </span>
+          </div>
+          <button
+            type="button"
+            id="custom-domain-edit-btn"
+            class="btn btn-secondary text-sm"
+          >
+            Edit
+          </button>
+        </div>
+
+        <!-- EDIT MODE (form) -->
+        <div id="custom-domain-edit" class={`space-y-5 ${customDomainDomain ? "hidden" : ""}`}>
+          <!-- Step 1: Domain input -->
+          <div>
+            <label class="block text-sm text-admin-muted mb-2" for="custom-domain-input">Domain name</label>
+            <input
+              type="text"
+              id="custom-domain-input"
+              value={customDomainDomain}
+              class="w-full"
+              placeholder="example.com or www.example.com"
+            />
+            <!-- Inline apex helper (shown when apex detected) -->
+            <div id="custom-domain-apex-hint" class={`text-xs text-admin-muted mt-2 ${customDomainIsApex ? "" : "hidden"}`}>
+              ✓ Apex detected — you can also add
+              <label class="inline-flex items-center gap-1 ml-1 cursor-pointer">
+                <input type="checkbox" id="custom-domain-add-www" class="w-4 h-4 accent-primary" checked={customDomainAddWww} />
+                <span id="custom-domain-www-preview">{customDomainWwwPreview}</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Step 2: Hosting target (shown after domain entered) -->
+          <div id="custom-domain-hosting-section" class={`${customDomainDomain ? "" : "hidden"}`}>
+            <span class="block text-sm text-admin-muted mb-2">Where is this domain hosted?</span>
+            <div class="flex flex-col gap-2">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="custom-domain-hosting"
+                  value="cloudflare_pages"
+                  class="w-4 h-4 accent-primary"
+                  checked={customDomainHostingTarget === "cloudflare_pages"}
+                />
+                <span class="text-sm">Cloudflare Pages <span class="text-admin-muted">(automatic DNS setup)</span></span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="custom-domain-hosting"
+                  value="elsewhere"
+                  class="w-4 h-4 accent-primary"
+                  checked={customDomainHostingTarget === "elsewhere"}
+                />
+                <span class="text-sm">Elsewhere <span class="text-admin-muted">(manual DNS setup)</span></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Cloudflare-specific: DNS Status + Verify button (shown only for Cloudflare + domain) -->
+          <div id="custom-domain-cloudflare-actions" class={`${customDomainDomain && customDomainHostingTarget === "cloudflare_pages" ? "" : "hidden"}`}>
+            <div class="flex items-center gap-3 flex-wrap">
+              <span class="text-sm text-admin-muted">DNS status:</span>
+              <span
+                id="custom-domain-status-badge"
+                class={`text-xs px-2 py-1 rounded cursor-help ${
+                  customDomainDnsStatus === "active"
+                    ? "bg-green-500/10 text-green-400"
+                    : customDomainDnsStatus === "pending"
+                      ? "bg-yellow-500/10 text-yellow-400"
+                      : customDomainDnsStatus === "error"
+                        ? "bg-red-500/10 text-red-400"
+                        : "bg-admin-bg text-admin-muted"
+                }`}
+                data-status={customDomainDnsStatus}
+                title={customDomainLastChecked ? `Last checked: ${new Date(customDomainLastChecked).toLocaleString()}` : ""}
+              >
+                {customDomainDnsStatus === "active"
+                  ? "Active"
+                  : customDomainDnsStatus === "pending"
+                    ? "Pending"
+                    : customDomainDnsStatus === "error"
+                      ? "Error"
+                      : "Not configured"}
+              </span>
+              <Button
+                type="button"
+                id="custom-domain-help-btn"
+                variant="ghost"
+                size="sm"
+                class="text-admin-muted"
+              >
+                Need help?
+              </Button>
+              <button
+                type="button"
+                id="custom-domain-verify-btn"
+                class="btn btn-secondary text-sm"
+              >
+                Verify DNS
+              </button>
+            </div>
+            <p id="custom-domain-vault-warning" class="text-xs text-yellow-400 mt-2 hidden"></p>
+          </div>
+
+          <!-- Elsewhere-specific message (shown only for elsewhere + domain) -->
+          <div id="custom-domain-elsewhere-message" class={`text-xs text-admin-muted bg-admin-sidebar/50 rounded-lg p-3 ${customDomainDomain && customDomainHostingTarget === "elsewhere" ? "" : "hidden"}`}>
+            <p class="mb-2"><strong>Manual DNS setup required:</strong></p>
+            <p>Add a CNAME or ALIAS record at your domain host pointing to your deployment. No Cloudflare account needed.</p>
+          </div>
+
+          <!-- Error message -->
+          <p id="custom-domain-error" class={`text-sm text-red-400 ${customDomainErrorMessage ? "" : "hidden"}`}>{customDomainErrorMessage || ""}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Secrets Vault Component -->
+  <SecretsVault />
+
+  <!-- Setup Master Password Modal -->
+  <Modal
+    id="custom-domain-help-modal"
+    title="Custom Domain Verification"
+    showActions={false}
+    size="lg"
+  >
+    <div class="space-y-4 text-sm">
+      <div class="bg-admin-sidebar/50 rounded-lg p-3">
+        <div class="text-xs uppercase tracking-wide text-admin-muted">
+          Domain
+        </div>
+        <div id="custom-domain-help-domain" class="text-base font-semibold">
+          —
+        </div>
+        <p
+          id="custom-domain-help-status"
+          class="text-xs text-admin-muted mt-1"
+        >
+          Cloudflare is verifying your DNS. This can take up to 24 hours.
+        </p>
+      </div>
+
+      <div class="bg-admin-sidebar/50 rounded-lg p-3">
+        <p class="font-medium text-admin-text mb-2">What happens next</p>
+        <ul class="list-disc list-inside space-y-1 text-admin-muted">
+          <li>Cloudflare checks your DNS record and validates the domain</li>
+          <li>Your domain switches to Active automatically after verification</li>
+          <li>You will get an email from Cloudflare when verification completes</li>
+        </ul>
+      </div>
+
+      <div
+        id="custom-domain-help-record"
+        class="bg-admin-sidebar/50 rounded-lg p-3 hidden"
+      >
+        <p class="font-medium text-admin-text mb-2">Expected DNS record</p>
+        <div class="grid gap-2 md:grid-cols-2 text-xs text-admin-muted">
+          <div>
+            <div class="uppercase tracking-wide text-admin-muted">Host</div>
+            <code id="custom-domain-help-record-name" class="text-admin-text">
+              —
+            </code>
+          </div>
+          <div>
+            <div class="uppercase tracking-wide text-admin-muted">Target</div>
+            <code id="custom-domain-help-record-target" class="text-admin-text">
+              —
+            </code>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between">
+        <a
+          href="https://dash.cloudflare.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="text-primary hover:underline text-sm"
+        >
+          Open Cloudflare dashboard
+        </a>
+        <Button type="button" variant="secondary" size="sm" class="close-modal">
+          Close
+        </Button>
+      </div>
+    </div>
+  </Modal>
+
+
+</AdminLayout>
+
+<style>
+
+
+  /* Auth method card styling */
+  .auth-method-card input:checked + div {
+    border-color: var(--admin-accent);
+    background: var(--admin-card);
+  }
+
+  .auth-method-card input:checked + div::before {
+    content: "✓";
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 20px;
+    height: 20px;
+    background: var(--admin-accent);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: white;
+  }
+
+  .auth-method-card > div {
+    position: relative;
+  }
+
+  /* Storage method card styling */
+  .storage-method-card input:checked + div {
+    border-color: var(--admin-accent);
+    background: var(--admin-card);
+  }
+
+  .storage-method-card > div {
+    position: relative;
+  }
+
+  #refresh-content-path-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  #refresh-content-path-btn .refresh-icon {
+    display: inline-block;
+  }
+
+  #refresh-content-path-btn[data-refreshing="true"] .refresh-icon {
+    animation: refresh-spin 1s linear infinite;
+  }
+
+  @keyframes refresh-spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+</style>
+
+<script>
+  import { createUnsavedChangesGuard } from "../../lib/form-save-handler";
+  import {
+    readLocalStorage,
+    writeLocalStorage,
+    removeLocalStorage,
+  } from "../../lib/client-storage";
+
+  // Type definitions for Secrets
+  type SecretsData = {
+    encryption_version: string;
+    auth?: { type: "none" | "password" | "github"; github_client_id?: string; github_client_secret?: string };
+    r2?: { account_id: string; access_key_id: string; secret_access_key: string };
+    deployment?: { type: "static" | "ftp" | "sftp" | "git"; ftp_host?: string; ftp_user?: string; ftp_password?: string; github_token?: string; deploy_repo?: string };
+    cloudflare?: { account_id: string; api_token: string };
+  };
+
+  function normalizeDomainInput(input: string): string {
+    if (!input) return "";
+    const stripped = input.toLowerCase().trim().replace(/^https?:\/\//, "");
+    const withoutPath = stripped.split("/")[0].split("?")[0].split("#")[0];
+    return withoutPath.replace(/:\d+$/, "").replace(/\.+$/, "");
+  }
+
+  function getApexDomain(input: string): string {
+    const normalized = normalizeDomainInput(input);
+    const parts = normalized.split(".").filter(Boolean);
+    if (parts.length <= 2) return normalized;
+    return parts.slice(-2).join(".");
+  }
+
+  function isApexDomain(input: string): boolean {
+    const normalized = normalizeDomainInput(input);
+    const parts = normalized.split(".").filter(Boolean);
+    return parts.length === 2;
+  }
+
+  // Configuration Form Script
+  const form = document.getElementById("config-form") as HTMLFormElement;
+  const saveBtn = document.getElementById(
+    "config-save-btn",
+  ) as HTMLButtonElement;
+  const saveStatus = document.getElementById("save-status");
+  // Vault state (synced from SecretsVault component)
+  let vaultState: "not-initialized" | "locked" | "unlocked" = "locked";
+  let hasUnsavedChanges = false;
+
+  function updateConfigStatus(text: string) {
+    if (saveStatus) saveStatus.textContent = text;
+  }
+
+  const settingsSkipFields = [
+    "imageStorage",
+    "r2.publicUrl",
+    "r2.bucketName",
+    "r2.projectFolder",
+    "external.baseUrl",
+    "external.pathPrefix",
+  ];
+
+  // Change detection
+  function enableSave() {
+    if (saveBtn) saveBtn.disabled = false;
+  }
+
+  function markUnsaved() {
+    hasUnsavedChanges = true;
+    enableSave();
+  }
+
+  form?.addEventListener("input", markUnsaved);
+  form?.addEventListener("change", markUnsaved);
+
+  const navigationGuard = createUnsavedChangesGuard({
+    hasChanges: () => hasUnsavedChanges,
+  });
+  navigationGuard.attach();
+
+  // Form submission
+  form?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (saveBtn) saveBtn.disabled = true;
+    updateConfigStatus("Saving...");
+
+    const formData = new FormData(form);
+    const data: Record<string, any> = {};
+
+    formData.forEach((value, key) => {
+      data[key] = value;
+    });
+
+    // Handle checkboxes
+    const checkboxes = form.querySelectorAll('input[type="checkbox"]');
+    checkboxes.forEach((cb) => {
+      const input = cb as HTMLInputElement;
+      data[input.name] = input.checked;
+    });
+
+    // Extract userDataPath for artis.config.yaml (bootstrap only)
+    const userDataPath = data.userDataPath;
+
+    // Prepare Secrets Data
+    const secretsData: SecretsData = {
+      encryption_version: "1.0",
+    };
+
+    // R2 Secrets
+    const r2AccountId = (
+      document.getElementById("r2-account-id") as HTMLInputElement
+    )?.value;
+    const r2AccessKeyId = (
+      document.getElementById("r2-access-key-id") as HTMLInputElement
+    )?.value;
+    const r2SecretKey = (
+      document.getElementById("r2-secret-access-key") as HTMLInputElement
+    )?.value;
+    if (r2AccountId || r2AccessKeyId || r2SecretKey) {
+      secretsData.r2 = {
+        account_id: r2AccountId,
+        access_key_id: r2AccessKeyId,
+        secret_access_key: r2SecretKey,
+      };
+    }
+    // Auth Secrets
+    const githubClientId = (
+      document.getElementById("github-client-id") as HTMLInputElement
+    )?.value;
+    const githubClientSecret = (
+      document.getElementById("github-client-secret") as HTMLInputElement
+    )?.value;
+    if (githubClientId || githubClientSecret) {
+      secretsData.auth = {
+        type: "github",
+        github_client_id: githubClientId,
+        github_client_secret: githubClientSecret,
+      };
+    }
+    // Deployment Secrets
+    const deployTypeEl = document.getElementById(
+      "deploy-type",
+    ) as HTMLSelectElement;
+    const deployTypeVal = deployTypeEl?.value as "ftp" | "git" | "";
+    if (deployTypeVal) {
+      if (deployTypeVal === "ftp") {
+        secretsData.deployment = {
+          type: "ftp",
+          ftp_host: (document.getElementById("ftp-host") as HTMLInputElement)
+            ?.value,
+          ftp_user: (document.getElementById("ftp-user") as HTMLInputElement)
+            ?.value,
+          ftp_password: (
+            document.getElementById("ftp-password") as HTMLInputElement
+          )?.value,
+        };
+      } else if (deployTypeVal === "git") {
+        secretsData.deployment = {
+          type: "git",
+          github_token: (
+            document.getElementById("github-token") as HTMLInputElement
+          )?.value,
+          deploy_repo: (
+            document.getElementById("deploy-repo") as HTMLInputElement
+          )?.value,
+        };
+      }
+    }
+    // Cloudflare Secrets
+    const cfAccountId = (
+      document.getElementById("cf-account-id") as HTMLInputElement
+    )?.value;
+    const cfApiToken = (
+      document.getElementById("cf-api-token") as HTMLInputElement
+    )?.value;
+    if (cfAccountId || cfApiToken) {
+      secretsData.cloudflare = {
+        account_id: cfAccountId,
+        api_token: cfApiToken,
+      };
+    }
+
+    try {
+      const results: { type: string; ok: boolean; error: string | null }[] = [];
+
+      // 1. Config (optional) - update path before writing settings/secrets
+      let configOk = true;
+      if (userDataPath) {
+        const res = await fetch("/api/config", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userDataPath }),
+        });
+        results.push({
+          type: "config",
+          ok: res.ok,
+          error: !res.ok ? await res.text() : null,
+        });
+        configOk = res.ok;
+      }
+
+      // 2. Settings
+      if (configOk) {
+        const settingsPayload = { ...data };
+        settingsSkipFields.forEach((field) => {
+          delete settingsPayload[field];
+        });
+
+        const res = await fetch("/api/settings", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(settingsPayload),
+        });
+        results.push({
+          type: "settings",
+          ok: res.ok,
+          error: !res.ok ? await res.text() : null,
+        });
+      }
+
+      // 3. Image hosting config
+      if (configOk) {
+        const imageHostingPayload = {
+          imageStorage: data.imageStorage,
+          r2: {
+            publicUrl: data["r2.publicUrl"] || "",
+            bucketName: data["r2.bucketName"] || "",
+            projectFolder: data["r2.projectFolder"] || "",
+          },
+          external: {
+            baseUrl: data["external.baseUrl"] || "",
+            pathPrefix: data["external.pathPrefix"] || "",
+          },
+        };
+
+        const res = await fetch("/api/image-hosting", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(imageHostingPayload),
+        });
+        results.push({
+          type: "image-hosting",
+          ok: res.ok,
+          error: !res.ok ? await res.text() : null,
+        });
+      }
+
+      // 4. Secrets (if unlocked and data exists)
+      if (configOk) {
+        const secretsStatusRes = await fetch("/api/secrets/status");
+        const secretsStatus = await secretsStatusRes.json();
+
+        if (
+          secretsStatus.unlocked &&
+          (secretsData.r2 ||
+            secretsData.auth ||
+            secretsData.deployment ||
+            secretsData.cloudflare)
+        ) {
+          const r = await fetch("/api/secrets/data", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ data: secretsData }),
+          });
+          const res = await r.json();
+          results.push({
+            type: "secrets",
+            ok: r.ok,
+            error: res.error || (r.ok ? null : "Failed to save secrets"),
+          });
+        }
+      }
+
+      const failed = results.filter((r) => !r.ok);
+
+      if (failed.length === 0) {
+        await reloadSettingsFromSelectedPath({ silent: true });
+        updateConfigStatus("✓ Saved");
+        hasUnsavedChanges = false;
+        window.dispatchEvent(
+          new CustomEvent("artsitemaker:toast", {
+            detail: {
+              title: "Configuration and secrets saved successfully",
+              variant: "success",
+            },
+          }),
+        );
+        setTimeout(() => updateConfigStatus(""), 2000);
+      } else {
+        const errorMsg = failed.map((f) => f.type).join(", ") + " failed";
+        updateConfigStatus(`✗ Save failed`);
+        window.dispatchEvent(
+          new CustomEvent("artsitemaker:toast", {
+            detail: {
+              title: "Save failed",
+              description: errorMsg,
+              variant: "destructive",
+            },
+          }),
+        );
+        // Re-enable to retry
+        if (saveBtn) saveBtn.disabled = false;
+      }
+    } catch (e) {
+      updateConfigStatus("✗ Save failed");
+      window.dispatchEvent(
+        new CustomEvent("artsitemaker:toast", {
+          detail: {
+            title: "Save failed",
+            description:
+              e instanceof Error ? e.message : "An unexpected error occurred",
+            variant: "destructive",
+          },
+        }),
+      );
+      if (saveBtn) saveBtn.disabled = false;
+    }
+  });
+
+  // Process all button
+  document
+    .getElementById("process-all-btn")
+    ?.addEventListener("click", async () => {
+      const btn = document.getElementById(
+        "process-all-btn",
+      ) as HTMLButtonElement;
+      btn.disabled = true;
+      btn.textContent = "⏳ Processing...";
+
+      try {
+        const res = await fetch("/api/process", {
+          method: "POST",
+          body: JSON.stringify({}),
+        });
+        const data = await res.json();
+        window.dispatchEvent(
+          new CustomEvent("artsitemaker:toast", {
+            detail: {
+              title: "Processing Complete",
+              description: `Processed ${data.processed?.length || 0} images`,
+              variant: "success",
+            },
+          }),
+        );
+        location.reload();
+      } catch (e) {
+        window.dispatchEvent(
+          new CustomEvent("artsitemaker:toast", {
+            detail: {
+              title: "Processing failed",
+              description: "An unexpected error occurred.",
+              variant: "destructive",
+            },
+          }),
+        );
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "⚡ Process All";
+      }
+    });
+
+  // Quality slider
+  const qualitySlider = document.querySelector(
+    'input[name="images.quality"]',
+  ) as HTMLInputElement;
+  const qualityValue = document.getElementById("quality-value");
+  qualitySlider?.addEventListener("input", () => {
+    if (qualityValue) qualityValue.textContent = `${qualitySlider.value}%`;
+  });
+
+  // ========== Image Storage Switching ==========
+  function refreshStorageUI() {
+    updateStorageSettingsVisibility();
+    const selectedStorage = document.querySelector(
+      'input[name="imageStorage"]:checked',
+    ) as HTMLInputElement | null;
+    updateStorageCheckmarks(selectedStorage?.value || "local");
+    updateSyncButtonState();
+    updateAuthSettingsVisibility();
+  }
+
+  function updateStorageSettingsVisibility() {
+    const selectedStorage = document.querySelector(
+      'input[name="imageStorage"]:checked',
+    ) as HTMLInputElement;
+    const storage = selectedStorage?.value || "local";
+
+    const r2Settings = document.getElementById("r2-settings");
+    const localInfo = document.getElementById("local-storage-info");
+    const externalSettings = document.getElementById("external-settings");
+
+    if (r2Settings) r2Settings.classList.toggle("hidden", storage !== "r2");
+    if (localInfo) localInfo.classList.toggle("hidden", storage !== "local");
+    if (externalSettings)
+      externalSettings.classList.toggle("hidden", storage !== "external");
+  }
+
+  // Update checkmark visibility based on selected storage
+  function updateStorageCheckmarks(storage: string) {
+    document.querySelectorAll(".storage-checkmark").forEach((checkmark) => {
+      const checkmarkStorage = checkmark.getAttribute("data-checkmark");
+      checkmark.classList.toggle("hidden", checkmarkStorage !== storage);
+    });
+
+    // Also update card border styling
+    document.querySelectorAll(".storage-card").forEach((card) => {
+      const cardStorage = card.getAttribute("data-storage");
+      if (cardStorage === storage) {
+        card.classList.add("border-admin-accent");
+        card.classList.remove("border-transparent");
+      } else {
+        card.classList.remove("border-admin-accent");
+        card.classList.add("border-transparent");
+      }
+    });
+  }
+
+  // Save imageStorage when changed (to artis.config.yaml with immediate effect)
+  async function saveImageStorage(storage: string) {
+    try {
+      // Also collect R2 settings to save them together
+      const r2PublicUrlInput = document.querySelector(
+        'input[name="r2.publicUrl"]',
+      ) as HTMLInputElement;
+      const r2BucketNameInput = document.querySelector(
+        'input[name="r2.bucketName"]',
+      ) as HTMLInputElement;
+      const r2ProjectFolderInput = document.querySelector(
+        'input[name="r2.projectFolder"]',
+      ) as HTMLInputElement;
+
+      const res = await fetch("/api/image-storage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          imageStorage: storage,
+          r2PublicUrl: r2PublicUrlInput?.value || "",
+          r2BucketName: r2BucketNameInput?.value || "",
+          r2ProjectPrefix: r2ProjectFolderInput?.value || "",
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        window.dispatchEvent(
+          new CustomEvent("artsitemaker:toast", {
+            detail: {
+              title: "Image storage updated",
+              description:
+                "Changes are now active. Preview will use the new storage location.",
+              variant: "success",
+            },
+          }),
+        );
+      } else {
+        window.dispatchEvent(
+          new CustomEvent("artsitemaker:toast", {
+            detail: {
+              title: data.error || "Failed to save",
+              variant: "destructive",
+            },
+          }),
+        );
+      }
+    } catch (e) {
+      window.dispatchEvent(
+        new CustomEvent("artsitemaker:toast", {
+          detail: {
+            title: "Failed to save image storage setting",
+            variant: "destructive",
+          },
+        }),
+      );
+    }
+  }
+
+  // Initialize checkmarks on page load
+  const initialStorage = document.querySelector(
+    'input[name="imageStorage"]:checked',
+  ) as HTMLInputElement;
+  if (initialStorage) {
+    updateStorageCheckmarks(initialStorage.value);
+  }
+
+  document.querySelectorAll('input[name="imageStorage"]').forEach((radio) => {
+    radio.addEventListener("change", (e) => {
+      const storage = (e.target as HTMLInputElement).value;
+      updateStorageSettingsVisibility();
+      updateStorageCheckmarks(storage);
+      saveImageStorage(storage);
+    });
+  });
+
+  // R2 Connection Test
+  document
+    .getElementById("test-r2-btn")
+    ?.addEventListener("click", async () => {
+      const btn = document.getElementById("test-r2-btn") as HTMLButtonElement;
+      const statusEl = document.getElementById("r2-status");
+
+      btn.disabled = true;
+      btn.textContent = "⏳ Testing...";
+      if (statusEl)
+        statusEl.innerHTML =
+          '<span class="text-admin-muted">Checking connection...</span>';
+
+      try {
+        // Read credentials from Secrets Vault fields (populated when vault is unlocked)
+        const accountId =
+          (document.getElementById("r2-account-id") as HTMLInputElement)
+            ?.value || "";
+        const accessKeyId =
+          (document.getElementById("r2-access-key-id") as HTMLInputElement)
+            ?.value || "";
+        const secretAccessKey =
+          (document.getElementById("r2-secret-access-key") as HTMLInputElement)
+            ?.value || "";
+        // Read bucket name from Image Hosting form
+        const bucketNameInput = document.querySelector(
+          'input[name="r2.bucketName"]',
+        ) as HTMLInputElement;
+        const bucketName = bucketNameInput?.value || "";
+
+        if (!accountId) {
+          if (statusEl) {
+            if (vaultState === "locked") {
+              statusEl.innerHTML =
+                '<span class="text-yellow-400">⚠️ Unlock the Secrets Vault below and enter your Account ID first</span>';
+            } else if (vaultState === "not-initialized") {
+              statusEl.innerHTML =
+                '<span class="text-yellow-400">⚠️ Set up the Secrets Vault and enter your Account ID first</span>';
+            } else {
+              statusEl.innerHTML =
+                '<span class="text-yellow-400">⚠️ Enter your Account ID in the Secrets Vault to test the connection</span>';
+            }
+          }
+          return;
+        }
+
+        const res = await fetch("/api/r2/test", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            accountId,
+            accessKeyId,
+            secretAccessKey,
+            bucketName,
+          }),
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          if (statusEl)
+            statusEl.innerHTML =
+              '<span class="text-green-500">✓ Connection successful</span>';
+        } else {
+          if (statusEl)
+            statusEl.innerHTML = `<span class="text-red-400">✗ ${data.error || "Connection failed"}</span>`;
+        }
+      } catch (e) {
+        if (statusEl)
+          statusEl.innerHTML =
+            '<span class="text-red-400">✗ Test failed</span>';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "🔗 Test Connection";
+      }
+    });
+
+  // Cloudflare Pages Credentials Test
+  document
+    .getElementById("test-cf-btn")
+    ?.addEventListener("click", async () => {
+      const btn = document.getElementById("test-cf-btn") as HTMLButtonElement;
+      const statusEl = document.getElementById("cf-test-status");
+
+      btn.disabled = true;
+      btn.textContent = "⏳ Testing...";
+      if (statusEl)
+        statusEl.innerHTML =
+          '<span class="text-admin-muted">Checking credentials...</span>';
+
+      try {
+        const accountId =
+          (document.getElementById("cf-account-id") as HTMLInputElement)
+            ?.value?.trim() || "";
+        const apiToken =
+          (document.getElementById("cf-api-token") as HTMLInputElement)
+            ?.value?.trim() || "";
+
+        if (!accountId || !apiToken) {
+          if (statusEl) {
+            if (vaultState === "locked") {
+              statusEl.innerHTML =
+                '<span class="text-yellow-400">⚠️ Unlock the Secrets Vault below and enter your Account ID and API Token first</span>';
+            } else if (vaultState === "not-initialized") {
+              statusEl.innerHTML =
+                '<span class="text-yellow-400">⚠️ Set up the Secrets Vault and enter your Account ID and API Token first</span>';
+            } else {
+              statusEl.innerHTML =
+                '<span class="text-yellow-400">⚠️ Enter your Account ID and API Token to test the connection</span>';
+            }
+          }
+          return;
+        }
+
+        const res = await fetch("/api/cloudflare/test", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ accountId, apiToken }),
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          const accountLabel = data.accountName
+            ? ` (Account: ${data.accountName})`
+            : "";
+          if (statusEl)
+            statusEl.innerHTML = `<span class="text-green-500">✓ Connection successful${accountLabel}</span>`;
+        } else {
+          if (statusEl)
+            statusEl.innerHTML = `<span class="text-red-400">✗ ${data.error || "Connection failed"}</span>`;
+        }
+      } catch (e) {
+        if (statusEl)
+          statusEl.innerHTML =
+            '<span class="text-red-400">✗ Test failed</span>';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "🔗 Test Connection";
+      }
+    });
+
+  // Storage Diagnostics
+  const diagnosticsRefreshBtn = document.getElementById(
+    "storage-diagnostics-refresh",
+  ) as HTMLButtonElement | null;
+  const diagnosticsCheckBtn = document.getElementById(
+    "storage-diagnostics-check",
+  ) as HTMLButtonElement | null;
+  const diagnosticsStatusEl = document.getElementById(
+    "storage-diagnostics-status",
+  ) as HTMLElement | null;
+  const diagnosticsCheckEl = document.getElementById(
+    "storage-diagnostics-check-result",
+  ) as HTMLElement | null;
+  const diagnosticsJsonEl = document.getElementById(
+    "storage-diagnostics-json",
+  ) as HTMLElement | null;
+  const diagnosticsStorageModeEl = document.getElementById(
+    "diagnostics-storage-mode",
+  ) as HTMLElement | null;
+  const diagnosticsStorageBaseEl = document.getElementById(
+    "diagnostics-storage-base",
+  ) as HTMLElement | null;
+  const diagnosticsVaultStatusEl = document.getElementById(
+    "diagnostics-vault-status",
+  ) as HTMLElement | null;
+  const diagnosticsVaultMissingEl = document.getElementById(
+    "diagnostics-vault-missing",
+  ) as HTMLElement | null;
+  const diagnosticsR2ConfigStatusEl = document.getElementById(
+    "diagnostics-r2-config-status",
+  ) as HTMLElement | null;
+  const diagnosticsR2ConfigMissingEl = document.getElementById(
+    "diagnostics-r2-config-missing",
+  ) as HTMLElement | null;
+  const diagnosticsLocalFilesPathEl = document.getElementById(
+    "diagnostics-local-files-path",
+  ) as HTMLElement | null;
+  const diagnosticsLocalThumbnailsPathEl = document.getElementById(
+    "diagnostics-local-thumbnails-path",
+  ) as HTMLElement | null;
+  const diagnosticsLocalStatusEl = document.getElementById(
+    "diagnostics-local-status",
+  ) as HTMLElement | null;
+  const diagnosticsLocalMissingEl = document.getElementById(
+    "diagnostics-local-missing",
+  ) as HTMLElement | null;
+  const diagnosticsLocalVariantCountsEl = document.getElementById(
+    "diagnostics-local-variant-counts",
+  ) as HTMLElement | null;
+  const diagnosticsLocalThumbnailsCountEl = document.getElementById(
+    "diagnostics-local-thumbnails-count",
+  ) as HTMLElement | null;
+  const diagnosticsUserDataStatusEl = document.getElementById(
+    "diagnostics-user-data-status",
+  ) as HTMLElement | null;
+  const diagnosticsUserDataSummaryEl = document.getElementById(
+    "diagnostics-user-data-summary",
+  ) as HTMLElement | null;
+  const diagnosticsBucketEl = document.getElementById(
+    "diagnostics-r2-bucket",
+  ) as HTMLElement | null;
+  const diagnosticsPublicUrlEl = document.getElementById(
+    "diagnostics-r2-public-url",
+  ) as HTMLElement | null;
+  const diagnosticsPrefixEl = document.getElementById(
+    "diagnostics-r2-prefix",
+  ) as HTMLElement | null;
+  const diagnosticsImageBaseUrlEl = document.getElementById(
+    "diagnostics-image-base-url",
+  ) as HTMLElement | null;
+  const diagnosticsSections = Array.from(
+    document.querySelectorAll("[data-storage-section]"),
+  ) as HTMLElement[];
+  let diagnosticsStorageMode: "local" | "r2" | "external" | "unknown" = "unknown";
+
+  const diagnosticsToneClasses = {
+    ok: "text-green-500",
+    warn: "text-yellow-400",
+    error: "text-red-400",
+    muted: "text-admin-muted",
+  };
+
+  function setDiagnosticsTone(
+    el: HTMLElement | null,
+    tone: keyof typeof diagnosticsToneClasses,
+  ) {
+    if (!el) return;
+    Object.values(diagnosticsToneClasses).forEach((className) => {
+      el.classList.remove(className);
+    });
+    el.classList.add(diagnosticsToneClasses[tone]);
+  }
+
+  function setDiagnosticsText(
+    el: HTMLElement | null,
+    text: string,
+    tone: keyof typeof diagnosticsToneClasses = "muted",
+  ) {
+    if (!el) return;
+    el.textContent = text;
+    setDiagnosticsTone(el, tone);
+  }
+
+  function formatVaultStatus(status: string) {
+    switch (status) {
+      case "ready":
+        return { label: "Ready", tone: "ok" as const };
+      case "vault-uninitialized":
+        return { label: "Not initialized", tone: "warn" as const };
+      case "vault-locked":
+        return { label: "Locked", tone: "warn" as const };
+      case "credentials-missing":
+        return { label: "Missing credentials", tone: "error" as const };
+      case "credentials-incomplete":
+        return { label: "Incomplete credentials", tone: "error" as const };
+      default:
+        return { label: "Unknown", tone: "muted" as const };
+    }
+  }
+
+  function getCheckLabel(storageMode: string) {
+    if (storageMode === "r2") return "🔎 Run R2 Check";
+    if (storageMode === "local") return "🔎 Run Local Check";
+    return "🔎 Check Unavailable";
+  }
+
+  function updateDiagnosticsView(diagnostics: any) {
+    const storageMode = diagnostics?.storageMode || "unknown";
+    diagnosticsStorageMode = storageMode;
+    const siteName = diagnostics?.siteName || "Unknown site";
+    const imageBaseUrl = diagnostics?.imageBaseUrl || "";
+
+    setDiagnosticsText(
+      diagnosticsStorageModeEl,
+      storageMode.toUpperCase(),
+      storageMode === "r2" ? "ok" : "muted",
+    );
+    if (diagnosticsStorageBaseEl) {
+      diagnosticsStorageBaseEl.textContent = `Site: ${siteName}`;
+    }
+
+    diagnosticsSections.forEach((section) => {
+      const sectionMode = section.dataset.storageSection;
+      section.classList.toggle(
+        "hidden",
+        sectionMode !== storageMode,
+      );
+    });
+
+    if (diagnosticsCheckBtn) {
+      diagnosticsCheckBtn.textContent = getCheckLabel(storageMode);
+      const disabled = storageMode !== "r2" && storageMode !== "local";
+      diagnosticsCheckBtn.disabled = disabled;
+      diagnosticsCheckBtn.setAttribute(
+        "data-tooltip",
+        disabled
+          ? "Storage checks are only available for local or R2 modes."
+          : "",
+      );
+    }
+
+    const vaultStatus = diagnostics?.r2?.vault?.status || "unknown";
+    const vaultMissing = diagnostics?.r2?.vault?.missingFields || [];
+    const vaultFormatted = formatVaultStatus(vaultStatus);
+    setDiagnosticsText(
+      diagnosticsVaultStatusEl,
+      vaultFormatted.label,
+      vaultFormatted.tone,
+    );
+    if (diagnosticsVaultMissingEl) {
+      diagnosticsVaultMissingEl.textContent = vaultMissing.length
+        ? `Missing: ${vaultMissing.join(", ")}`
+        : "";
+    }
+
+    const configMissing = diagnostics?.r2?.configMissingFields || [];
+    if (configMissing.length > 0) {
+      setDiagnosticsText(
+        diagnosticsR2ConfigStatusEl,
+        "Missing required fields",
+        "error",
+      );
+      if (diagnosticsR2ConfigMissingEl) {
+        diagnosticsR2ConfigMissingEl.textContent = `Missing: ${configMissing.join(
+          ", ",
+        )}`;
+      }
+    } else {
+      setDiagnosticsText(
+        diagnosticsR2ConfigStatusEl,
+        "Configured",
+        storageMode === "r2" ? "ok" : "muted",
+      );
+      if (diagnosticsR2ConfigMissingEl) {
+        diagnosticsR2ConfigMissingEl.textContent = "";
+      }
+    }
+
+    if (diagnosticsBucketEl) {
+      diagnosticsBucketEl.textContent = diagnostics?.r2?.bucketName || "—";
+    }
+    if (diagnosticsPublicUrlEl) {
+      diagnosticsPublicUrlEl.textContent = diagnostics?.r2?.publicUrl || "—";
+    }
+    if (diagnosticsPrefixEl) {
+      diagnosticsPrefixEl.textContent = diagnostics?.r2?.projectPrefix || "—";
+    }
+    if (diagnosticsImageBaseUrlEl) {
+      diagnosticsImageBaseUrlEl.textContent = imageBaseUrl || "—";
+    }
+
+    if (diagnosticsLocalFilesPathEl) {
+      diagnosticsLocalFilesPathEl.textContent =
+        diagnostics?.local?.filesPath || "—";
+    }
+    if (diagnosticsLocalThumbnailsPathEl) {
+      diagnosticsLocalThumbnailsPathEl.textContent =
+        diagnostics?.local?.thumbnailsPath || "—";
+    }
+    const localMissing: string[] = [];
+    if (diagnostics?.local && diagnostics.local.filesPathExists === false) {
+      localMissing.push("filesPath");
+    }
+    if (diagnostics?.local && diagnostics.local.thumbnailsPathExists === false) {
+      localMissing.push("thumbnailsPath");
+    }
+    if (localMissing.length === 0) {
+      setDiagnosticsText(
+        diagnosticsLocalStatusEl,
+        "Ready",
+        storageMode === "local" ? "ok" : "muted",
+      );
+      if (diagnosticsLocalMissingEl) {
+        diagnosticsLocalMissingEl.textContent = "";
+      }
+    } else {
+      setDiagnosticsText(
+        diagnosticsLocalStatusEl,
+        "Missing paths",
+        "error",
+      );
+      if (diagnosticsLocalMissingEl) {
+        diagnosticsLocalMissingEl.textContent = `Missing: ${localMissing.join(
+          ", ",
+        )}`;
+      }
+    }
+
+    const localCounts = diagnostics?.local?.variantCounts;
+    if (diagnosticsLocalVariantCountsEl) {
+      diagnosticsLocalVariantCountsEl.textContent = localCounts
+        ? `originals: ${localCounts.originals} • large: ${localCounts.large} • medium: ${localCounts.medium} • small: ${localCounts.small}`
+        : "—";
+    }
+    if (diagnosticsLocalThumbnailsCountEl) {
+      diagnosticsLocalThumbnailsCountEl.textContent = localCounts
+        ? String(localCounts.thumbnails)
+        : "—";
+    }
+
+    const userDataSummary = diagnostics?.userDataStructure?.summary;
+    const userDataValid = diagnostics?.userDataStructure?.valid;
+    if (diagnosticsUserDataStatusEl) {
+      if (userDataValid) {
+        setDiagnosticsText(
+          diagnosticsUserDataStatusEl,
+          "Valid",
+          storageMode === "local" ? "ok" : "muted",
+        );
+      } else {
+        setDiagnosticsText(
+          diagnosticsUserDataStatusEl,
+          "Issues detected",
+          "warn",
+        );
+      }
+    }
+    if (diagnosticsUserDataSummaryEl) {
+      diagnosticsUserDataSummaryEl.textContent = userDataSummary
+        ? `Errors: ${userDataSummary.errorCount} • Warnings: ${userDataSummary.warningCount}`
+        : "";
+    }
+
+    if (diagnosticsJsonEl) {
+      diagnosticsJsonEl.textContent = JSON.stringify(diagnostics, null, 2);
+    }
+
+    if (diagnosticsStatusEl) {
+      const updatedAt = diagnostics?.timestamp
+        ? new Date(diagnostics.timestamp).toLocaleString()
+        : "Unknown time";
+      diagnosticsStatusEl.textContent = `Last updated: ${updatedAt}`;
+      setDiagnosticsTone(diagnosticsStatusEl, "muted");
+    }
+  }
+
+  function updateDiagnosticsCheck(check: any, storageMode: string) {
+    if (!diagnosticsCheckEl) return;
+    if (!check) {
+      diagnosticsCheckEl.textContent = "";
+      return;
+    }
+
+    if (check.status === "skipped") {
+      setDiagnosticsText(
+        diagnosticsCheckEl,
+        `Check skipped because storage mode is ${storageMode}.`,
+        "muted",
+      );
+      return;
+    }
+
+    if (check.ok) {
+      const countLabel =
+        check.type === "local" && check.counts
+          ? ` • Originals: ${check.counts.originals} • Large: ${check.counts.large}`
+          : Number.isFinite(check.keyCount)
+            ? ` • Keys: ${check.keyCount}`
+            : "";
+      setDiagnosticsText(
+        diagnosticsCheckEl,
+        check.type === "local"
+          ? `✓ Local check succeeded${countLabel}`
+          : `✓ R2 check succeeded in ${check.durationMs}ms${countLabel}`,
+        "ok",
+      );
+      return;
+    }
+
+    const reason = check.reason || "unknown";
+    switch (reason) {
+      case "local-path-missing": {
+        const missing = check.missingPaths?.length
+          ? ` Missing: ${check.missingPaths.join(", ")}.`
+          : "";
+        setDiagnosticsText(
+          diagnosticsCheckEl,
+          `Local check failed: required paths are missing.${missing}`,
+          "error",
+        );
+        break;
+      }
+      case "user-data-invalid": {
+        const summary = check.userData
+          ? ` Errors: ${check.userData.errorCount} • Warnings: ${check.userData.warningCount}.`
+          : "";
+        setDiagnosticsText(
+          diagnosticsCheckEl,
+          `Local check failed: user-data structure has issues.${summary}`,
+          "warn",
+        );
+        break;
+      }
+      case "vault-uninitialized":
+        setDiagnosticsText(
+          diagnosticsCheckEl,
+          "R2 check failed: secrets vault is not initialized.",
+          "warn",
+        );
+        break;
+      case "vault-locked":
+        setDiagnosticsText(
+          diagnosticsCheckEl,
+          "R2 check failed: secrets vault is locked. Unlock it below.",
+          "warn",
+        );
+        break;
+      case "credentials-missing":
+        setDiagnosticsText(
+          diagnosticsCheckEl,
+          "R2 check failed: credentials are missing in the vault.",
+          "error",
+        );
+        break;
+      case "credentials-incomplete": {
+        const missing = check.missingFields?.length
+          ? ` Missing: ${check.missingFields.join(", ")}.`
+          : "";
+        setDiagnosticsText(
+          diagnosticsCheckEl,
+          `R2 check failed: credentials are incomplete.${missing}`,
+          "error",
+        );
+        break;
+      }
+      case "config-missing": {
+        const missing = check.missingFields?.length
+          ? ` Missing: ${check.missingFields.join(", ")}.`
+          : "";
+        setDiagnosticsText(
+          diagnosticsCheckEl,
+          `R2 check failed: configuration is incomplete.${missing}`,
+          "error",
+        );
+        break;
+      }
+      case "r2-request-failed":
+        setDiagnosticsText(
+          diagnosticsCheckEl,
+          `R2 check failed: ${check.error || "request error"}.`,
+          "error",
+        );
+        break;
+      default:
+        setDiagnosticsText(
+          diagnosticsCheckEl,
+          `R2 check failed: ${check.error || "unknown error"}.`,
+          "error",
+        );
+    }
+  }
+
+  async function fetchStorageDiagnostics(runCheck = false) {
+    const res = await fetch("/api/storage-diagnostics", {
+      method: runCheck ? "POST" : "GET",
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data?.error || "Failed to load storage diagnostics");
+    }
+    return data;
+  }
+
+  async function refreshStorageDiagnostics(runCheck = false) {
+    if (diagnosticsStatusEl) {
+      diagnosticsStatusEl.textContent = runCheck
+        ? "Running R2 check..."
+        : "Refreshing diagnostics...";
+    }
+
+    if (diagnosticsCheckEl && !runCheck) {
+      diagnosticsCheckEl.textContent = "";
+    }
+
+    const activeBtn = runCheck ? diagnosticsCheckBtn : diagnosticsRefreshBtn;
+    const originalLabel = activeBtn?.textContent || "";
+    if (activeBtn) {
+      activeBtn.disabled = true;
+      activeBtn.textContent = runCheck ? "⏳ Running..." : "⏳ Refreshing...";
+    }
+
+    try {
+      const data = await fetchStorageDiagnostics(runCheck);
+      updateDiagnosticsView(data.diagnostics);
+      updateDiagnosticsCheck(
+        data.check,
+        data.diagnostics?.storageMode || "unknown",
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to load diagnostics.";
+      if (diagnosticsStatusEl) {
+        diagnosticsStatusEl.textContent = message;
+      }
+      setDiagnosticsTone(diagnosticsStatusEl, "error");
+    } finally {
+      if (activeBtn) {
+        activeBtn.disabled = false;
+        if (activeBtn === diagnosticsCheckBtn) {
+          activeBtn.textContent = getCheckLabel(diagnosticsStorageMode);
+        } else {
+          activeBtn.textContent = originalLabel;
+        }
+      }
+    }
+  }
+
+  diagnosticsRefreshBtn?.addEventListener("click", () => {
+    refreshStorageDiagnostics(false);
+  });
+
+  diagnosticsCheckBtn?.addEventListener("click", () => {
+    refreshStorageDiagnostics(true);
+  });
+
+  refreshStorageDiagnostics(false);
+
+  // R2 Image Sync with SSE
+  let syncEventSource: EventSource | null = null;
+  let receivedMessage = false;
+
+  // Helper: Update toast with sync progress
+  function updateSyncToast(
+    detail: Partial<{
+      title: string;
+      description: string;
+      variant: "default" | "success" | "destructive" | "warning";
+      progress: number | undefined;
+    }>,
+  ) {
+    window.dispatchEvent(new CustomEvent("artsitemaker:toast:update", { detail }));
+  }
+
+  // Helper: Reset sync UI state
+  function resetSyncUI(btn: HTMLButtonElement) {
+    syncEventSource?.close();
+    syncEventSource = null;
+    btn.disabled = false;
+    btn.textContent = "☁️ Sync Images";
+  }
+
+  // Helper: Check if error is a configuration error
+  function isConfigError(slug: string): boolean {
+    return slug === "config-check" || slug === "no-images";
+  }
+
+  document
+    .getElementById("sync-r2-btn")
+    ?.addEventListener("click", async () => {
+      const btn = document.getElementById("sync-r2-btn") as HTMLButtonElement;
+
+      // Check if already syncing
+      if (syncEventSource) {
+        window.dispatchEvent(
+          new CustomEvent("artsitemaker:toast", {
+            detail: {
+              title: "Sync already in progress",
+              variant: "warning",
+            },
+          }),
+        );
+        return;
+      }
+
+      // Reset message flag
+      receivedMessage = false;
+
+      // Disable button during sync
+      btn.disabled = true;
+      btn.textContent = "⏳ Syncing...";
+
+      // Show initial toast with progress
+      window.dispatchEvent(
+        new CustomEvent("artsitemaker:toast", {
+          detail: {
+            title: "Syncing images to R2",
+            description: "Starting sync...",
+            variant: "default",
+            progress: 0,
+          },
+        }),
+      );
+
+      // Create SSE connection
+      syncEventSource = new EventSource("/api/r2/sync");
+
+      syncEventSource.onmessage = (event) => {
+        receivedMessage = true;
+        try {
+          const data = JSON.parse(event.data);
+
+          switch (data.type) {
+            case "init":
+              updateSyncToast({
+                description: `Found ${data.total} images to sync`,
+                progress: 0,
+              });
+              break;
+
+            case "progress": {
+              const progressPercent = Math.round(
+                (data.current / data.total) * 100,
+              );
+              const statusText =
+                data.status === "uploading"
+                  ? `Uploading ${data.slug}...`
+                  : data.status === "success"
+                    ? `Uploaded ${data.slug}`
+                    : `Failed ${data.slug}`;
+
+              updateSyncToast({
+                description: `${statusText} (${data.current} of ${data.total})`,
+                progress: progressPercent,
+                variant:
+                  data.status === "error"
+                    ? "warning"
+                    : data.status === "success"
+                      ? "success"
+                      : "default",
+              });
+              break;
+            }
+
+            case "error": {
+              if (isConfigError(data.slug)) {
+                updateSyncToast({
+                  title: "Sync failed",
+                  description: data.message,
+                  variant: "destructive",
+                  progress: undefined,
+                });
+                resetSyncUI(btn);
+              } else {
+                // Individual artwork error - shown in progress
+                console.warn(`Sync error for ${data.slug}:`, data.message);
+              }
+              break;
+            }
+
+            case "complete": {
+              const { uploaded, failed } = data;
+              const isSuccess = failed === 0;
+
+              updateSyncToast({
+                title: isSuccess
+                  ? "Sync complete!"
+                  : "Sync complete with errors",
+                description: isSuccess
+                  ? `Successfully uploaded ${uploaded} images`
+                  : `${uploaded} uploaded, ${failed} failed`,
+                variant: isSuccess ? "success" : "warning",
+                progress: 100,
+              });
+
+              resetSyncUI(btn);
+              break;
+            }
+          }
+        } catch (e) {
+          console.error("Failed to parse SSE message:", e);
+        }
+      };
+
+      syncEventSource.onerror = (error) => {
+        console.error("SSE error:", error);
+
+        // Only show generic error if we haven't received any messages
+        if (!receivedMessage) {
+          updateSyncToast({
+            title: "Sync failed",
+            description: "Connection error. Please try again.",
+            variant: "destructive",
+            progress: 0,
+          });
+        }
+
+        resetSyncUI(btn);
+      };
+    });
+
+  // Update sync button state based on storage selection
+  function updateSyncButtonState() {
+    const syncBtn = document.getElementById("sync-r2-btn") as HTMLButtonElement;
+    const selectedStorage = document.querySelector(
+      'input[name="imageStorage"]:checked',
+    ) as HTMLInputElement;
+    const storage = selectedStorage?.value || "local";
+
+    if (syncBtn) {
+      syncBtn.disabled = storage !== "r2" || !!syncEventSource;
+    }
+  }
+
+  // Call on load and when storage changes
+  updateSyncButtonState();
+  document.querySelectorAll('input[name="imageStorage"]').forEach((radio) => {
+    radio.addEventListener("change", updateSyncButtonState);
+  });
+
+  // ========== Content Path Validation ==========
+  const contentPathInput = document.getElementById(
+    "content-path-input",
+  ) as HTMLInputElement;
+  const refreshContentPathBtn = document.getElementById(
+    "refresh-content-path-btn",
+  ) as HTMLButtonElement;
+  const pathValidationIndicator = document.getElementById(
+    "path-validation-indicator",
+  );
+  const pathValidationMessage = document.getElementById(
+    "path-validation-message",
+  );
+  const contentPathSync = document.getElementById("content-path-sync");
+  const contentPathSyncText = document.getElementById(
+    "content-path-sync-text",
+  );
+
+  let pathValidationTimeout: number;
+  let autoRefreshTimeout: number;
+  let lastLoadedPath = "";
+  let refreshIndicatorStart = 0;
+  let refreshIndicatorTimeout: number | null = null;
+
+  function updateContentPathSyncStatus() {
+    if (!contentPathSync || !contentPathSyncText || !contentPathInput) return;
+    const currentPath = contentPathInput.value.trim();
+    if (!currentPath || !lastLoadedPath || currentPath === lastLoadedPath) {
+      contentPathSync.classList.add("hidden");
+      contentPathSyncText.textContent = "";
+      return;
+    }
+
+    contentPathSync.classList.remove("hidden");
+    contentPathSyncText.textContent = `Settings loaded from ${lastLoadedPath}. Click Refresh to sync.`;
+  }
+
+  function setContentPathRefreshStatus(isLoading: boolean) {
+    if (!refreshContentPathBtn) return;
+    if (!isLoading) {
+      const elapsed = Date.now() - refreshIndicatorStart;
+      const remaining = Math.max(0, 2000 - elapsed);
+
+      if (refreshIndicatorTimeout) {
+        clearTimeout(refreshIndicatorTimeout);
+      }
+
+      refreshIndicatorTimeout = window.setTimeout(() => {
+        refreshContentPathBtn.removeAttribute("data-refreshing");
+        refreshContentPathBtn.removeAttribute("aria-busy");
+        refreshIndicatorTimeout = null;
+      }, remaining) as unknown as number;
+      return;
+    }
+
+    if (refreshIndicatorTimeout) {
+      clearTimeout(refreshIndicatorTimeout);
+      refreshIndicatorTimeout = null;
+    }
+    refreshIndicatorStart = Date.now();
+    refreshContentPathBtn.setAttribute("data-refreshing", "true");
+    refreshContentPathBtn.setAttribute("aria-busy", "true");
+  }
+
+  function renderValidationMessage(
+    message: string,
+    variant: "success" | "warning" | "error",
+    issues?: Array<{ message: string; targetPath: string }>,
+  ) {
+    if (!pathValidationMessage) return;
+
+    const uniqueIssues = issues?.filter((issue, index, all) => {
+      const key = `${issue.message}::${issue.targetPath}`;
+      return all.findIndex((item) => `${item.message}::${item.targetPath}` === key) === index;
+    }) ?? [];
+
+    const summaryText = uniqueIssues.length > 0
+      ? `${uniqueIssues.length} issue${uniqueIssues.length === 1 ? "" : "s"} found`
+      : message;
+
+    pathValidationMessage.className = `text-sm ${
+      variant === "success"
+        ? "text-green-500"
+        : variant === "warning"
+          ? "text-yellow-500"
+          : "text-red-500"
+    }`;
+
+    pathValidationMessage.textContent = "";
+    pathValidationMessage.innerHTML = "";
+
+    const summary = document.createElement("div");
+    summary.textContent = summaryText;
+    pathValidationMessage.appendChild(summary);
+
+    if (uniqueIssues.length > 0) {
+      const list = document.createElement("ul");
+      list.className = "mt-2 space-y-1 text-sm";
+      const visibleIssues = uniqueIssues.slice(0, 3);
+      visibleIssues.forEach((issue) => {
+        const item = document.createElement("li");
+        item.textContent = `${issue.message} (${issue.targetPath})`;
+        list.appendChild(item);
+      });
+
+      if (uniqueIssues.length > visibleIssues.length) {
+        const item = document.createElement("li");
+        item.textContent = `+${uniqueIssues.length - visibleIssues.length} more issue(s)`;
+        list.appendChild(item);
+      }
+      pathValidationMessage.appendChild(list);
+    }
+  }
+
+  async function validateContentPath(path: string) {
+    if (!path || !path.trim()) {
+      // Empty path is valid (will use default)
+      if (pathValidationIndicator) {
+        pathValidationIndicator.className = "text-sm whitespace-nowrap hidden";
+        pathValidationIndicator.textContent = "";
+      }
+      if (pathValidationMessage) {
+        pathValidationMessage.className = "text-sm hidden";
+        pathValidationMessage.textContent = "";
+      }
+      return { valid: true };
+    }
+
+    if (pathValidationIndicator) {
+      pathValidationIndicator.className =
+        "text-sm whitespace-nowrap text-admin-muted";
+      pathValidationIndicator.textContent = "⏳ Checking...";
+    }
+
+    try {
+      const res = await fetch("/api/validate-path", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: path.trim() }),
+      });
+
+      const result = await res.json();
+
+      if (result.valid && result.status === "valid") {
+        if (pathValidationIndicator) {
+          pathValidationIndicator.className =
+            "text-sm whitespace-nowrap text-green-500";
+          pathValidationIndicator.textContent = "✓ Valid";
+        }
+        renderValidationMessage(result.message, "success");
+      } else if (result.valid && result.status === "exists-but-incomplete") {
+        if (pathValidationIndicator) {
+          pathValidationIndicator.className =
+            "text-sm whitespace-nowrap text-yellow-500";
+          pathValidationIndicator.textContent = "⚠️ Warning";
+        }
+        renderValidationMessage(
+          result.message,
+          "warning",
+          result.errors ?? [],
+        );
+      } else {
+        if (pathValidationIndicator) {
+          pathValidationIndicator.className =
+            "text-sm whitespace-nowrap text-red-500";
+          pathValidationIndicator.textContent = "✗ Invalid";
+        }
+        renderValidationMessage(
+          result.message,
+          "error",
+          result.errors ?? [],
+        );
+      }
+
+      return result;
+    } catch (e) {
+      if (pathValidationIndicator) {
+        pathValidationIndicator.className =
+          "text-sm whitespace-nowrap text-admin-muted";
+        pathValidationIndicator.textContent = "";
+      }
+      return { valid: false, error: "Validation failed" };
+    }
+  }
+
+  function flattenSettings(
+    value: Record<string, any>,
+    prefix = "",
+  ): Record<string, any> {
+    const result: Record<string, any> = {};
+    Object.entries(value || {}).forEach(([key, entry]) => {
+      const nextKey = prefix ? `${prefix}.${key}` : key;
+      if (entry && typeof entry === "object" && !Array.isArray(entry)) {
+        Object.assign(result, flattenSettings(entry, nextKey));
+      } else {
+        result[nextKey] = entry;
+      }
+    });
+    return result;
+  }
+
+  function applySettingsToForm(
+    settings: Record<string, any>,
+    options: { skipFields?: string[] } = {},
+  ) {
+    if (!form) return false;
+    const flattened = flattenSettings(settings);
+    const skipFields = new Set(options.skipFields || []);
+    let changed = false;
+
+    Object.entries(flattened).forEach(([name, value]) => {
+      if (skipFields.has(name)) return;
+      const fields = form.querySelectorAll(`[name="${name}"]`) as NodeListOf<
+        HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+      >;
+      if (!fields.length) return;
+
+      fields.forEach((field) => {
+        if (field instanceof HTMLInputElement) {
+          if (field.type === "checkbox") {
+            const next = Boolean(value);
+            if (field.checked !== next) {
+              field.checked = next;
+              changed = true;
+            }
+            return;
+          }
+
+          if (field.type === "radio") {
+            const next = String(value ?? "");
+            const shouldCheck = field.value === next;
+            if (field.checked !== shouldCheck) {
+              field.checked = shouldCheck;
+              changed = true;
+            }
+            return;
+          }
+
+          if (value === undefined || value === null) return;
+          const next = String(value);
+          if (field.value !== next) {
+            field.value = next;
+            changed = true;
+          }
+          return;
+        }
+
+        if (field instanceof HTMLSelectElement) {
+          if (value === undefined || value === null) return;
+          const next = String(value);
+          if (field.value !== next) {
+            field.value = next;
+            changed = true;
+          }
+          return;
+        }
+
+        if (field instanceof HTMLTextAreaElement) {
+          if (value === undefined || value === null) return;
+          const next = String(value);
+          if (field.value !== next) {
+            field.value = next;
+            changed = true;
+          }
+        }
+      });
+    });
+
+    return changed;
+  }
+
+  async function fetchConfigForPath(
+    endpoint: string,
+    targetPath: string,
+  ): Promise<Record<string, any> | null> {
+    if (!targetPath) return null;
+
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path: targetPath }),
+      cache: "no-store",
+    });
+
+    if (!res.ok) return null;
+    const payload = await res.json();
+    return (payload?.config as Record<string, any>) || null;
+  }
+
+  async function applyConfigFilesFromPath(
+    targetPath: string,
+  ): Promise<{ changed: boolean; loaded: boolean }> {
+    if (!targetPath) return { changed: false, loaded: false };
+
+    const [projectConfig, imageHostingConfig] = await Promise.all([
+      fetchConfigForPath("/api/project-config-file", targetPath),
+      fetchConfigForPath("/api/image-hosting-file", targetPath),
+    ]);
+
+    let changed = false;
+    const loaded = projectConfig !== null || imageHostingConfig !== null;
+
+    if (projectConfig) {
+      changed = applySettingsToForm(projectConfig) || changed;
+    }
+
+    if (imageHostingConfig) {
+      changed = applySettingsToForm(imageHostingConfig) || changed;
+    }
+
+    return { changed, loaded };
+  }
+
+  async function reloadSettingsFromSelectedPath(
+    options: { silent?: boolean; showIndicator?: boolean } = {},
+  ): Promise<{ changed: boolean; loaded: boolean }> {
+    const selectedPath = contentPathInput?.value?.trim() || "";
+    if (!selectedPath) return { changed: false, loaded: false };
+
+    let settingsPayload: any = null;
+    const showIndicator = options.showIndicator ?? true;
+    if (showIndicator) setContentPathRefreshStatus(true);
+    try {
+      const res = await fetch("/api/settings-file", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: selectedPath }),
+        cache: "no-store",
+      });
+      if (res.ok) {
+        const payload = await res.json();
+        settingsPayload = payload?.settings ?? payload;
+      }
+    } catch (e) {
+      if (!options.silent) {
+        window.dispatchEvent(
+          new CustomEvent("artsitemaker:toast", {
+            detail: {
+              title: "Failed to refresh settings",
+              description:
+                "Could not read settings.yaml from the selected content folder.",
+              variant: "warning",
+            },
+          }),
+        );
+      }
+    } finally {
+      if (showIndicator) setContentPathRefreshStatus(false);
+    }
+
+    let changed = false;
+    const configResult = await applyConfigFilesFromPath(selectedPath);
+    changed = changed || configResult.changed;
+      if (settingsPayload) {
+        changed =
+          applySettingsToForm(settingsPayload, {
+            skipFields: ["userDataPath", "contentPath", ...settingsSkipFields],
+          }) || changed;
+      }
+
+    refreshStorageUI();
+
+    return {
+      changed,
+      loaded: Boolean(settingsPayload) || configResult.loaded,
+    };
+  }
+
+  async function refreshContentPathFromSettings() {
+    if (!refreshContentPathBtn || !contentPathInput) return;
+
+    const labelEl = refreshContentPathBtn.querySelector(
+      "[data-button-label]",
+    ) as HTMLElement | null;
+    const originalLabel = labelEl?.textContent || "↻ Refresh";
+    refreshContentPathBtn.disabled = true;
+    if (labelEl) {
+      labelEl.textContent = "Refreshing...";
+    }
+    setContentPathRefreshStatus(true);
+
+    try {
+      let nextPath = "";
+      let sourceLabel = "settings.yaml";
+      let settingsChanged = false;
+      let configChanged = false;
+      let settingsPayload: any = null;
+
+      const requestedPath = contentPathInput?.value?.trim() || "";
+
+      if (requestedPath) {
+        const res = await fetch("/api/settings-file", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ path: requestedPath }),
+          cache: "no-store",
+        });
+        if (res.ok) {
+          const payload = await res.json();
+          settingsPayload = payload?.settings ?? payload;
+        } else {
+          window.dispatchEvent(
+            new CustomEvent("artsitemaker:toast", {
+              detail: {
+                title: "Failed to refresh settings",
+                description:
+                  "Could not read settings.yaml from the selected content folder.",
+                variant: "warning",
+              },
+            }),
+          );
+          return;
+        }
+      }
+
+      if (!settingsPayload) {
+        const res = await fetch("/api/settings", { cache: "no-store" });
+        if (res.ok) {
+          settingsPayload = await res.json();
+        }
+      }
+
+      if (settingsPayload) {
+        const nextPathRaw =
+          settingsPayload?.userDataPath || settingsPayload?.contentPath || "";
+        nextPath = typeof nextPathRaw === "string" ? nextPathRaw.trim() : "";
+      }
+
+      if (!nextPath) {
+        const configRes = await fetch("/api/user-data-path");
+        if (configRes.ok) {
+          const configData = await configRes.json();
+          const configPathRaw = configData?.path || "";
+          const configPath =
+            typeof configPathRaw === "string" ? configPathRaw.trim() : "";
+          if (configPath) {
+            nextPath = configPath;
+            sourceLabel = "artis.config.yaml";
+          }
+        }
+      }
+
+      if (!nextPath) {
+        window.dispatchEvent(
+          new CustomEvent("artsitemaker:toast", {
+            detail: {
+              title: "No content path found",
+              description:
+                "Unable to read a content path from settings.yaml or artis.config.yaml.",
+              variant: "warning",
+            },
+          }),
+        );
+        return;
+      }
+
+      const previousPath = contentPathInput.value;
+      const shouldUpdatePath = !requestedPath && !!nextPath;
+      const changed = shouldUpdatePath && previousPath !== nextPath;
+
+      if (shouldUpdatePath) {
+        contentPathInput.value = nextPath;
+      }
+
+      const pathToValidate =
+        (shouldUpdatePath ? nextPath : requestedPath) || contentPathInput.value;
+      if (pathToValidate) {
+        validateContentPath(pathToValidate);
+        const configResult = await applyConfigFilesFromPath(pathToValidate);
+        configChanged = configResult.changed;
+      }
+
+      if (settingsPayload) {
+        settingsChanged =
+          applySettingsToForm(settingsPayload, {
+            skipFields: ["userDataPath", "contentPath", ...settingsSkipFields],
+          }) || settingsChanged;
+      }
+
+      refreshStorageUI();
+
+      lastLoadedPath = contentPathInput.value.trim();
+      updateContentPathSyncStatus();
+
+      if (changed || settingsChanged || configChanged) {
+        enableSave();
+      }
+
+      window.dispatchEvent(
+        new CustomEvent("artsitemaker:toast", {
+          detail: {
+            title: "Content path refreshed",
+            description: changed
+              ? `Loaded from ${sourceLabel}.`
+              : settingsChanged
+                ? "Settings refreshed from disk."
+                : `Already in sync with ${sourceLabel}.`,
+            variant: "success",
+          },
+        }),
+      );
+    } catch (e) {
+      window.dispatchEvent(
+        new CustomEvent("artsitemaker:toast", {
+          detail: {
+            title: "Failed to refresh content path",
+            variant: "destructive",
+          },
+        }),
+      );
+    } finally {
+      refreshContentPathBtn.disabled = false;
+      setContentPathRefreshStatus(false);
+      if (labelEl) {
+        labelEl.textContent = originalLabel;
+      }
+    }
+  }
+
+  async function autoRefreshForSelectedPath() {
+    if (!contentPathInput) return;
+    const nextPath = contentPathInput.value.trim();
+    if (!nextPath) return;
+
+    const validation = await validateContentPath(nextPath);
+    if (!validation.valid) return;
+
+    const result = await reloadSettingsFromSelectedPath({ silent: true });
+    if (result.loaded) {
+      lastLoadedPath = nextPath;
+    }
+    updateContentPathSyncStatus();
+    if (result.changed) enableSave();
+  }
+
+  // Validate on input (with debounce)
+  contentPathInput?.addEventListener("input", () => {
+    clearTimeout(pathValidationTimeout);
+    pathValidationTimeout = window.setTimeout(() => {
+      validateContentPath(contentPathInput.value);
+      updateContentPathSyncStatus();
+    }, 500);
+  });
+
+  // Auto-refresh settings when the content path changes
+  contentPathInput?.addEventListener("change", () => {
+    clearTimeout(autoRefreshTimeout);
+    autoRefreshTimeout = window.setTimeout(() => {
+      autoRefreshForSelectedPath();
+    }, 300);
+  });
+
+  // Initial validation
+  if (contentPathInput?.value) {
+    validateContentPath(contentPathInput.value);
+    lastLoadedPath = contentPathInput.value.trim();
+    updateContentPathSyncStatus();
+    autoRefreshForSelectedPath();
+  }
+
+  refreshContentPathBtn?.addEventListener(
+    "click",
+    refreshContentPathFromSettings,
+  );
+
+  // ========== Auth Method Switching ==========
+  function updateAuthSettingsVisibility() {
+    const selectedMethod = document.querySelector(
+      'input[name="auth.method"]:checked',
+    ) as HTMLInputElement;
+    const method = selectedMethod?.value || "none";
+
+    // Hide all settings panels
+    document
+      .querySelectorAll(".auth-settings")
+      .forEach((el) => el.classList.add("hidden"));
+
+    // Show the relevant panel
+    const panelId = `auth-${method}-settings`;
+    const panel = document.getElementById(panelId);
+    if (panel) panel.classList.remove("hidden");
+  }
+
+  // Listen for auth method changes
+  document.querySelectorAll('input[name="auth.method"]').forEach((radio) => {
+    radio.addEventListener("change", updateAuthSettingsVisibility);
+  });
+
+  // Initial visibility
+  updateAuthSettingsVisibility();
+
+  // Copy callback URL button
+  document
+    .getElementById("copy-callback-url")
+    ?.addEventListener("click", () => {
+      const urlInput = document.getElementById(
+        "github-callback-url",
+      ) as HTMLInputElement;
+      if (urlInput) {
+        navigator.clipboard.writeText(urlInput.value);
+        const btn = document.getElementById("copy-callback-url");
+        if (btn) {
+          btn.textContent = "Copied!";
+          setTimeout(() => {
+            btn.textContent = "Copy";
+          }, 2000);
+        }
+      }
+    });
+
+  // ========== Account Management ==========
+  const usernameInput = document.getElementById(
+    "account-username",
+  ) as HTMLInputElement;
+  const currentPasswordInput = document.getElementById(
+    "current-password",
+  ) as HTMLInputElement;
+  const newPasswordInput = document.getElementById(
+    "new-password",
+  ) as HTMLInputElement;
+  const confirmPasswordInput = document.getElementById(
+    "confirm-password",
+  ) as HTMLInputElement;
+  const saveAccountBtn = document.getElementById(
+    "save-account-btn",
+  ) as HTMLButtonElement;
+  const accountStatus = document.getElementById("account-status");
+  const accountPasswordStrengthEl = document.getElementById(
+    "account-password-strength",
+  );
+  const passwordMatch = document.getElementById("password-match");
+
+  // Password requirements
+  const accountRequirements = {
+    length: {
+      el: document.getElementById("req-length"),
+      check: (p: string) => p.length >= 8,
+    },
+    upper: {
+      el: document.getElementById("req-upper"),
+      check: (p: string) => /[A-Z]/.test(p),
+    },
+    lower: {
+      el: document.getElementById("req-lower"),
+      check: (p: string) => /[a-z]/.test(p),
+    },
+    number: {
+      el: document.getElementById("req-number"),
+      check: (p: string) => /[0-9]/.test(p),
+    },
+    special: {
+      el: document.getElementById("req-special"),
+      check: (p: string) => /[!@#$%^&*(),.?":{}|<>]/.test(p),
+    },
+  };
+
+  function checkAccountPasswordStrength(password: string): {
+    valid: boolean;
+    score: number;
+  } {
+    let score = 0;
+    let allMet = true;
+
+    for (const [key, req] of Object.entries(accountRequirements)) {
+      const met = req.check(password);
+      if (met) score++;
+      else allMet = false;
+
+      const icon = req.el?.querySelector(".req-icon");
+      if (icon) {
+        icon.textContent = met ? "✓" : "○";
+        icon.className = `req-icon ${met ? "text-green-400" : ""}`;
+      }
+      if (req.el) {
+        req.el.className = `flex items-center gap-2 ${met ? "text-green-400" : "text-admin-muted"}`;
+      }
+    }
+
+    return { valid: allMet, score };
+  }
+
+  function validateAccountForm(): boolean {
+    const currentPwd = currentPasswordInput?.value || "";
+    const newPwd = newPasswordInput?.value || "";
+    const confirmPwd = confirmPasswordInput?.value || "";
+    const username = usernameInput?.value?.trim() || "";
+
+    // Must have current password to make any changes
+    if (!currentPwd) {
+      if (accountStatus) accountStatus.textContent = "";
+      return false;
+    }
+
+    // Username must be at least 3 characters
+    if (username.length < 3) {
+      if (accountStatus)
+        accountStatus.textContent = "Username must be at least 3 characters";
+      return false;
+    }
+
+    // If changing password, validate new password
+    if (newPwd) {
+      const { valid } = checkAccountPasswordStrength(newPwd);
+
+      if (!valid) {
+        if (accountPasswordStrengthEl) {
+          accountPasswordStrengthEl.textContent =
+            "Password does not meet requirements";
+          accountPasswordStrengthEl.className = "mt-2 text-xs text-red-400";
+        }
+        return false;
+      } else {
+        if (accountPasswordStrengthEl) {
+          accountPasswordStrengthEl.textContent =
+            "Password meets all requirements ✓";
+          accountPasswordStrengthEl.className = "mt-2 text-xs text-green-400";
+        }
+      }
+
+      // Check password match
+      if (newPwd !== confirmPwd) {
+        if (passwordMatch) {
+          passwordMatch.textContent = "Passwords do not match";
+          passwordMatch.className = "mt-1 text-xs text-red-400";
+        }
+        return false;
+      } else {
+        if (passwordMatch) {
+          passwordMatch.textContent = "Passwords match ✓";
+          passwordMatch.className = "mt-1 text-xs text-green-400";
+        }
+      }
+    }
+
+    return true;
+  }
+
+  // Live validation
+  [
+    usernameInput,
+    currentPasswordInput,
+    newPasswordInput,
+    confirmPasswordInput,
+  ].forEach((input) => {
+    input?.addEventListener("input", () => {
+      const newPwd = newPasswordInput?.value || "";
+      if (newPwd) {
+        checkAccountPasswordStrength(newPwd);
+      }
+
+      const valid = validateAccountForm();
+      if (saveAccountBtn) saveAccountBtn.disabled = !valid;
+    });
+  });
+
+  // Save account
+  saveAccountBtn?.addEventListener("click", async () => {
+    if (!validateAccountForm()) return;
+
+    saveAccountBtn.disabled = true;
+    saveAccountBtn.textContent = "⏳ Updating...";
+
+    const payload: any = {
+      currentPassword: currentPasswordInput.value,
+      username: usernameInput.value.trim(),
+    };
+
+    if (newPasswordInput.value) {
+      payload.newPassword = newPasswordInput.value;
+    }
+
+    try {
+      const res = await fetch("/api/account", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        if (accountStatus) {
+          accountStatus.textContent = "✓ Credentials updated!";
+          accountStatus.className = "text-sm text-green-400";
+        }
+        // Clear password fields
+        currentPasswordInput.value = "";
+        newPasswordInput.value = "";
+        confirmPasswordInput.value = "";
+        // Reset requirement indicators
+        for (const req of Object.values(accountRequirements)) {
+          const icon = req.el?.querySelector(".req-icon");
+          if (icon) icon.textContent = "○";
+        }
+        if (accountPasswordStrengthEl)
+          accountPasswordStrengthEl.textContent = "";
+        if (passwordMatch) passwordMatch.textContent = "";
+
+        setTimeout(() => {
+          if (accountStatus) {
+            accountStatus.textContent = "";
+            accountStatus.className = "text-sm text-admin-muted";
+          }
+        }, 5000);
+      } else {
+        throw new Error(data.error || "Update failed");
+      }
+    } catch (e: any) {
+      if (accountStatus) {
+        accountStatus.textContent = `✗ ${e.message || "Update failed"}`;
+        accountStatus.className = "text-sm text-red-400";
+      }
+    } finally {
+      saveAccountBtn.disabled = false;
+      saveAccountBtn.textContent = "🔒 Update Credentials";
+    }
+  });
+
+  // --- SECRETS LOGIC ---
+
+  let sessionTimer: number | null = null;
+
+  // DOM Elements
+  const secretsStatusCard = document.getElementById("secrets-status-card");
+  const stateNotInitialized = document.getElementById("state-not-initialized");
+  const stateLocked = document.getElementById("state-locked");
+  const stateUnlocked = document.getElementById("state-unlocked");
+
+  const vaultStatus = document.getElementById("vault-status");
+  const sessionTimerEl = document.getElementById("session-timer");
+
+  // Listen to Secrets Vault state changes from the component
+  window.addEventListener('secrets-vault:state-change', (e) => {
+    const { state } = (e as CustomEvent).detail;
+    vaultState = state;
+    
+    // Update custom domain vault warnings when vault state changes
+    updateCustomDomainVaultWarning(
+      customDomainInputEl?.value?.trim() ?? "",
+      (document.querySelector('input[name="custom-domain-hosting"]:checked') as HTMLInputElement | null)?.value ?? "cloudflare_pages",
+    );
+  });
+
+  // ── Custom Domain ──────────────────────────────────────────────────────
+  const customDomainEnabledEl = document.getElementById("custom-domain-enabled") as HTMLInputElement | null;
+  const customDomainFieldsEl = document.getElementById("custom-domain-fields");
+  const customDomainInputEl = document.getElementById("custom-domain-input") as HTMLInputElement | null;
+  const customDomainApexHintEl = document.getElementById("custom-domain-apex-hint");
+  const customDomainAddWwwCheckboxEl = document.getElementById("custom-domain-add-www") as HTMLInputElement | null;
+  const customDomainWwwPreviewEl = document.getElementById("custom-domain-www-preview");
+  const customDomainHostingRadiosEl = document.querySelectorAll('input[name="custom-domain-hosting"]');
+  const customDomainHostingSectionEl = document.getElementById("custom-domain-hosting-section");
+  const customDomainCloudflareActionsEl = document.getElementById("custom-domain-cloudflare-actions");
+  const customDomainElsewhereMessageEl = document.getElementById("custom-domain-elsewhere-message");
+  const customDomainVerifyBtnEl = document.getElementById("custom-domain-verify-btn") as HTMLButtonElement | null;
+  const customDomainStatusBadgeEl = document.getElementById("custom-domain-status-badge");
+  const customDomainErrorEl = document.getElementById("custom-domain-error");
+  const customDomainSummaryEl = document.getElementById("custom-domain-summary");
+  const customDomainEditEl = document.getElementById("custom-domain-edit");
+  const customDomainEditBtnEl = document.getElementById("custom-domain-edit-btn") as HTMLButtonElement | null;
+  const customDomainSummaryDomainEl = document.getElementById("custom-domain-summary-domain");
+  const customDomainSummaryHostingEl = document.getElementById("custom-domain-summary-hosting");
+  const customDomainSummarySatusEl = document.getElementById("custom-domain-summary-status");
+  const customDomainVaultWarningEl = document.getElementById("custom-domain-vault-warning");
+  const customDomainHelpBtnEl = document.getElementById("custom-domain-help-btn") as HTMLButtonElement | null;
+  const customDomainHelpModalEl = document.getElementById("custom-domain-help-modal") as (HTMLElement & { open?: () => void }) | null;
+  const customDomainHelpDomainEl = document.getElementById("custom-domain-help-domain");
+  const customDomainHelpStatusEl = document.getElementById("custom-domain-help-status");
+  const customDomainHelpRecordEl = document.getElementById("custom-domain-help-record");
+  const customDomainHelpRecordNameEl = document.getElementById("custom-domain-help-record-name");
+  const customDomainHelpRecordTargetEl = document.getElementById("custom-domain-help-record-target");
+  const customDomainHelpDataEl = document.getElementById("custom-domain-help-data");
+
+  const CUSTOM_DOMAIN_DRAFT_KEY = "artsitemaker:custom-domain:draft";
+  type CustomDomainDraft = {
+    enabled: boolean;
+    domain: string;
+    addWww: boolean;
+    hostingTarget: "cloudflare_pages" | "elsewhere";
+    editMode: boolean;
+    updatedAt: number;
+  };
+
+  let customDomainForceEdit = false;
+
+  function getCustomDomainState(): Omit<CustomDomainDraft, "editMode" | "updatedAt"> {
+    const domain = customDomainInputEl?.value?.trim() ?? "";
+    const hostingTarget = (document.querySelector('input[name="custom-domain-hosting"]:checked') as HTMLInputElement | null)?.value ?? "cloudflare_pages";
+    return {
+      enabled: customDomainEnabledEl?.checked ?? false,
+      domain,
+      addWww: customDomainAddWwwCheckboxEl?.checked ?? false,
+      hostingTarget: hostingTarget as "cloudflare_pages" | "elsewhere",
+    };
+  }
+
+  function persistCustomDomainDraft(): void {
+    const state = getCustomDomainState();
+    if (!state.enabled && !state.domain) {
+      removeLocalStorage(CUSTOM_DOMAIN_DRAFT_KEY);
+      return;
+    }
+    const isEditMode = customDomainEditEl ? !customDomainEditEl.classList.contains("hidden") : true;
+    const draft: CustomDomainDraft = {
+      ...state,
+      editMode: customDomainForceEdit || isEditMode,
+      updatedAt: Date.now(),
+    };
+    writeLocalStorage(CUSTOM_DOMAIN_DRAFT_KEY, draft);
+  }
+
+  function applyCustomDomainDraft(): void {
+    const draft = readLocalStorage<CustomDomainDraft | null>(CUSTOM_DOMAIN_DRAFT_KEY, null);
+    if (!draft) return;
+    const initialState = getCustomDomainState();
+    const differsFromInitial =
+      draft.domain !== initialState.domain ||
+      draft.enabled !== initialState.enabled ||
+      draft.addWww !== initialState.addWww ||
+      draft.hostingTarget !== initialState.hostingTarget;
+    if (!differsFromInitial && !draft.editMode) return;
+
+    if (customDomainEnabledEl) customDomainEnabledEl.checked = !!draft.enabled;
+    if (customDomainInputEl) customDomainInputEl.value = draft.domain || "";
+    if (customDomainAddWwwCheckboxEl) customDomainAddWwwCheckboxEl.checked = !!draft.addWww;
+    if (customDomainHostingRadiosEl?.length) {
+      customDomainHostingRadiosEl.forEach((radio) => {
+        const input = radio as HTMLInputElement;
+        input.checked = input.value === draft.hostingTarget;
+      });
+    }
+
+    customDomainForceEdit = draft.editMode || differsFromInitial;
+  }
+
+  function showDomainToast(message: string, type: "success" | "error" | "info" = "info") {
+    const variant = type === "error" ? "destructive" : type === "success" ? "success" : "default";
+    window.dispatchEvent(
+      new CustomEvent("artsitemaker:toast", {
+        detail: {
+          title: type === "error" ? "Error" : type === "success" ? "Success" : "Info",
+          description: message,
+          variant,
+        },
+      }),
+    );
+  }
+
+  function updateCustomDomainFieldsVisibility(options: { allowRemove?: boolean } = {}) {
+    if (!customDomainFieldsEl) return;
+    const enabled = customDomainEnabledEl?.checked ?? false;
+    customDomainFieldsEl.classList.toggle("hidden", !enabled);
+    if (options.allowRemove !== false && !enabled && customDomainInputEl?.value.trim()) {
+      fetch("/api/deployment/custom-domain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "remove", domain: customDomainInputEl.value.trim() }),
+      }).then(() => {
+        if (customDomainInputEl) customDomainInputEl.value = "";
+        updateCustomDomainProgressiveDisclosure();
+        removeLocalStorage(CUSTOM_DOMAIN_DRAFT_KEY);
+        showDomainToast("Custom domain removed", "success");
+      }).catch(() => {});
+    }
+    if (!enabled) {
+      persistCustomDomainDraft();
+    }
+  }
+
+  customDomainEnabledEl?.addEventListener("change", () => {
+    customDomainForceEdit = true;
+    updateCustomDomainFieldsVisibility();
+    updateCustomDomainProgressiveDisclosure();
+    updateCustomDomainModes();
+    persistCustomDomainDraft();
+  });
+
+  // Progressive disclosure: update visibility based on domain and hosting target
+  function updateCustomDomainVaultWarning(domain: string, hostingTarget: string) {
+    if (!customDomainVaultWarningEl || !customDomainVerifyBtnEl) return;
+    const needsVault: boolean = !!domain && hostingTarget === "cloudflare_pages" && vaultState !== "unlocked";
+    customDomainVaultWarningEl.classList.toggle("hidden", !needsVault);
+    if (needsVault) {
+      customDomainVaultWarningEl.textContent =
+        vaultState === "locked"
+          ? "⚠️ Unlock the Secrets Vault below to verify DNS."
+          : vaultState === "not-initialized"
+            ? "⚠️ Set up the Secrets Vault below to verify DNS."
+            : "⚠️ Secrets Vault status is unknown. Verify DNS may fail.";
+    } else {
+      customDomainVaultWarningEl.textContent = "";
+    }
+    customDomainVerifyBtnEl.disabled = needsVault;
+  }
+
+  function updateCustomDomainProgressiveDisclosure() {
+    const domain = customDomainInputEl?.value?.trim() ?? "";
+    const hostingTarget = (document.querySelector('input[name="custom-domain-hosting"]:checked') as HTMLInputElement)?.value ?? "cloudflare_pages";
+
+    // Show/hide hosting target section (only when domain is entered)
+    if (customDomainHostingSectionEl) {
+      customDomainHostingSectionEl.classList.toggle("hidden", !domain);
+    }
+
+    // Show/hide apex hint and www checkbox
+    if (customDomainApexHintEl) {
+      const isApex = domain && isApexDomain(domain);
+      customDomainApexHintEl.classList.toggle("hidden", !isApex);
+      if (isApex && customDomainWwwPreviewEl) {
+        customDomainWwwPreviewEl.textContent = `www.${getApexDomain(domain)}`;
+      }
+    }
+
+    // Show/hide Cloudflare actions (only for Cloudflare + domain)
+    if (customDomainCloudflareActionsEl) {
+      customDomainCloudflareActionsEl.classList.toggle("hidden", !(domain && hostingTarget === "cloudflare_pages"));
+    }
+
+    // Show/hide Elsewhere message (only for Elsewhere + domain)
+    if (customDomainElsewhereMessageEl) {
+      customDomainElsewhereMessageEl.classList.toggle("hidden", !(domain && hostingTarget === "elsewhere"));
+    }
+
+    updateCustomDomainVaultWarning(domain, hostingTarget);
+  }
+
+  function updateCustomDomainSummary(domain: string, hostingTarget: string) {
+    if (customDomainSummaryDomainEl) {
+      customDomainSummaryDomainEl.textContent = domain || "—";
+    }
+    if (customDomainSummaryHostingEl) {
+      customDomainSummaryHostingEl.textContent = hostingTarget === "cloudflare_pages" ? "Cloudflare Pages" : "Manual DNS";
+    }
+  }
+
+  // Update on domain input
+  customDomainInputEl?.addEventListener("input", () => {
+    customDomainForceEdit = true;
+    updateCustomDomainProgressiveDisclosure();
+    updateCustomDomainModes();
+    persistCustomDomainDraft();
+  });
+
+  // Update on hosting target change
+  customDomainHostingRadiosEl.forEach(radio => {
+    radio.addEventListener("change", () => {
+      customDomainForceEdit = true;
+      updateCustomDomainProgressiveDisclosure();
+      updateCustomDomainModes();
+      persistCustomDomainDraft();
+    });
+  });
+
+  // Initialize progressive disclosure
+  updateCustomDomainProgressiveDisclosure();
+
+  // Summary/Edit mode toggle
+  function updateCustomDomainModes() {
+    const domain = customDomainInputEl?.value?.trim() ?? "";
+    const hostingTarget = (document.querySelector('input[name="custom-domain-hosting"]:checked') as HTMLInputElement | null)?.value ?? "cloudflare_pages";
+    const hasDomain = !!domain;
+    const shouldEdit = customDomainForceEdit || !hasDomain;
+
+    if (customDomainSummaryEl && customDomainEditEl) {
+      customDomainSummaryEl.classList.toggle("hidden", shouldEdit);
+      customDomainEditEl.classList.toggle("hidden", !shouldEdit);
+    }
+    updateCustomDomainSummary(domain, hostingTarget);
+  }
+
+  customDomainEditBtnEl?.addEventListener("click", () => {
+    customDomainForceEdit = true;
+    if (customDomainSummaryEl && customDomainEditEl) {
+      customDomainSummaryEl.classList.add("hidden");
+      customDomainEditEl.classList.remove("hidden");
+    }
+    persistCustomDomainDraft();
+  });
+
+  customDomainAddWwwCheckboxEl?.addEventListener("change", () => {
+    customDomainForceEdit = true;
+    updateCustomDomainProgressiveDisclosure();
+    updateCustomDomainModes();
+    persistCustomDomainDraft();
+  });
+
+  applyCustomDomainDraft();
+  updateCustomDomainFieldsVisibility({ allowRemove: false });
+  updateCustomDomainProgressiveDisclosure();
+  updateCustomDomainModes();
+  // Vault status check is now handled by SecretsVault component via event listeners
+
+  function updateCustomDomainHelpContent() {
+    const domain = customDomainInputEl?.value?.trim() ?? "";
+    const status = customDomainStatusBadgeEl?.dataset.status || "pending";
+    const projectName = customDomainHelpDataEl?.dataset.projectName || "";
+
+    if (customDomainHelpDomainEl) {
+      customDomainHelpDomainEl.textContent = domain || "—";
+    }
+    if (customDomainHelpStatusEl) {
+      customDomainHelpStatusEl.textContent =
+        status === "active"
+          ? "Cloudflare verified your DNS. Your domain is active."
+          : status === "error"
+            ? "Cloudflare could not verify your DNS. Check the record below."
+            : "Cloudflare is verifying your DNS. This can take up to 24 hours.";
+    }
+
+    if (customDomainHelpRecordEl && customDomainHelpRecordNameEl && customDomainHelpRecordTargetEl && projectName) {
+      customDomainHelpRecordEl.classList.remove("hidden");
+      customDomainHelpRecordNameEl.textContent = domain || "—";
+      customDomainHelpRecordTargetEl.textContent = `${projectName}.pages.dev`;
+    } else if (customDomainHelpRecordEl) {
+      customDomainHelpRecordEl.classList.add("hidden");
+    }
+  }
+
+  function openCustomDomainHelpModal() {
+    if (!customDomainHelpModalEl) return;
+    updateCustomDomainHelpContent();
+    if (typeof customDomainHelpModalEl.open === "function") {
+      customDomainHelpModalEl.open();
+    }
+  }
+
+  customDomainHelpBtnEl?.addEventListener("click", openCustomDomainHelpModal);
+
+  // Verify DNS button
+  customDomainVerifyBtnEl?.addEventListener("click", async () => {
+    const domain = customDomainInputEl?.value?.trim() ?? "";
+    const hostingTarget = (document.querySelector('input[name="custom-domain-hosting"]:checked') as HTMLInputElement)?.value ?? "cloudflare_pages";
+    const enabled = customDomainEnabledEl?.checked ?? false;
+    const addWww = customDomainAddWwwCheckboxEl?.checked ?? false;
+
+    if (!domain) {
+      showDomainToast("Enter a domain name", "error");
+      return;
+    }
+
+    customDomainVerifyBtnEl.disabled = true;
+    customDomainVerifyBtnEl.textContent = "Verifying...";
+    if (customDomainErrorEl) {
+      customDomainErrorEl.textContent = "";
+      customDomainErrorEl.classList.add("hidden");
+    }
+
+    try {
+      // Step 1: configure (save + add to CF Pages if applicable)
+      const configureRes = await fetch("/api/deployment/custom-domain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "configure", domain, addWww, hostingTarget, enabled }),
+      });
+      const configureData = await configureRes.json();
+
+      if (!configureData.success) {
+        showDomainToast(configureData.error || "Failed to save domain", "error");
+        if (customDomainErrorEl) {
+          customDomainErrorEl.textContent = configureData.error || "";
+          customDomainErrorEl.classList.remove("hidden");
+        }
+        return;
+      }
+
+      showDomainToast(configureData.message || "Domain saved", "success");
+
+      // Step 2: verify status (only for Cloudflare Pages)
+      if (hostingTarget === "cloudflare_pages") {
+        const verifyRes = await fetch("/api/deployment/custom-domain", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "verify", domain, hostingTarget }),
+        });
+        const verifyData = await verifyRes.json();
+        const status = verifyData.status ?? "not_configured";
+        
+        if (customDomainStatusBadgeEl) {
+          customDomainStatusBadgeEl.textContent =
+            status === "active" ? "Active" :
+            status === "pending" ? "Pending" :
+            status === "error" ? "Error" : "Not configured";
+          customDomainStatusBadgeEl.dataset.status = status;
+          customDomainStatusBadgeEl.className = "text-xs px-2 py-1 rounded cursor-help " + (
+            status === "active" ? "bg-green-500/10 text-green-400" :
+            status === "pending" ? "bg-yellow-500/10 text-yellow-400" :
+            status === "error" ? "bg-red-500/10 text-red-400" :
+            "bg-admin-bg text-admin-muted"
+          );
+          if (verifyData.lastChecked) {
+            customDomainStatusBadgeEl.setAttribute("title", `Last checked: ${new Date(verifyData.lastChecked).toLocaleString()}`);
+          }
+        }
+
+        // Update summary status badge if visible
+        if (customDomainSummarySatusEl) {
+          customDomainSummarySatusEl.textContent =
+            status === "active" ? "Active" :
+            status === "pending" ? "Pending" :
+            status === "error" ? "Error" : "Not configured";
+          customDomainSummarySatusEl.className = `text-xs px-2 py-1 rounded ${
+            status === "active" ? "bg-green-500/10 text-green-400" :
+            status === "pending" ? "bg-yellow-500/10 text-yellow-400" :
+            status === "error" ? "bg-red-500/10 text-red-400" :
+            "bg-admin-bg text-admin-muted"
+          }`;
+        }
+
+        if (customDomainErrorEl) {
+          if (verifyData.status === "error" && verifyData.message) {
+            customDomainErrorEl.textContent = verifyData.message;
+            customDomainErrorEl.classList.remove("hidden");
+          } else {
+            customDomainErrorEl.textContent = "";
+            customDomainErrorEl.classList.add("hidden");
+          }
+        }
+
+        if (verifyData.status === "pending") {
+          openCustomDomainHelpModal();
+        }
+      } else {
+        // Elsewhere: update status to "Manual DNS"
+        if (customDomainStatusBadgeEl) {
+          customDomainStatusBadgeEl.textContent = "Manual DNS";
+          customDomainStatusBadgeEl.className = "text-xs px-2 py-1 rounded bg-admin-bg text-admin-muted";
+        }
+        if (customDomainSummarySatusEl) {
+          customDomainSummarySatusEl.textContent = "Manual DNS";
+          customDomainSummarySatusEl.className = "text-xs px-2 py-1 rounded bg-admin-bg text-admin-muted";
+        }
+      }
+
+      // Switch to summary mode after successful save
+      customDomainForceEdit = false;
+      updateCustomDomainModes();
+      persistCustomDomainDraft();
+    } catch (e) {
+      showDomainToast((e as Error).message || "Request failed", "error");
+    } finally {
+      customDomainVerifyBtnEl.disabled = false;
+      customDomainVerifyBtnEl.textContent = "Verify DNS";
+    }
+  });
+</script>

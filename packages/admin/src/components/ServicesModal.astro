@@ -1,0 +1,809 @@
+---
+// Services Modal - Full service management in a modal
+---
+
+<div id="services-modal" class="services-modal hidden">
+  <div class="modal-overlay"></div>
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 class="text-xl font-semibold">Development Services</h2>
+      <div class="flex items-center gap-3">
+        <label class="flex items-center gap-2 text-sm text-admin-muted cursor-pointer">
+          <input type="checkbox" id="auto-refresh-toggle" checked class="rounded border-admin-border bg-admin-sidebar">
+          Auto-refresh
+        </label>
+        <button id="close-services-modal" class="text-admin-muted hover:text-admin-text p-1">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+    
+    <div class="modal-body">
+      <!-- Services Grid -->
+      <div id="modal-services-container" class="services-grid">
+        <div class="loading-state">
+          <div class="text-4xl mb-2">⏳</div>
+          <p class="text-admin-muted">Loading services...</p>
+        </div>
+      </div>
+
+      <!-- Logs Viewer -->
+      <div id="modal-logs-section" class="logs-section hidden">
+        <div class="logs-header">
+          <h3 class="text-sm font-semibold">
+            <span id="modal-logs-title">Service Logs</span>
+          </h3>
+          <button id="modal-close-logs" class="text-admin-muted hover:text-admin-text">✕</button>
+        </div>
+        <div id="modal-logs-container" class="logs-container">
+          <!-- Logs will be inserted here -->
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .services-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+
+  .services-modal.hidden {
+    display: none;
+  }
+
+  .services-modal:not(.hidden) .modal-overlay {
+    animation: fade-in 200ms ease-out;
+  }
+
+  .services-modal:not(.hidden) .modal-content {
+    animation: slide-up 300ms ease-out;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .services-modal:not(.hidden) .modal-overlay,
+    .services-modal:not(.hidden) .modal-content {
+      animation: none;
+    }
+  }
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slide-up {
+    from { 
+      transform: translateY(20px); 
+      opacity: 0; 
+    }
+    to { 
+      transform: translateY(0); 
+      opacity: 1; 
+    }
+  }
+
+  .modal-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    cursor: pointer;
+  }
+
+  .modal-content {
+    position: relative;
+    background: var(--admin-card);
+    border: 1px solid var(--admin-border);
+    border-radius: 0.75rem;
+    width: 100%;
+    max-width: 900px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+  }
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--admin-border);
+  }
+
+  .modal-header button,
+  .modal-header label {
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .modal-header button:hover {
+    color: var(--admin-text);
+    transform: scale(1.1);
+  }
+
+  .modal-header button:focus-visible {
+    outline: 2px solid var(--admin-accent);
+    outline-offset: 2px;
+    border-radius: 0.25rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .modal-header button:hover {
+      transform: none;
+    }
+  }
+
+  .modal-body {
+    flex: 1;
+    overflow: auto;
+    padding: 1.5rem;
+  }
+
+  .services-grid {
+    display: grid;
+    grid-template-columns: repeat(1, 1fr);
+    gap: 1rem;
+  }
+
+  @media (min-width: 640px) {
+    .services-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  .loading-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 3rem;
+  }
+
+  .service-card {
+    background: var(--admin-sidebar);
+    border: 1px solid var(--admin-border);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .service-card:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    transform: translateY(-2px);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .service-card:hover {
+      transform: none;
+    }
+  }
+
+  .service-card.running {
+    border-left: 4px solid var(--admin-success);
+  }
+
+  .service-card.stopped {
+    border-left: 4px solid var(--admin-muted);
+  }
+
+  .service-card.starting {
+    border-left: 4px solid var(--admin-accent);
+  }
+
+  .service-card.error {
+    border-left: 4px solid var(--admin-error);
+  }
+
+  .service-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .service-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+  }
+
+  .health-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+  }
+
+  .health-healthy {
+    background-color: var(--admin-success);
+    box-shadow: 0 0 12px var(--admin-success);
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% {
+      box-shadow: 0 0 12px var(--admin-success);
+      opacity: 1;
+    }
+    50% {
+      box-shadow: 0 0 20px var(--admin-success);
+      opacity: 0.8;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .health-healthy {
+      animation: none;
+    }
+  }
+
+  .health-unhealthy {
+    background-color: var(--admin-error);
+    box-shadow: 0 0 8px var(--admin-error);
+  }
+
+  .health-unknown {
+    background-color: var(--admin-muted);
+  }
+
+  .service-meta {
+    font-size: 0.75rem;
+    color: var(--admin-muted);
+  }
+
+  .service-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .status-icon {
+    font-size: 1.25rem;
+  }
+
+  .status-icon.pulse {
+    animation: pulse-bounce 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes pulse-bounce {
+    0%, 100% { 
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% { 
+      opacity: 0.6;
+      transform: scale(0.95);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .status-icon.pulse {
+      animation: none;
+    }
+  }
+
+  .service-error {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--admin-error);
+    font-size: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.375rem;
+    margin-top: 0.5rem;
+  }
+
+  .service-actions {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+  }
+
+  .service-actions .btn {
+    flex: 0 0 auto;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+    border-radius: 0.375rem;
+    border: 1px solid var(--admin-border);
+    background: var(--admin-sidebar);
+    color: var(--admin-text);
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .service-actions .btn:hover:not(:disabled) {
+    background: var(--admin-border);
+    border-color: var(--admin-muted);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .service-actions .btn:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .service-actions .btn:hover:not(:disabled) {
+      transform: none;
+    }
+  }
+
+  .service-actions .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .service-actions .btn:focus-visible {
+    outline: 2px solid var(--admin-accent);
+    outline-offset: 2px;
+  }
+
+  .service-actions .btn-success {
+    background: var(--admin-success);
+    border-color: var(--admin-success);
+    color: white;
+  }
+
+  .service-actions .btn-success:hover:not(:disabled) {
+    background: #22c55e;
+    border-color: #22c55e;
+  }
+
+  .service-actions .btn-secondary {
+    background: var(--admin-card);
+    border-color: var(--admin-border);
+    color: var(--admin-text);
+  }
+
+  .service-actions .btn-secondary:hover:not(:disabled) {
+    background: var(--admin-sidebar);
+  }
+
+  .service-actions .btn-icon {
+    flex: 0 0 auto;
+    padding: 0.5rem;
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  .service-actions .btn-icon:hover:not(:disabled) {
+    background: var(--admin-sidebar);
+  }
+
+  .logs-section {
+    margin-top: 1.5rem;
+    border-top: 1px solid var(--admin-border);
+    padding-top: 1rem;
+    animation: slide-down 300ms ease-out;
+  }
+
+  @keyframes slide-down {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .logs-section {
+      animation: none;
+    }
+  }
+
+  .logs-section.hidden {
+    display: none;
+  }
+
+  .logs-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+  }
+
+  .logs-header button {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0.25rem;
+    border-radius: 0.25rem;
+  }
+
+  .logs-header button:hover {
+    background: var(--admin-sidebar);
+    transform: scale(1.1);
+  }
+
+  .logs-header button:focus-visible {
+    outline: 2px solid var(--admin-accent);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .logs-header button:hover {
+      transform: none;
+    }
+  }
+
+  .logs-container {
+    background: var(--admin-sidebar);
+    border: 1px solid var(--admin-border);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.75rem;
+    max-height: 16rem;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .logs-container::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .logs-container::-webkit-scrollbar-track {
+    background: var(--admin-card);
+    border-radius: 4px;
+  }
+
+  .logs-container::-webkit-scrollbar-thumb {
+    background: var(--admin-border);
+    border-radius: 4px;
+    transition: background 0.2s ease;
+  }
+
+  .logs-container::-webkit-scrollbar-thumb:hover {
+    background: var(--admin-muted);
+  }
+
+  .log-line {
+    color: var(--admin-muted);
+    line-height: 1.5;
+  }
+
+  .log-line:hover {
+    color: var(--admin-text);
+  }
+</style>
+
+<script>
+  interface ServiceStatus {
+    id: string;
+    name: string;
+    status: 'running' | 'stopped' | 'error' | 'starting';
+    pid?: number;
+    uptime?: number;
+    port?: number;
+    lastError?: string;
+    healthStatus?: 'healthy' | 'unhealthy' | 'unknown';
+    logs: string[];
+  }
+
+  let currentLogService: string | null = null;
+  let refreshInterval: number | null = null;
+  let autoRefreshEnabled = true;
+
+  const modal = document.getElementById('services-modal');
+  const closeBtn = document.getElementById('close-services-modal');
+  const autoRefreshToggle = document.getElementById('auto-refresh-toggle') as HTMLInputElement | null;
+
+  // Format uptime
+  function formatUptime(seconds: number): string {
+    if (seconds < 60) return `${seconds}s`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m`;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours}h ${mins}m`;
+  }
+
+  // Escape HTML
+  function escapeHtml(text: string): string {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // Render a single service card
+  function renderServiceCard(service: ServiceStatus): string {
+    const statusIcons = {
+      running: '🟢',
+      stopped: '⚫',
+      starting: '🟡',
+      error: '🔴',
+    };
+
+    const statusTexts = {
+      running: 'Running',
+      stopped: 'Stopped',
+      starting: 'Starting...',
+      error: 'Error',
+    };
+
+    const healthClass = service.healthStatus
+      ? `health-${service.healthStatus}`
+      : 'health-unknown';
+
+    const uptimeText = service.uptime ? formatUptime(service.uptime) : '';
+    const portText = service.port ? `Port ${service.port}` : '';
+
+    return `
+      <div class="service-card ${service.status}">
+        <div class="service-header">
+          <div class="flex items-center gap-3 flex-1">
+            <span class="service-title font-semibold">
+              ${service.name}
+            </span>
+            ${service.healthStatus && service.status === 'running'
+              ? `<span class="health-indicator ${healthClass}"></span>`
+              : ''}
+            <span class="service-meta text-sm">
+              ${portText}${uptimeText ? ` • ${uptimeText}` : ''}
+            </span>
+            <span class="status-icon ${service.status === 'starting' ? 'pulse' : ''}">
+              ${statusIcons[service.status]}
+            </span>
+            <span class="text-sm ${
+              service.status === 'running' ? 'text-green-400' :
+              service.status === 'error' ? 'text-red-400' :
+              'text-admin-muted'
+            }">
+              ${statusTexts[service.status]}
+            </span>
+          </div>
+          <div class="service-actions">
+            ${service.status !== 'running' ? `
+              <button
+                class="btn btn-success relative group transition-all duration-200 flex items-center justify-center gap-2"
+                data-action="start"
+                data-service="${service.id}"
+              >
+                ▶️ Start
+              </button>
+            ` : `
+              <button
+                class="btn btn-secondary relative group transition-all duration-200 flex items-center justify-center gap-2"
+                data-action="stop"
+                data-service="${service.id}"
+              >
+                ⏹️ Stop
+              </button>
+              <button
+                class="btn btn-secondary relative group transition-all duration-200 flex items-center justify-center gap-2"
+                data-action="restart"
+                data-service="${service.id}"
+              >
+                🔄 Restart
+              </button>
+            `}
+            <button
+              class="btn btn-icon"
+              data-action="logs"
+              data-service="${service.id}"
+              title="View logs"
+            >
+              📋
+            </button>
+            ${service.port ? `
+              <a
+                href="http://localhost:${service.port}"
+                target="_blank"
+                class="btn btn-icon"
+                title="Open in browser"
+              >
+                🔗
+              </a>
+            ` : ''}
+          </div>
+        </div>
+
+        ${service.lastError ? `
+          <div class="service-error">
+            ${escapeHtml(service.lastError)}
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  // Load and render services
+  async function loadServices() {
+    try {
+      const res = await fetch('/api/services');
+      const data = await res.json();
+
+      const container = document.getElementById('modal-services-container');
+      if (!container) return;
+
+      if (data.services && data.services.length > 0) {
+        container.innerHTML = data.services.map(renderServiceCard).join('');
+        attachEventListeners();
+      } else {
+        container.innerHTML = `
+          <div class="loading-state">
+            <div class="text-4xl mb-2">📭</div>
+            <p class="text-admin-muted">No services configured</p>
+          </div>
+        `;
+      }
+    } catch (error) {
+      console.error('Failed to load services:', error);
+      const container = document.getElementById('modal-services-container');
+      if (container) {
+        container.innerHTML = `
+          <div class="loading-state">
+            <div class="text-4xl mb-2">⚠️</div>
+            <p class="text-red-400">Failed to load services</p>
+          </div>
+        `;
+      }
+    }
+  }
+
+  // Handle service actions
+  async function handleAction(action: string, serviceId: string, button: HTMLButtonElement) {
+    button.disabled = true;
+    const originalText = button.textContent;
+    button.textContent = '⏳';
+
+    try {
+      const res = await fetch(`/api/services/${serviceId}/${action}`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+
+      if (data.success || data.status) {
+        await loadServices();
+      } else {
+        window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
+          detail: {
+            title: `Failed to ${action} service`,
+            variant: 'destructive'
+          }
+        }));
+      }
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
+        detail: {
+          title: `Error: ${error}`,
+          variant: 'destructive'
+        }
+      }));
+    } finally {
+      button.disabled = false;
+      button.textContent = originalText || '';
+    }
+  }
+
+  // View logs
+  async function viewLogs(serviceId: string) {
+    try {
+      const res = await fetch(`/api/services/${serviceId}/logs?lines=100`);
+      const data = await res.json();
+
+      const logsSection = document.getElementById('modal-logs-section');
+      const logsTitle = document.getElementById('modal-logs-title');
+      const logsContainer = document.getElementById('modal-logs-container');
+
+      if (logsSection && logsTitle && logsContainer) {
+        currentLogService = serviceId;
+
+        // Find service name
+        const servicesRes = await fetch('/api/services');
+        const servicesData = await servicesRes.json();
+        const service = servicesData.services?.find((s: ServiceStatus) => s.id === serviceId);
+
+        logsTitle.textContent = `${service?.name || serviceId} Logs`;
+        logsContainer.innerHTML = data.logs.length > 0
+          ? data.logs.map((log: string) => `<div class="log-line">${escapeHtml(log)}</div>`).join('')
+          : '<div class="text-admin-muted">No logs available</div>';
+
+        logsSection.classList.remove('hidden');
+        logsContainer.scrollTop = logsContainer.scrollHeight;
+      }
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
+        detail: {
+          title: `Failed to load logs: ${error}`,
+          variant: 'destructive'
+        }
+      }));
+    }
+  }
+
+  // Attach event listeners
+  function attachEventListeners() {
+    document.querySelectorAll('[data-action]').forEach((button) => {
+      button.addEventListener('click', async (e) => {
+        const target = e.currentTarget as HTMLButtonElement;
+        const action = target.dataset.action;
+        const serviceId = target.dataset.service;
+
+        if (!action || !serviceId) return;
+
+        if (action === 'logs') {
+          await viewLogs(serviceId);
+        } else {
+          await handleAction(action, serviceId, target);
+        }
+      });
+    });
+  }
+
+  // Close logs
+  document.getElementById('modal-close-logs')?.addEventListener('click', () => {
+    document.getElementById('modal-logs-section')?.classList.add('hidden');
+    currentLogService = null;
+  });
+
+  // Modal open/close
+  export function openServicesModal() {
+    modal?.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    loadServices();
+    
+    // Start auto-refresh
+    if (refreshInterval) clearInterval(refreshInterval);
+    refreshInterval = window.setInterval(() => {
+      if (autoRefreshEnabled) {
+        loadServices();
+      }
+    }, 3000);
+  }
+
+  export function closeServicesModal() {
+    modal?.classList.add('hidden');
+    document.body.style.overflow = '';
+    if (refreshInterval) {
+      clearInterval(refreshInterval);
+      refreshInterval = null;
+    }
+    // Hide logs section
+    document.getElementById('modal-logs-section')?.classList.add('hidden');
+  }
+
+  // Close button
+  closeBtn?.addEventListener('click', closeServicesModal);
+
+  // Close on overlay click
+  modal?.querySelector('.modal-overlay')?.addEventListener('click', closeServicesModal);
+
+  // Close on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !modal?.classList.contains('hidden')) {
+      closeServicesModal();
+    }
+  });
+
+  // Auto-refresh toggle
+  autoRefreshToggle?.addEventListener('change', () => {
+    autoRefreshEnabled = autoRefreshToggle.checked;
+  });
+
+  // Expose to window for dashboard usage
+  (window as any).openServicesModal = openServicesModal;
+  (window as any).closeServicesModal = closeServicesModal;
+</script>
+</script>

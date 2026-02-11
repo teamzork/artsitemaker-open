@@ -1,0 +1,203 @@
+---
+// packages/site/src/pages/about.astro
+import PageLayout from "@layouts/PageLayout.astro";
+import { marked } from "marked";
+import { isPageEnabled, getPageSettings } from "../lib/pageTypes";
+import type { ArtworkData, PageData } from "../types/content";
+import { getImageBaseUrl } from "../lib/paths";
+import { loadPage, loadArtwork } from "../lib/content-service";
+
+// Check if about is the home page - if so, redirect to / to avoid duplicate content
+const pageSettings = await getPageSettings();
+if (pageSettings.homePage === "about") {
+  return Astro.redirect("/");
+}
+
+// Check if this page type is enabled
+if (!(await isPageEnabled("about"))) {
+  return Astro.redirect("/");
+}
+
+const page: PageData | null = await loadPage("about");
+
+// Load featured artwork if specified
+let featuredArtwork: ArtworkData | null = null;
+if (page?.featuredArtwork) {
+  featuredArtwork = await loadArtwork(page.featuredArtwork);
+}
+
+// Get image URL for featured artwork
+const imageBaseUrl = getImageBaseUrl();
+const featuredImagePath = page?.featuredImage?.trim();
+const featuredImageUrl = featuredImagePath
+  ? (featuredImagePath.startsWith('http')
+    ? featuredImagePath
+    : `${imageBaseUrl}/${featuredImagePath.replace(/^\/+/, '')}`)
+  : (featuredArtwork?.slug
+    ? `${imageBaseUrl}/large/${featuredArtwork.slug}.webp`
+    : null);
+const featuredAltText = featuredImagePath
+  ? (page?.title || 'Featured image')
+  : (featuredArtwork?.title || 'Featured artwork');
+
+// Parse markdown content
+const parsedContent = page?.content ? await marked.parse(page.content) : "";
+---
+
+<PageLayout title={page?.title || "About"}>
+  <article class="about-page">
+    <div class="about-content">
+      {/* Featured Artwork Image */}
+      {
+        featuredImageUrl && (
+          <div class="featured-artwork">
+            <img
+              src={featuredImageUrl}
+              alt={featuredAltText}
+              class="featured-image"
+              loading="lazy"
+            />
+            {!featuredImagePath && featuredArtwork?.title && (
+              <p class="featured-caption">{featuredArtwork.title}</p>
+            )}
+          </div>
+        )
+      }
+
+      <!-- Content -->
+      <div class="about-text prose max-w-none">
+        {/* Page title */}
+        {page?.title && <h1 class="about-title">{page.title}</h1>}
+
+        {
+          parsedContent ? (
+            <div class="markdown-content" set:html={parsedContent} />
+          ) : (
+            <div>
+              <h2>About</h2>
+              <p>
+                Welcome to my art portfolio. This site showcases a collection of
+                works created over the years.
+              </p>
+              <p>Please explore the galleries to see the latest pieces.</p>
+
+              <h2>Contact</h2>
+              <ul>
+                <li>
+                  <a href="mailto:studio@valerokanz.artistablinum.com">
+                    studio@valerokanz.artistablinum.com
+                  </a>
+                </li>
+              </ul>
+            </div>
+          )
+        }
+      </div>
+    </div>
+  </article>
+</PageLayout>
+
+<style>
+  .about-title {
+    font-family: var(--font-heading, sans-serif);
+    font-size: 2rem;
+    font-weight: 400;
+    color: var(--color-text);
+    margin: 0 0 1.5rem 0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .about-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  @media (min-width: 768px) {
+    .about-content {
+      flex-direction: row;
+      align-items: flex-start;
+    }
+  }
+
+  .featured-artwork {
+    flex-shrink: 0;
+    max-width: 100%;
+  }
+
+  @media (min-width: 768px) {
+    .featured-artwork {
+      max-width: 40%;
+    }
+  }
+
+  .featured-image {
+    width: 100%;
+    height: auto;
+    border-radius: var(--corner-radius, 0);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .featured-caption {
+    font-size: 0.875rem;
+    color: var(--color-muted);
+    text-align: center;
+    margin-top: 0.5rem;
+    font-style: italic;
+  }
+
+  .prose h2 {
+    color: var(--color-accent);
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+  }
+
+  .prose h2:first-child {
+    margin-top: 0;
+  }
+
+  .prose p {
+    color: var(--color-text);
+    margin-bottom: 1rem;
+    line-height: 1.7;
+  }
+
+  .prose a {
+    color: var(--color-link);
+    text-decoration: none;
+  }
+
+  .prose a:hover {
+    color: var(--color-link-hover);
+    text-decoration: underline;
+  }
+
+  .prose ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .prose li {
+    margin-bottom: 0.5rem;
+  }
+
+  .prose strong {
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  .prose img {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--corner-radius, 0);
+    margin: 1rem 0;
+  }
+
+  .prose br {
+    display: block;
+    margin-bottom: 0.25rem;
+  }
+</style>

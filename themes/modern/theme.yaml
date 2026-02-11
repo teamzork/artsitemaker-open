@@ -1,0 +1,79 @@
+name: Modern
+version: 1.0.0
+author: ArtSiteMaker
+description: sleek dark aesthetic with vibrant accents
+supported_pages:
+  - home
+  - gallery
+  - slider
+  - art_piece
+  - about
+  - collections_list
+  - article
+  - schedule
+  - contact
+  - search_results
+layout:
+  gallery: masonry
+  galleryRowHeight: 350
+  galleryGap: 24
+  cornerRadius: 8
+  maxContentWidth: 1800
+colors:
+  background: '#111111'
+  backgroundAlt: '#1a1a1a'
+  text: '#ffffff'
+  textMuted: '#a1a1aa'
+  accent: '#3b82f6'
+  accentHover: '#60a5fa'
+  border: '#27272a'
+  shadow: rgba(0, 0, 0, 0.5)
+fonts:
+  heading:
+    family: Inter
+    file: null
+    weight: 700
+  body:
+    family: Inter
+    file: null
+    weight: 400
+  mono:
+    family: monospace
+    file: null
+    weight: 400
+background:
+  type: solid
+  solid: '#111111'
+galleryItem:
+  border: 1px solid
+  borderRadius: 8
+  shadow: true
+  shadowColor: rgba(0, 0, 0, 0.3)
+  shadowBlur: 30
+  shadowOffset:
+    - 0
+    - 10
+  hoverEffect: glow
+carousel:
+  thumbnailShape: square
+  thumbnailSize: 100
+  thumbnailBorder: 2px solid transparent
+  activeBorder: '2px solid #3b82f6'
+  gap: '12'
+  arrowStyle: floating
+nav:
+  style: minimal
+  position: left
+  backgroundColor: '#111111'
+  activeColor: '#3b82f6'
+logo:
+  file: null
+  width: 140
+  position: top-center
+artworkDetail:
+  imageMaxHeight: 90vh
+  showBorder: false
+  metaPosition: side
+footer:
+  backgroundColor: '#111111'
+  showCredits: true

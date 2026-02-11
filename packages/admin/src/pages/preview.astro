@@ -1,0 +1,25 @@
+---
+// Preview redirect - opens the public site in a new tab
+// This page just redirects to the site URL
+
+import fs from "fs/promises";
+import yaml from "js-yaml";
+import { getSettingsFilePath } from "../lib/config-paths";
+
+// Get site URL from settings
+let siteUrl = "http://localhost:4321";
+try {
+  const content = await fs.readFile(getSettingsFilePath(), "utf-8");
+  const settings = yaml.load(content) as any;
+  if (settings.site?.url) {
+    siteUrl = settings.site.url;
+  }
+} catch (e) {}
+
+// For development, use localhost
+if (import.meta.env.DEV) {
+  siteUrl = "http://localhost:4321";
+}
+
+return Astro.redirect(siteUrl);
+---

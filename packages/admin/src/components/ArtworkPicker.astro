@@ -1,0 +1,385 @@
+---
+import Button from './ui/Button.astro';
+import Combobox from './ui/Combobox.astro';
+
+type ArtworkPickerProps = {
+  name: string;
+  value?: string;
+  label?: string;
+  description?: string;
+  labelClass?: string;
+  descriptionClass?: string;
+  placeholder?: string;
+  emptyLabel?: string;
+  variant?: 'stacked' | 'inline';
+  artworks?: Array<{
+    slug: string;
+    title: string;
+    thumbnailUrl: string;
+    published: boolean;
+  }>;
+  debugInfo?: Record<string, string>;
+};
+
+const {
+  name,
+  value = '',
+  label,
+  description,
+  labelClass = '',
+  descriptionClass = '',
+  placeholder = 'Search artworks by title',
+  emptyLabel = 'No artworks found',
+  variant = 'stacked',
+  artworks = [],
+  debugInfo,
+} = Astro.props as ArtworkPickerProps;
+
+const baseId = name.replace(/[^a-zA-Z0-9-_]/g, '-');
+const comboboxId = `${baseId}-combobox`;
+const hintId = `${baseId}-hint`;
+const isInline = variant === 'inline';
+
+const truncateTitle = (title: string) => {
+  const normalized = title.trim();
+  if (normalized.length <= 64) return normalized;
+  return `${normalized.slice(0, 61).trimEnd()}...`;
+};
+
+const normalizedArtworks = Array.isArray(artworks) ? artworks : [];
+const artworkItems = normalizedArtworks.map((artwork) => {
+  const baseTitle = (artwork.title || artwork.slug || '').trim();
+  const safeTitle = baseTitle || artwork.slug;
+  return {
+    ...artwork,
+    title: safeTitle,
+    displayTitle: truncateTitle(safeTitle),
+  };
+});
+const selectedItem = artworkItems.find((artwork) => artwork.slug === value);
+const comboboxOptions = artworkItems.map((artwork) => ({
+  label: artwork.displayTitle,
+  value: artwork.displayTitle,
+}));
+const comboboxValue = selectedItem ? selectedItem.displayTitle : '';
+const serializedItems = JSON.stringify(artworkItems);
+const debugPayload = debugInfo ? JSON.stringify(debugInfo) : '';
+---
+
+<div
+  class="artwork-picker"
+  data-artwork-picker
+  data-artwork-picker-debug={debugPayload || undefined}
+>
+  <div class:list={['artwork-picker-header', isInline ? 'is-inline' : '']}>
+    <div class="artwork-picker-header-text">
+      {label && (
+        <label
+          class={`block text-sm text-admin-muted mb-2 ${labelClass}`.trim()}
+          for={`${comboboxId}-input`}
+        >
+          {label}
+        </label>
+      )}
+      {description && (
+        <p
+          id={hintId}
+          class={`text-xs text-admin-muted mb-3 ${descriptionClass}`.trim()}
+        >
+          {description}
+        </p>
+      )}
+    </div>
+    <div class:list={['artwork-picker-preview', isInline ? 'is-inline-preview' : '']}>
+      <div class="artwork-picker-preview-square" data-artwork-picker-preview>
+        <img
+          class="artwork-picker-preview-image hidden"
+          alt="Selected artwork preview"
+          data-artwork-picker-preview-image
+        />
+        <span
+          class="artwork-picker-preview-empty"
+          data-artwork-picker-preview-empty
+        >
+          No artwork
+        </span>
+        <Button
+          type="button"
+          variant="ghost"
+          class="artwork-picker-remove hidden"
+          data-artwork-picker-clear
+        >
+          Remove
+        </Button>
+      </div>
+    </div>
+  </div>
+  <input type="hidden" name={name} value={value} data-artwork-picker-value />
+
+  <div
+    class="artwork-picker-warning bg-admin-warning/10 border border-admin-warning text-admin-warning text-xs rounded-lg px-3 py-2 mb-3 hidden"
+    data-artwork-picker-warning
+  >
+    The selected artwork no longer exists. Please choose a new one.
+  </div>
+
+  <Combobox
+    id={comboboxId}
+    name={`${name}-title`}
+    value={comboboxValue}
+    placeholder={placeholder}
+    options={comboboxOptions}
+    emptyLabel={emptyLabel}
+    inputClass="artwork-picker-combo-input"
+  />
+
+  <script
+    type="application/json"
+    data-artwork-picker-items
+    set:html={serializedItems}
+  ></script>
+</div>
+
+<style>
+  .artwork-picker-header {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .artwork-picker-header.is-inline {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .artwork-picker-header-text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .artwork-picker-preview {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .artwork-picker-preview.is-inline-preview {
+    width: 96px;
+    margin-left: auto;
+  }
+
+  .artwork-picker-preview-square {
+    width: 88px;
+    height: 88px;
+    border-radius: 12px;
+    border: 1px solid var(--admin-border);
+    background: color-mix(in srgb, var(--admin-card) 70%, transparent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .artwork-picker-preview-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .artwork-picker-preview-empty {
+    text-align: center;
+    font-size: 11px;
+    color: var(--admin-muted);
+    padding: 0 6px;
+  }
+
+  .artwork-picker-remove.btn {
+    position: absolute;
+    right: 6px;
+    bottom: 6px;
+    padding: 4px 6px;
+    font-size: 10px;
+    line-height: 1;
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .artwork-picker-preview-square:hover .artwork-picker-remove.btn {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .artwork-picker-combo-input {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .artwork-picker .combo-label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+</style>
+
+<script>
+  // @ts-nocheck
+  /**
+   * @typedef {{ slug: string; title: string; thumbnailUrl: string; published: boolean; displayTitle: string }} ArtworkListItem
+   */
+
+  function initArtworkPickers() {
+    document.querySelectorAll('[data-artwork-picker]').forEach((node) => {
+      if (!(node instanceof HTMLElement)) return;
+      if (node.dataset.artworkPickerInit) return;
+      node.dataset.artworkPickerInit = 'true';
+
+      const hiddenInput = node.querySelector('[data-artwork-picker-value]');
+      const warning = node.querySelector('[data-artwork-picker-warning]');
+      const previewImage = node.querySelector('[data-artwork-picker-preview-image]');
+      const previewEmpty = node.querySelector('[data-artwork-picker-preview-empty]');
+      const clearButton = node.querySelector('[data-artwork-picker-clear]');
+      const comboInput = node.querySelector('[data-combobox-input]');
+      const comboOptions = Array.from(node.querySelectorAll('[data-combobox-option]'));
+      const itemsScript = node.querySelector('[data-artwork-picker-items]');
+      const debugPayload = node.dataset.artworkPickerDebug;
+
+      if (!(hiddenInput instanceof HTMLInputElement)) return;
+      if (!(comboInput instanceof HTMLInputElement)) return;
+
+      /** @type {ArtworkListItem[]} */
+      let items = [];
+
+      if (itemsScript instanceof HTMLScriptElement) {
+        try {
+          const parsed = JSON.parse(itemsScript.textContent || '[]');
+          items = Array.isArray(parsed) ? parsed : [];
+        } catch {}
+      }
+
+      if (debugPayload) {
+        try {
+          const parsed = JSON.parse(debugPayload);
+          console.log('[ArtworkPicker] debug info', parsed);
+        } catch {
+          console.log('[ArtworkPicker] debug payload', debugPayload);
+        }
+        console.log('[ArtworkPicker] items count', items.length);
+      }
+
+      /** @param {string} slug */
+      function findBySlug(slug) {
+        return items.find((item) => item.slug === slug);
+      }
+
+      /** @param {string} display */
+      function findByDisplay(display) {
+        return items.find((item) => item.displayTitle === display);
+      }
+
+      /** @param {ArtworkListItem | undefined} selected */
+      function updateWarning(selected) {
+        if (!(warning instanceof HTMLElement)) return;
+        const isMissing = Boolean(hiddenInput.value.trim()) && !selected;
+        warning.classList.toggle('hidden', !isMissing);
+      }
+
+      /** @param {ArtworkListItem | undefined} selected */
+      function updatePreview(selected) {
+        if (!(previewEmpty instanceof HTMLElement)) return;
+        if (!(previewImage instanceof HTMLImageElement)) return;
+
+        if (selected && selected.thumbnailUrl) {
+          previewImage.src = selected.thumbnailUrl;
+          previewImage.alt = selected.title || selected.slug;
+          previewImage.classList.remove('hidden');
+          previewEmpty.classList.add('hidden');
+          if (debugPayload) {
+            console.log('[ArtworkPicker] preview image', selected.slug, selected.thumbnailUrl);
+          }
+        } else {
+          previewImage.src = '';
+          previewImage.classList.add('hidden');
+          previewEmpty.classList.remove('hidden');
+          if (debugPayload) {
+            console.log('[ArtworkPicker] preview empty', selected ? selected.slug : 'none');
+          }
+        }
+
+        if (clearButton instanceof HTMLButtonElement) {
+          clearButton.classList.toggle('hidden', !hiddenInput.value.trim());
+        }
+      }
+
+      const updateOptionSelection = () => {
+        const current = comboInput.value;
+        comboOptions.forEach((option) => {
+          if (!(option instanceof HTMLElement)) return;
+          const value = option.getAttribute('data-value') || '';
+          const selected = value === current;
+          option.classList.toggle('is-selected', selected);
+          option.setAttribute('aria-selected', selected ? 'true' : 'false');
+        });
+      };
+
+      let currentSelection = findBySlug(hiddenInput.value.trim());
+
+      const syncFromSlug = () => {
+        currentSelection = findBySlug(hiddenInput.value.trim());
+        comboInput.value = currentSelection ? currentSelection.displayTitle : '';
+        updatePreview(currentSelection);
+        updateWarning(currentSelection);
+        updateOptionSelection();
+      };
+
+      const handleInputChange = () => {
+        const display = comboInput.value.trim();
+        const selected = display ? findByDisplay(display) : undefined;
+
+        if (selected) {
+          hiddenInput.value = selected.slug;
+          currentSelection = selected;
+        } else if (!display) {
+          hiddenInput.value = '';
+          currentSelection = undefined;
+        }
+
+        if (debugPayload) {
+          console.log('[ArtworkPicker] selection change', {
+            display,
+            slug: currentSelection?.slug || '',
+            thumbnailUrl: currentSelection?.thumbnailUrl || '',
+          });
+        }
+
+        updatePreview(currentSelection);
+        updateWarning(currentSelection);
+        updateOptionSelection();
+      };
+
+      comboInput.addEventListener('input', handleInputChange);
+      comboInput.addEventListener('change', handleInputChange);
+
+      if (clearButton instanceof HTMLButtonElement) {
+        clearButton.addEventListener('click', () => {
+          hiddenInput.value = '';
+          comboInput.value = '';
+          currentSelection = undefined;
+          updatePreview(currentSelection);
+          updateWarning(currentSelection);
+          updateOptionSelection();
+        });
+      }
+
+      syncFromSlug();
+    });
+  }
+
+  initArtworkPickers();
+  document.addEventListener('astro:page-load', initArtworkPickers);
+</script>

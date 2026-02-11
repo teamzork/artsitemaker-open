@@ -1,0 +1,1164 @@
+---
+import AdminLayout from "@layouts/AdminLayout.astro";
+import Button from "@components/ui/Button.astro";
+import fs from "fs/promises";
+import yaml from "js-yaml";
+import {
+  getSettingsFilePath,
+} from "../../lib/config-paths";
+import {
+  mergeDeployConfig,
+  readLegacyDeploymentConfig,
+  readProjectConfig,
+} from "../../lib/deployment-config";
+
+// Load current settings
+let settings: any = {};
+
+try {
+  const content = await fs.readFile(getSettingsFilePath(), "utf-8");
+  settings = yaml.load(content) as any;
+} catch (e) {
+  console.error("Failed to load settings:", e);
+}
+
+let projectConfig: any = {};
+try {
+  projectConfig = await readProjectConfig();
+} catch (e) {
+  // Project config may not exist
+}
+
+const legacyDeployment = await readLegacyDeploymentConfig();
+const resolvedDeploy = mergeDeployConfig(
+  projectConfig.deploy as Record<string, unknown> | undefined,
+  legacyDeployment || undefined,
+);
+
+// Merge git/deploy settings from project config + legacy fallback
+settings = {
+  ...settings,
+  git: projectConfig.git || settings.git,
+  deploy: { ...(settings.deploy || {}), ...resolvedDeploy },
+};
+
+// Active Deployment Method
+let activeMethod = resolvedDeploy.method || "none";
+let cfPagesProjectName = resolvedDeploy.cloudflarePages?.projectName || "";
+function slugifyProjectName(input: string): string {
+  return input
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .substring(0, 80);
+}
+if (!cfPagesProjectName && settings.site?.title) {
+  cfPagesProjectName = slugifyProjectName(settings.site.title);
+}
+---
+
+<AdminLayout title="Deployment">
+  <span
+    id="deploy-save-status"
+    slot="header-actions"
+    class="text-sm text-admin-muted"
+  ></span>
+  <Button
+    id="deploy-save-btn"
+    type="submit"
+    form="deployment-method-form"
+    slot="header-actions"
+    variant="primary"
+  >
+    Save Method
+  </Button>
+
+  <div class="max-w-4xl space-y-8">
+    <!-- Header -->
+    <div class="card">
+      <h2 class="text-lg font-semibold mb-2">🚀 Deployment</h2>
+      <p class="text-admin-muted text-sm">
+        Choose how to publish your site. Static Export is always available,
+        while other methods can be configured as your active deployment.
+      </p>
+    </div>
+
+    <!-- Static Export - Always Available -->
+    <div class="card border-2 border-admin-border/50">
+      <div class="flex items-start gap-4">
+        <div class="text-3xl">📦</div>
+        <div class="flex-1">
+          <h3 class="text-lg font-semibold">Static Export</h3>
+          <p class="text-sm text-admin-muted mt-1 mb-4">
+            Build your site and download as a ZIP file. Upload manually to any
+            web host. Always available.
+          </p>
+          <button id="build-zip-btn" class="btn btn-primary">
+            Build & Download
+          </button>
+          <div id="static-status" class="mt-4 text-sm hidden"></div>
+        </div>
+      </div>
+    </div>
+
+    <form id="deployment-method-form" class="space-y-6">
+      <!-- Active Deployment Methods -->
+      <h3 class="text-lg font-semibold">Active Deployment Method</h3>
+      <div>
+        <div class="grid gap-4">
+        <!-- None / No Active Deployment -->
+        <div
+          class={`card relative border-2 transition-all duration-300 ${activeMethod === "none" ? "border-primary bg-primary/5" : "border-transparent cursor-pointer"}`}
+          id="deploy-none"
+          data-method="none"
+        >
+          <label
+            class="absolute top-4 right-4 flex items-center gap-2 cursor-pointer"
+            onclick="event.stopPropagation()"
+          >
+            <input
+              type="radio"
+              name="deployMethod"
+              value="none"
+              checked={activeMethod === "none"}
+              class="w-5 h-5 accent-primary"
+            />
+            <span class="text-sm font-medium">Selected</span>
+          </label>
+
+          <div class="flex items-start gap-4">
+            <div class="text-3xl">🚫</div>
+            <div class="flex-1">
+              <h3 class="text-lg font-semibold">None</h3>
+              <p class="text-sm text-admin-muted mt-1">
+                No ongoing deployment method is configured.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Git Push -->
+        <div
+          class={`card relative border-2 transition-all duration-300 ${activeMethod === "git" ? "border-primary bg-primary/5" : "border-transparent cursor-pointer"}`}
+          id="deploy-git"
+          data-method="git"
+        >
+          <label
+            class="absolute top-4 right-4 flex items-center gap-2 cursor-pointer"
+            onclick="event.stopPropagation()"
+          >
+            <input
+              type="radio"
+              name="deployMethod"
+              value="git"
+              checked={activeMethod === "git"}
+              class="w-5 h-5 accent-primary"
+            />
+            <span class="text-sm font-medium">Selected</span>
+          </label>
+
+          <div class="flex items-start gap-4">
+            <div class="text-3xl">🐙</div>
+            <div class="flex-1">
+              <h3 class="text-lg font-semibold">Git Repository</h3>
+              <p class="text-sm text-admin-muted mt-1">
+                Commit and push changes to a Git repository. Works with GitHub,
+                GitLab, Bitbucket, etc.
+              </p>
+            </div>
+          </div>
+
+          <!-- Git Configuration (conditionally visible) -->
+          <div
+            class={`deploy-content mt-4 overflow-hidden transition-all duration-300 ${activeMethod === "git" ? "max-h-[1000px] opacity-100" : "max-h-0 opacity-0"}`}
+            data-method="git"
+          >
+            <div class="pt-4 border-t border-admin-border">
+              <!-- Deployment Target Info -->
+              <div class="bg-admin-sidebar/50 rounded-lg p-4 mb-6">
+                <div class="text-sm font-medium mb-2">Auto-Deploy Targets</div>
+                <p class="text-xs text-admin-muted mb-3">
+                  Connect your git repository to these platforms for automatic
+                  deployment on push:
+                </p>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                  <div
+                    class="flex items-center gap-2 bg-admin-bg rounded px-2 py-1"
+                  >
+                    <span>▲</span>
+                    <span>Vercel</span>
+                  </div>
+                  <div
+                    class="flex items-center gap-2 bg-admin-bg rounded px-2 py-1"
+                  >
+                    <span>◆</span>
+                    <span>Netlify</span>
+                  </div>
+                  <div
+                    class="flex items-center gap-2 bg-admin-bg rounded px-2 py-1"
+                  >
+                    <span>☁️</span>
+                    <span>CF Pages</span>
+                  </div>
+                  <div
+                    class="flex items-center gap-2 bg-admin-bg rounded px-2 py-1"
+                  >
+                    <span>🅰️</span>
+                    <span>AWS Amplify</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label class="block text-sm text-admin-muted mb-2"
+                    >Remote</label
+                  >
+                  <input
+                    type="text"
+                    id="git-remote"
+                    value={settings.git?.remote || "origin"}
+                    class="w-full"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm text-admin-muted mb-2"
+                    >Branch</label
+                  >
+                  <input
+                    type="text"
+                    id="git-branch"
+                    value={settings.git?.branch || "main"}
+                    class="w-full"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm text-admin-muted mb-2"
+                    >Commit Prefix</label
+                  >
+                  <input
+                    type="text"
+                    id="git-prefix"
+                    value={settings.git?.commitPrefix || "[ArtSiteMaker]"}
+                    class="w-full"
+                  />
+                </div>
+                <div class="flex items-center gap-3 pt-6">
+                  <input
+                    type="checkbox"
+                    id="git-auto-commit"
+                    checked={settings.git?.autoCommit}
+                    class="w-5 h-5"
+                  />
+                  <label for="git-auto-commit" class="text-sm"
+                    >Auto-commit on save</label
+                  >
+                </div>
+              </div>
+
+              <div
+                class="flex items-center gap-3 pt-4 border-t border-admin-border"
+              >
+                <div class="flex-1">
+                  <input
+                    type="text"
+                    id="commit-message"
+                    placeholder="Commit message"
+                    value="Update content"
+                    class="w-full"
+                  />
+                </div>
+                <button id="git-push-btn" type="button" class="btn btn-primary">
+                  Commit & Push
+                </button>
+              </div>
+              <div id="git-status" class="mt-4 text-sm hidden"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- FTP/SFTP -->
+        <div
+          class={`card relative border-2 transition-all duration-300 ${activeMethod === "ftp" ? "border-primary bg-primary/5" : "border-transparent cursor-pointer"}`}
+          id="deploy-ftp"
+          data-method="ftp"
+        >
+          <label
+            class="absolute top-4 right-4 flex items-center gap-2 cursor-pointer"
+            onclick="event.stopPropagation()"
+          >
+            <input
+              type="radio"
+              name="deployMethod"
+              value="ftp"
+              checked={activeMethod === "ftp"}
+              class="w-5 h-5 accent-primary"
+            />
+            <span class="text-sm font-medium">Selected</span>
+          </label>
+
+          <div class="flex items-start gap-4">
+            <div class="text-3xl">📤</div>
+            <div class="flex-1">
+              <h3 class="text-lg font-semibold">FTP / SFTP</h3>
+              <p class="text-sm text-admin-muted mt-1">
+                Upload built site directly to a web server via FTP or SFTP.
+              </p>
+            </div>
+          </div>
+
+          <!-- FTP Configuration (conditionally visible) -->
+          <div
+            class={`deploy-content mt-4 overflow-hidden transition-all duration-300 ${activeMethod === "ftp" ? "max-h-[1000px] opacity-100" : "max-h-0 opacity-0"}`}
+            data-method="ftp"
+          >
+            <div class="pt-4 border-t border-admin-border">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label class="block text-sm text-admin-muted mb-2"
+                    >Protocol</label
+                  >
+                  <select id="ftp-protocol" class="w-full bg-admin-sidebar">
+                    <option
+                      value="ftp"
+                      selected={settings.deploy?.ftp?.protocol === "ftp"}
+                      >FTP</option
+                    >
+                    <option
+                      value="sftp"
+                      selected={settings.deploy?.ftp?.protocol === "sftp"}
+                      >SFTP</option
+                    >
+                    <option
+                      value="ftps"
+                      selected={settings.deploy?.ftp?.protocol === "ftps"}
+                      >FTPS (FTP over TLS)</option
+                    >
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-sm text-admin-muted mb-2">Host</label
+                  >
+                  <input
+                    type="text"
+                    id="ftp-host"
+                    value={settings.deploy?.ftp?.host || ""}
+                    class="w-full"
+                    placeholder="ftp.example.com"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm text-admin-muted mb-2">Port</label
+                  >
+                  <input
+                    type="number"
+                    id="ftp-port"
+                    value={settings.deploy?.ftp?.port || 21}
+                    class="w-full"
+                  />
+                  <p class="text-xs text-admin-muted mt-1">
+                    Default: 21 (FTP), 22 (SFTP)
+                  </p>
+                </div>
+                <div>
+                  <label class="block text-sm text-admin-muted mb-2"
+                    >Remote Path</label
+                  >
+                  <input
+                    type="text"
+                    id="ftp-path"
+                    value={settings.deploy?.ftp?.remotePath || "/public_html"}
+                    class="w-full"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm text-admin-muted mb-2"
+                    >Username</label
+                  >
+                  <input
+                    type="text"
+                    id="ftp-user"
+                    value={settings.deploy?.ftp?.username || ""}
+                    class="w-full"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm text-admin-muted mb-2"
+                    >Password</label
+                  >
+                  <input
+                    type="password"
+                    id="ftp-password"
+                    value=""
+                    class="w-full"
+                    placeholder="••••••••"
+                  />
+                </div>
+              </div>
+
+              <!-- SFTP SSH Key Options (shown when SFTP selected) -->
+              <div
+                id="sftp-key-options"
+                class={`bg-admin-sidebar/50 rounded-lg p-4 mb-4 ${settings.deploy?.ftp?.protocol !== "sftp" ? "hidden" : ""}`}
+              >
+                <div class="text-sm font-medium mb-3">
+                  SSH Key Authentication (Optional)
+                </div>
+                <p class="text-xs text-admin-muted mb-3">
+                  Use SSH key instead of password for SFTP connections.
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm text-admin-muted mb-2"
+                      >SSH Private Key Path</label
+                    >
+                    <input
+                      type="text"
+                      id="sftp-key-path"
+                      value={settings.deploy?.ftp?.sshKeyPath || ""}
+                      class="w-full"
+                      placeholder="~/.ssh/id_rsa"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-sm text-admin-muted mb-2"
+                      >Key Passphrase (if encrypted)</label
+                    >
+                    <input
+                      type="password"
+                      id="sftp-key-passphrase"
+                      value=""
+                      class="w-full"
+                      placeholder="••••••••"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div
+                class="flex items-center gap-3 pt-4 border-t border-admin-border"
+              >
+                <button id="ftp-test-btn" class="btn btn-secondary">
+                  Test Connection
+                </button>
+                <button id="ftp-deploy-btn" type="button" class="btn btn-primary">
+                  Deploy via FTP
+                </button>
+              </div>
+              <div id="ftp-status" class="mt-4 text-sm hidden"></div>
+              <p class="text-xs text-admin-muted mt-4">
+                ⚠️ FTP credentials are stored in your secrets vault. Make sure
+                to initialize secrets first.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Webhook -->
+        <div
+          class={`card relative border-2 transition-all duration-300 ${activeMethod === "webhook" ? "border-primary bg-primary/5" : "border-transparent cursor-pointer"}`}
+          id="deploy-webhook"
+          data-method="webhook"
+        >
+          <label
+            class="absolute top-4 right-4 flex items-center gap-2 cursor-pointer"
+            onclick="event.stopPropagation()"
+          >
+            <input
+              type="radio"
+              name="deployMethod"
+              value="webhook"
+              checked={activeMethod === "webhook"}
+              class="w-5 h-5 accent-primary"
+            />
+            <span class="text-sm font-medium">Selected</span>
+          </label>
+
+          <div class="flex items-start gap-4">
+            <div class="text-3xl">🔗</div>
+            <div class="flex-1">
+              <h3 class="text-lg font-semibold">Deploy Webhook</h3>
+              <p class="text-sm text-admin-muted mt-1">
+                Trigger external deployment services like Vercel, Netlify, or
+                custom CI/CD pipelines.
+              </p>
+            </div>
+          </div>
+
+          <!-- Webhook Configuration (conditionally visible) -->
+          <div
+            class={`deploy-content mt-4 overflow-hidden transition-all duration-300 ${activeMethod === "webhook" ? "max-h-[1000px] opacity-100" : "max-h-0 opacity-0"}`}
+            data-method="webhook"
+          >
+            <div class="pt-4 border-t border-admin-border">
+              <div class="space-y-4 mb-4">
+                <div>
+                  <label class="block text-sm text-admin-muted mb-2"
+                    >Webhook URL</label
+                  >
+                  <input
+                    type="url"
+                    id="webhook-url"
+                    value={settings.deploy?.webhookUrl || ""}
+                    class="w-full"
+                    placeholder="https://api.vercel.com/v1/..."
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm text-admin-muted mb-2"
+                    >Webhook Secret (optional)</label
+                  >
+                  <input
+                    type="password"
+                    id="webhook-secret"
+                    value={settings.deploy?.webhookSecret || ""}
+                    class="w-full"
+                    placeholder="Optional authentication secret"
+                  />
+                </div>
+              </div>
+
+              <div
+                class="flex items-center gap-3 pt-4 border-t border-admin-border"
+              >
+                <button id="webhook-trigger-btn" class="btn btn-primary">
+                  Trigger Deploy
+                </button>
+                <button id="webhook-save-btn" type="button" class="btn btn-secondary">
+                  Save Settings
+                </button>
+              </div>
+              <div id="webhook-status" class="mt-4 text-sm hidden"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cloudflare Pages -->
+        <div
+          class={`card relative border-2 transition-all duration-300 ${activeMethod === "cloudflare-pages" ? "border-primary bg-primary/5" : "border-transparent cursor-pointer"}`}
+          id="deploy-cloudflare-pages"
+          data-method="cloudflare-pages"
+        >
+          <label
+            class="absolute top-4 right-4 flex items-center gap-2 cursor-pointer"
+            onclick="event.stopPropagation()"
+          >
+            <input
+              type="radio"
+              name="deployMethod"
+              value="cloudflare-pages"
+              checked={activeMethod === "cloudflare-pages"}
+              class="w-5 h-5 accent-primary"
+            />
+            <span class="text-sm font-medium">Selected</span>
+          </label>
+
+          <div class="flex items-start gap-4">
+            <div class="text-3xl">&#9729;&#65039;</div>
+            <div class="flex-1">
+              <h3 class="text-lg font-semibold">Cloudflare Pages</h3>
+              <p class="text-sm text-admin-muted mt-1">
+                Build and deploy your site directly to Cloudflare Pages.
+                Available at <code>&lt;project&gt;.pages.dev</code> or your
+                custom domain.
+              </p>
+            </div>
+          </div>
+
+          <!-- Cloudflare Pages Configuration (conditionally visible) -->
+          <div
+            class={`deploy-content mt-4 overflow-hidden transition-all duration-300 ${activeMethod === "cloudflare-pages" ? "max-h-[1000px] opacity-100" : "max-h-0 opacity-0"}`}
+            data-method="cloudflare-pages"
+          >
+            <div class="pt-4 border-t border-admin-border">
+              <!-- Credentials Status -->
+              <div class="bg-admin-sidebar/50 rounded-lg p-4 mb-6">
+                <div class="text-sm font-medium mb-2">
+                  Cloudflare Credentials
+                </div>
+                <p class="text-xs text-admin-muted mb-3">
+                  Account ID and API Token are managed in the
+                  <a
+                    href="/configuration"
+                    class="text-primary hover:underline"
+                    >Configuration</a
+                  > page under the Secrets Vault.
+                </p>
+                <div
+                  id="cf-creds-status"
+                  class="text-xs px-2 py-1 rounded bg-admin-bg inline-block"
+                >
+                  Checking credentials...
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label class="block text-sm text-admin-muted mb-2"
+                    >Project Name</label
+                  >
+                  <input
+                    type="text"
+                    id="cf-project-name"
+                    value={cfPagesProjectName}
+                    class="w-full"
+                    placeholder="my-portfolio"
+                  />
+                  <p class="text-xs text-admin-muted mt-1">
+                    Your site will be available at
+                    <code>&lt;name&gt;.pages.dev</code>. The project will be
+                    created automatically if it doesn't exist.
+                  </p>
+                </div>
+              </div>
+
+              <div
+                class="flex items-center gap-3 pt-4 border-t border-admin-border"
+              >
+                <button id="cf-save-btn" type="button" class="btn btn-secondary">
+                  Save Settings
+                </button>
+                <button id="cf-deploy-btn" type="button" class="btn btn-primary">
+                  Build & Deploy
+                </button>
+              </div>
+              <div id="cf-status" class="mt-4 text-sm hidden"></div>
+              <p class="text-xs text-admin-muted mt-4">
+                Custom domains can be configured in
+                <a
+                  href="/configuration#custom-domain"
+                  class="text-primary hover:underline"
+                  >Configuration → Custom Domain</a
+                >.
+              </p>
+            </div>
+          </div>
+        </div>
+        </div>
+      </div>
+    </form>
+  </div>
+</AdminLayout>
+
+<script>
+  import { createFormChangeDetector } from "../../lib/form-change-detector";
+  import { createFormSaveHandler } from "../../lib/form-save-handler";
+  // Status helpers
+  function showToast(
+    message: string,
+    type: "success" | "error" | "info" = "info",
+  ) {
+    const variant =
+      type === "error"
+        ? "destructive"
+        : type === "success"
+          ? "success"
+          : "default";
+    window.dispatchEvent(
+      new CustomEvent("artsitemaker:toast", {
+        detail: {
+          title:
+            type === "error"
+              ? "Error"
+              : type === "success"
+                ? "Success"
+                : "Info",
+          description: message,
+          variant: variant,
+        },
+      }),
+    );
+  }
+
+  function showStatus(
+    id: string,
+    message: string,
+    type: "success" | "error" | "info",
+  ) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = message;
+    el.className = `mt-4 text-sm ${type === "success" ? "text-green-400" : type === "error" ? "text-red-400" : "text-admin-muted"}`;
+    el.classList.remove("hidden");
+  }
+
+  // Make entire cards clickable (except when clicking on interactive elements)
+  document.querySelectorAll('[id^="deploy-"]').forEach((card) => {
+    card.addEventListener("click", (e) => {
+      // Don't trigger if clicking on inputs, buttons, links, selects, or inside deploy-content
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "BUTTON" ||
+        target.tagName === "A" ||
+        target.tagName === "SELECT" ||
+        target.tagName === "TEXTAREA" ||
+        target.closest("label") ||
+        target.closest("button") ||
+        target.closest("input") ||
+        target.closest("select") ||
+        target.closest(".deploy-content")
+      ) {
+        return;
+      }
+
+      // Find the radio button in this card and trigger it
+      const radio = card.querySelector(
+        'input[type="radio"]',
+      ) as HTMLInputElement;
+      if (radio && !radio.checked) {
+        radio.click();
+      }
+    });
+  });
+
+  const deployForm = document.getElementById(
+    "deployment-method-form",
+  ) as HTMLFormElement | null;
+  const deploySaveBtn = document.getElementById(
+    "deploy-save-btn",
+  ) as HTMLButtonElement | null;
+  const deploySaveStatus = document.getElementById("deploy-save-status");
+
+  if (deployForm && deploySaveBtn) {
+    const changeDetector = createFormChangeDetector({
+      form: deployForm,
+      saveButton: deploySaveBtn,
+    });
+
+    const saveHandler = createFormSaveHandler({
+      form: deployForm,
+      saveButton: deploySaveBtn,
+      statusElement: deploySaveStatus,
+      successToast: {
+        title: "Deployment method saved",
+        variant: "success",
+      },
+      errorToast: (err: Error) => ({
+        title: "Failed to save deployment method",
+        description: err.message,
+        variant: "destructive",
+      }),
+      saveFn: async (formData: FormData) => {
+        const method =
+          formData.get("deployMethod")?.toString() || "none";
+        return fetch("/api/project-config", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            deploy: { method },
+          }),
+        });
+      },
+      onAfterSave: () => {
+        changeDetector.reset();
+      },
+    });
+
+    setTimeout(() => {
+      changeDetector.initialize();
+      saveHandler.attach();
+    }, 0);
+  }
+
+  // Active Method Change
+  document.querySelectorAll('input[name="deployMethod"]').forEach((radio) => {
+    radio.addEventListener("change", (e) => {
+      const method = (e.target as HTMLInputElement).value;
+      const cards = ["none", "git", "ftp", "webhook", "cloudflare-pages"];
+
+      // Update UI immediately for responsiveness
+      cards.forEach((card) => {
+        const el = document.getElementById(`deploy-${card}`);
+        const content = el?.querySelector(".deploy-content");
+
+        if (el) {
+          if (card === method) {
+            el.classList.add("border-primary", "bg-primary/5");
+            el.classList.remove("border-transparent");
+            // Expand content
+            if (content) {
+              content.classList.remove("max-h-0", "opacity-0");
+              content.classList.add("max-h-[1000px]", "opacity-100");
+            }
+          } else {
+            el.classList.remove("border-primary", "bg-primary/5");
+            el.classList.add("border-transparent");
+            // Collapse content
+            if (content) {
+              content.classList.add("max-h-0", "opacity-0");
+              content.classList.remove("max-h-[1000px]", "opacity-100");
+            }
+          }
+        }
+      });
+
+    });
+  });
+
+  // Static Export
+  document
+    .getElementById("build-zip-btn")
+    ?.addEventListener("click", async () => {
+      const btn = document.getElementById("build-zip-btn") as HTMLButtonElement;
+      btn.disabled = true;
+      btn.textContent = "⏳ Building...";
+      showStatus("static-status", "Building static site...", "info");
+
+      try {
+        const res = await fetch("/api/build-zip", { method: "POST" });
+
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || "Build failed");
+        }
+
+        const blob = await res.blob();
+        const disposition = res.headers.get("Content-Disposition") || "";
+        const match = disposition.match(/filename=\"?([^\";\n]+)\"?/);
+        const filename = match?.[1] || "artsitemaker-site.zip";
+
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+
+        showStatus(
+          "static-status",
+          "✓ Build complete, download started",
+          "success",
+        );
+      } catch (e) {
+        showStatus("static-status", `✗ ${(e as Error).message}`, "error");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Build & Download";
+      }
+    });
+
+  // Git Push
+  document
+    .getElementById("git-push-btn")
+    ?.addEventListener("click", async () => {
+      const btn = document.getElementById("git-push-btn") as HTMLButtonElement;
+      const message =
+        (document.getElementById("commit-message") as HTMLInputElement)
+          ?.value || "Update content";
+
+      btn.disabled = true;
+      btn.textContent = "⏳ Pushing...";
+      showStatus("git-status", "Committing and pushing...", "info");
+
+      try {
+        const res = await fetch("/api/publish", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message }),
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          if (data.commit) {
+            const shortHash = data.commit.substring(0, 7);
+            const action = data.pushed ? "Published" : "Committed";
+            showStatus("git-status", `✓ ${action} (${shortHash})`, "success");
+          } else {
+            showStatus(
+              "git-status",
+              data.message || "No changes to commit",
+              "info",
+            );
+          }
+        } else {
+          throw new Error(data.error || "Push failed");
+        }
+      } catch (e) {
+        showStatus("git-status", `✗ ${(e as Error).message}`, "error");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Commit & Push";
+      }
+    });
+
+  // FTP Protocol Change Handler
+  document.getElementById("ftp-protocol")?.addEventListener("change", (e) => {
+    const protocol = (e.target as HTMLSelectElement).value;
+    const sshKeyOptions = document.getElementById("sftp-key-options");
+    const portInput = document.getElementById("ftp-port") as HTMLInputElement;
+
+    // Toggle SSH key options
+    if (sshKeyOptions) {
+      sshKeyOptions.classList.toggle("hidden", protocol !== "sftp");
+    }
+
+    // Update default port
+    if (portInput) {
+      if (
+        protocol === "sftp" &&
+        (portInput.value === "21" || portInput.value === "990")
+      ) {
+        portInput.value = "22";
+      } else if (protocol === "ftp" && portInput.value === "22") {
+        portInput.value = "21";
+      } else if (
+        protocol === "ftps" &&
+        (portInput.value === "21" || portInput.value === "22")
+      ) {
+        portInput.value = "990";
+      }
+    }
+  });
+
+  // FTP Deploy placeholder
+  document.getElementById("ftp-test-btn")?.addEventListener("click", () => {
+    showStatus("ftp-status", "FTP deployment is not yet implemented", "info");
+  });
+
+  document.getElementById("ftp-deploy-btn")?.addEventListener("click", () => {
+    showStatus(
+      "ftp-status",
+      "FTP deployment is not yet implemented. Use Static Export instead.",
+      "info",
+    );
+  });
+
+  // Webhook
+  document
+    .getElementById("webhook-trigger-btn")
+    ?.addEventListener("click", async () => {
+      const url = (document.getElementById("webhook-url") as HTMLInputElement)
+        ?.value;
+
+      if (!url) {
+        showStatus("webhook-status", "Please enter a webhook URL", "error");
+        return;
+      }
+
+      const btn = document.getElementById(
+        "webhook-trigger-btn",
+      ) as HTMLButtonElement;
+      btn.disabled = true;
+      btn.textContent = "⏳ Triggering...";
+      showStatus("webhook-status", "Sending webhook request...", "info");
+
+      try {
+        const res = await fetch("/api/deploy-webhook", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url }),
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          showStatus(
+            "webhook-status",
+            "✓ Webhook triggered successfully",
+            "success",
+          );
+        } else {
+          throw new Error(data.error || "Webhook failed");
+        }
+      } catch (e) {
+        showStatus("webhook-status", `✗ ${(e as Error).message}`, "error");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Trigger Deploy";
+      }
+    });
+
+  document
+    .getElementById("webhook-save-btn")
+    ?.addEventListener("click", async () => {
+      const url = (document.getElementById("webhook-url") as HTMLInputElement)
+        ?.value;
+      const secret = (
+        document.getElementById("webhook-secret") as HTMLInputElement
+      )?.value;
+
+      try {
+        const res = await fetch("/api/settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            "deploy.webhookUrl": url,
+            "deploy.webhookSecret": secret,
+          }),
+        });
+
+        if (res.ok) {
+          showStatus("webhook-status", "✓ Settings saved", "success");
+        } else {
+          throw new Error("Failed to save");
+        }
+      } catch (e) {
+        showStatus("webhook-status", `✗ ${(e as Error).message}`, "error");
+      }
+    });
+
+  // Cloudflare Pages - Check credentials status on load
+  (async () => {
+    const statusEl = document.getElementById("cf-creds-status");
+    if (!statusEl) return;
+
+    try {
+      const res = await fetch("/api/secrets/data?masked=true");
+      const data = await res.json();
+
+      if (!data.success || !data.data?.cloudflare?.account_id || !data.data?.cloudflare?.api_token) {
+        statusEl.textContent = "Not configured";
+        statusEl.className = "text-xs px-2 py-1 rounded bg-red-500/10 text-red-400 inline-block";
+      } else {
+        statusEl.textContent = "Configured";
+        statusEl.className = "text-xs px-2 py-1 rounded bg-green-500/10 text-green-400 inline-block";
+      }
+    } catch {
+      statusEl.textContent = "Vault locked";
+      statusEl.className = "text-xs px-2 py-1 rounded bg-yellow-500/10 text-yellow-400 inline-block";
+    }
+  })();
+
+  // Cloudflare Pages - Save project name
+  document
+    .getElementById("cf-save-btn")
+    ?.addEventListener("click", async () => {
+      const projectName = (
+        document.getElementById("cf-project-name") as HTMLInputElement
+      )?.value?.trim();
+
+      if (!projectName) {
+        showStatus("cf-status", "Please enter a project name", "error");
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/project-config", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            deploy: {
+              cloudflarePages: {
+                projectName,
+              },
+            },
+          }),
+        });
+
+        if (res.ok) {
+          showStatus("cf-status", "Settings saved", "success");
+          showToast("Cloudflare Pages settings saved", "success");
+        } else {
+          throw new Error("Failed to save");
+        }
+      } catch (e) {
+        showStatus("cf-status", `${(e as Error).message}`, "error");
+      }
+    });
+
+  // Cloudflare Pages - Deploy
+  document
+    .getElementById("cf-deploy-btn")
+    ?.addEventListener("click", async () => {
+      const projectName = (
+        document.getElementById("cf-project-name") as HTMLInputElement
+      )?.value?.trim();
+
+      if (!projectName) {
+        showStatus(
+          "cf-status",
+          "Please enter a project name and save settings first",
+          "error",
+        );
+        return;
+      }
+
+      const btn = document.getElementById(
+        "cf-deploy-btn",
+      ) as HTMLButtonElement;
+      const saveBtn = document.getElementById(
+        "cf-save-btn",
+      ) as HTMLButtonElement;
+      btn.disabled = true;
+      saveBtn.disabled = true;
+      btn.textContent = "Building & Deploying...";
+      showStatus(
+        "cf-status",
+        "Building site and deploying to Cloudflare Pages. This may take a few minutes...",
+        "info",
+      );
+
+      try {
+        // Save project name first (in case it was changed)
+        const saveRes = await fetch("/api/project-config", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            deploy: {
+              cloudflarePages: {
+                projectName,
+              },
+            },
+          }),
+        });
+        if (!saveRes.ok) {
+          throw new Error("Failed to save project name");
+        }
+
+        // Deploy
+        const res = await fetch("/api/deploy-cloudflare", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          let message = "Deployed successfully";
+          if (data.url) {
+            message = `Deployed: <a href="${data.url}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">${data.url}</a>`;
+          }
+          const statusEl = document.getElementById("cf-status");
+          if (statusEl) {
+            statusEl.innerHTML = message;
+            statusEl.className =
+              "mt-4 text-sm text-green-400";
+            statusEl.classList.remove("hidden");
+          }
+          showToast("Deployed to Cloudflare Pages", "success");
+        } else {
+          // Handle error with optional link
+          let errorMessage = data.error || "Deployment failed";
+          if (data.linkToConfig) {
+            errorMessage += ` <a href="${data.linkToConfig}" class="text-primary hover:underline">Go to Configuration</a>`;
+          }
+          const statusEl = document.getElementById("cf-status");
+          if (statusEl) {
+            statusEl.innerHTML = errorMessage;
+            statusEl.className = "mt-4 text-sm text-red-400";
+            statusEl.classList.remove("hidden");
+          }
+          showToast("Cloudflare Pages deployment failed", "error");
+          throw new Error(data.error || "Deployment failed");
+        }
+      } catch (e) {
+        // Only show generic error if not already handled above
+        const statusEl = document.getElementById("cf-status");
+        if (statusEl?.classList.contains("hidden")) {
+          showStatus("cf-status", `${(e as Error).message}`, "error");
+        }
+        showToast("Cloudflare Pages deployment failed", "error");
+      } finally {
+        btn.disabled = false;
+        saveBtn.disabled = false;
+        btn.textContent = "Build & Deploy";
+      }
+    });
+
+</script>

@@ -1,0 +1,106 @@
+---
+interface Props {
+  id: string;
+  title: string;
+  closeText?: string;
+  confirmText?: string;
+  variant?: 'danger' | 'primary';
+  size?: 'md' | 'lg' | 'xl';
+  showActions?: boolean;
+}
+
+const {
+  id,
+  title,
+  closeText = 'Cancel',
+  confirmText = 'Confirm',
+  variant = 'primary',
+  size = 'md',
+  showActions = true,
+} = Astro.props;
+
+const sizeClasses = {
+  md: 'max-w-md',
+  lg: 'max-w-2xl',
+  xl: 'max-w-4xl',
+};
+
+const sizeClass = sizeClasses[size] || 'max-w-md';
+
+const titleId = `${id}-title`;
+---
+
+<div id={id} class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center backdrop-blur-sm transition-opacity">
+  <div
+    class={`bg-admin-card border border-admin-border rounded-xl p-6 w-full mx-4 shadow-2xl transform transition-all scale-100 max-h-[85vh] overflow-y-auto ${sizeClass}`}
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby={titleId}
+  >
+    <h3 id={titleId} class="text-xl font-bold mb-4">{title}</h3>
+    
+    <div class="text-admin-text mb-6">
+      <slot />
+    </div>
+
+    {showActions && (
+      <div class="flex gap-3 justify-end">
+        <button type="button" class="btn btn-secondary close-modal">{closeText}</button>
+        <button 
+          type="button" 
+          class={`btn ${variant === 'danger' ? 'bg-red-500 hover:bg-red-600 text-white' : 'btn-primary'} confirm-modal`}
+        >
+          {confirmText}
+        </button>
+      </div>
+    )}
+  </div>
+</div>
+
+<script define:vars={{ id }}>
+  const modal = document.getElementById(id);
+  
+  if (modal) {
+    // Close on backdrop click
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        closeModal();
+      }
+    });
+
+    // Close buttons
+    modal.querySelectorAll('.close-modal').forEach(btn => {
+      btn.addEventListener('click', closeModal);
+    });
+
+    // Confirm button
+    modal.querySelectorAll('.confirm-modal').forEach(btn => {
+      btn.addEventListener('click', () => {
+        modal.dispatchEvent(new CustomEvent('confirm'));
+      });
+    });
+
+    // ESC key to close
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+        closeModal();
+      }
+    });
+
+    function closeModal() {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      document.body.style.overflow = '';
+      modal.dispatchEvent(new CustomEvent('close'));
+    }
+
+    // Expose open function on the element for easier usage
+    modal.open = () => {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.body.style.overflow = 'hidden';
+    };
+    
+    modal.close = closeModal;
+  }
+</script>

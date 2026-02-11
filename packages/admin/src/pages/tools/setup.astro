@@ -1,0 +1,100 @@
+---
+import AdminLayout from "@layouts/AdminLayout.astro";
+---
+
+<AdminLayout title="Setup Wizard">
+    <div class="space-y-8 max-w-2xl mx-auto">
+        <div class="text-center mb-8">
+            <h1 class="text-2xl font-bold mb-2">🧙 Setup Wizard</h1>
+            <p class="text-admin-muted">
+                Choose an option below to get started or troubleshoot your ArtSiteMaker
+                installation.
+            </p>
+        </div>
+
+        <div class="grid gap-4">
+            <!-- New Project -->
+            <a
+                href="/tools/setup/new"
+                class="card hover:border-admin-accent transition-colors group"
+            >
+                <div class="flex items-center gap-4">
+                    <span class="text-4xl">🎨</span>
+                    <div class="flex-1">
+                        <h2
+                            class="text-lg font-semibold group-hover:text-admin-accent transition-colors"
+                        >
+                            New Project
+                        </h2>
+                        <p class="text-sm text-admin-muted">
+                            Start fresh with a new portfolio. Set up your
+                            content folder, theme, and basic settings.
+                        </p>
+                    </div>
+                    <span
+                        class="text-admin-muted group-hover:text-admin-accent transition-colors"
+                        >→</span
+                    >
+                </div>
+            </a>
+
+            <!-- Existing Project -->
+            <a
+                href="/tools/setup/existing"
+                class="card hover:border-admin-accent transition-colors group"
+            >
+                <div class="flex items-center gap-4">
+                    <span class="text-4xl">📂</span>
+                    <div class="flex-1">
+                        <h2
+                            class="text-lg font-semibold group-hover:text-admin-accent transition-colors"
+                        >
+                            Existing Project
+                        </h2>
+                        <p class="text-sm text-admin-muted">
+                            Connect to an existing content folder from a
+                            previous installation or backup.
+                        </p>
+                    </div>
+                    <span
+                        class="text-admin-muted group-hover:text-admin-accent transition-colors"
+                        >→</span
+                    >
+                </div>
+            </a>
+
+            <!-- Troubleshooting -->
+            <a
+                href="/tools/setup/troubleshoot"
+                class="card hover:border-admin-accent transition-colors group"
+            >
+                <div class="flex items-center gap-4">
+                    <span class="text-4xl">🔧</span>
+                    <div class="flex-1">
+                        <h2
+                            class="text-lg font-semibold group-hover:text-admin-accent transition-colors"
+                        >
+                            Troubleshooting
+                        </h2>
+                        <p class="text-sm text-admin-muted">
+                            Diagnose and fix common issues with your
+                            configuration, paths, or settings.
+                        </p>
+                    </div>
+                    <span
+                        class="text-admin-muted group-hover:text-admin-accent transition-colors"
+                        >→</span
+                    >
+                </div>
+            </a>
+        </div>
+
+        <div class="text-center">
+            <a
+                href="/tools"
+                class="text-sm text-admin-muted hover:text-admin-text"
+                >← Back to Tools</a
+            >
+        </div>
+    </div>
+</AdminLayout>

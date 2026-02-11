@@ -1,0 +1,40 @@
+{
+    "name": "artsitemaker",
+    "version": "1.0.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "dev": "./scripts/dev.sh",
+        "dev:admin": "pnpm --filter @artsitemaker/admin dev",
+        "dev:site": "pnpm sync:themes && pnpm --filter @artsitemaker/site dev",
+        "build": "pnpm sync:themes && pnpm -r build",
+        "build:admin": "pnpm --filter @artsitemaker/admin build",
+        "build:site": "pnpm sync:themes && pnpm --filter @artsitemaker/site build",
+        "lint": "pnpm -r lint",
+        "test": "pnpm -r test",
+        "test:watch": "pnpm -r test:watch",
+        "test:coverage": "pnpm -r test:coverage",
+        "test:e2e": "pnpm --filter @artsitemaker/admin test:e2e && pnpm --filter @artsitemaker/site test:e2e",
+        "test:e2e:ui": "echo 'Run E2E UI tests from specific package: cd packages/admin && pnpm test:e2e:ui'",
+        "test:all": "pnpm test && pnpm test:e2e",
+        "test:admin": "pnpm --filter @artsitemaker/admin test --reporter=verbose",
+        "process:sample": "node packages/admin/scripts/process-sample-images.mjs",
+        "migrate:user-data": "node scripts/migrate-content-to-user-data.mjs",
+        "migrate:theme-assets": "node scripts/migrate-theme-assets.mjs",
+        "validate:user-data": "node scripts/user-data-validate.mjs",
+        "init:user-data": "node scripts/user-data-init.mjs",
+        "sync:themes": "./scripts/sync-themes.sh"
+    },
+    "engines": {
+        "node": ">=20.0.0"
+    },
+    "packageManager": "pnpm@10.28.2",
+    "dependencies": {
+        "@astrojs/check": "^0.9.6",
+        "js-yaml": "^4.1.0",
+        "typescript": "^5.0.0"
+    },
+    "devDependencies": {
+        "chokidar": "^4.0.3"
+    }
+}

@@ -1,0 +1,405 @@
+---
+// packages/site/src/pages/slideshow.astro
+import PageLayout from '@layouts/PageLayout.astro';
+import SlideshowFooter from '@components/nav/SlideshowFooter.astro';
+import { isPageEnabled } from '../lib/pageTypes';
+import type { ArtworkData } from '../types/content';
+import { getImageBaseUrl } from '../lib/paths';
+import { listArtworks } from '../lib/content-service';
+
+// Check if this page type is enabled
+if (!await isPageEnabled('slider')) {
+  return Astro.redirect('/');
+}
+
+const imageBaseUrl = getImageBaseUrl();
+const artworks: ArtworkData[] = await listArtworks();
+
+// Get starting index from hash (e.g., #/5)
+---
+
+<PageLayout title="Slideshow" showFooter={false}>
+  <div class="slideshow-container" data-testid="slideshow-container">
+    <!-- Main image area -->
+    <div class="main-image-wrapper">
+      <button id="prev-btn" class="nav-btn nav-prev" aria-label="Previous" data-testid="slideshow-prev-btn">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="15,18 9,12 15,6"></polyline>
+        </svg>
+      </button>
+
+      <div id="main-image" class="main-image" data-testid="slideshow-main-image">
+        {artworks.length > 0 && (
+          <img
+            src={artworks[0].processing?.processedAt
+              ? `${imageBaseUrl}/large/${artworks[0].slug}.webp`
+              : '/placeholder.svg'
+            }
+            alt={artworks[0].title}
+            data-testid="slideshow-image"
+          />
+        )}
+      </div>
+
+      <button id="next-btn" class="nav-btn nav-next" aria-label="Next" data-testid="slideshow-next-btn">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="9,18 15,12 9,6"></polyline>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Title with More Info button -->
+    <div class="title-area">
+      <span id="artwork-title" class="artwork-title" data-testid="slideshow-title">
+        {artworks[0]?.title || ''}
+      </span>
+      <a id="more-info-link" href={`/gallery/${artworks[0]?.slug}`} class="more-info-btn" title="More Info" data-testid="slideshow-more-info">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+      </a>
+    </div>
+
+    <!-- Carousel -->
+    <div class="carousel-container">
+      <button id="carousel-prev" class="carousel-nav" aria-label="Scroll left">‹</button>
+
+      <div id="carousel-track" class="carousel-track" data-testid="slideshow-carousel">
+        {artworks.map((artwork, index) => (
+          <button
+            class={`carousel-thumb ${index === 0 ? 'active' : ''}`}
+            data-index={index}
+            data-slug={artwork.slug}
+            data-title={artwork.title}
+            data-testid="carousel-thumb"
+            data-image={artwork.processing?.processedAt
+              ? `${imageBaseUrl}/large/${artwork.slug}.webp`
+              : '/placeholder.svg'
+            }
+          >
+            <img
+              src={artwork.processing?.processedAt && imageBaseUrl
+                ? `${imageBaseUrl}/thumbnails/${artwork.slug}.png`
+                : `/thumbnails/${artwork.slug}.png`
+              }
+              alt={artwork.title}
+              loading="lazy"
+              onerror="this.src='/placeholder.svg'"
+            />
+          </button>
+        ))}
+      </div>
+
+      <button id="carousel-next" class="carousel-nav" aria-label="Scroll right">›</button>
+    </div>
+  </div>
+
+  <!-- Dynamic footer from settings -->
+  <SlideshowFooter />
+</PageLayout>
+
+<style>
+  .slideshow-container {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 20px);
+    position: relative;
+  }
+  
+  .main-image-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding: 50px 80px 20px; /* More top padding for spacing from nav bar */
+    min-height: 0;
+  }
+  
+  .main-image {
+    max-width: 100%;
+    max-height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .main-image img {
+    max-width: 100%;
+    max-height: calc(100vh - 250px); /* Adjusted to leave room for title + carousel */
+    object-fit: contain;
+    border-radius: var(--corner-radius, 12px);
+    box-shadow: 2px 2px 20px rgba(0, 0, 0, 0.5);
+  }
+  
+  .nav-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: var(--color-text);
+    padding: 30px 18px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    z-index: 10;
+    border-radius: 8px;
+  }
+  
+  .nav-btn:hover {
+    background: rgba(128, 128, 128, 0.1);
+  }
+  
+  .nav-prev { left: 15px; }
+  .nav-next { right: 15px; }
+  
+  /* Title area */
+  .title-area {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px 20px;
+    flex-shrink: 0;
+  }
+  
+  .artwork-title {
+    font-family: var(--font-heading, sans-serif);
+    font-size: 20px;
+    font-weight: 100;
+    color: var(--color-text, #323232);
+    letter-spacing: 0.05em;
+  }
+  
+  .more-info-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text);
+    opacity: 0.6;
+    transition: opacity 0.2s, color 0.2s;
+    border: none;
+  }
+  
+  .more-info-btn:hover {
+    opacity: 1;
+    color: var(--color-accent, #efb600);
+    border: none;
+  }
+  
+  /* Carousel container - fixed at bottom */
+  .carousel-container {
+    display: flex;
+    align-items: center;
+    padding: 12px 10px 12px 10px;
+    background: var(--color-background);
+    flex-shrink: 0;
+  }
+
+  /* When thumbnails don't fill width, center them and hide arrows */
+  .carousel-container.centered .carousel-track {
+    justify-content: center;
+  }
+
+  .carousel-container.centered .carousel-nav {
+    display: none;
+  }
+  
+  .carousel-nav {
+    background: transparent;
+    border: none;
+    color: var(--color-text);
+    font-size: 28px;
+    padding: 20px 12px;
+    cursor: pointer;
+    transition: color 0.2s, background 0.2s;
+    border-radius: 6px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: var(--carousel-thumb-size, 80px); /* Match thumbnail height */
+  }
+  
+  .carousel-nav:hover {
+    color: var(--color-accent);
+    background: rgba(128, 128, 128, 0.1);
+  }
+  
+  .carousel-track {
+    flex: 1;
+    display: flex;
+    gap: var(--carousel-gap, 12px);
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    padding: 5px 10px;
+    align-items: center;
+  }
+  
+  .carousel-track::-webkit-scrollbar {
+    height: 4px;
+  }
+  
+  .carousel-track::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 2px;
+  }
+  
+  .carousel-thumb {
+    flex-shrink: 0;
+    width: var(--carousel-thumb-size, 70px);
+    height: var(--carousel-thumb-size, 70px);
+    border-radius: var(--carousel-thumb-radius, 0);
+    border: var(--carousel-thumb-border, 1px solid var(--color-border, #ccc));
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.2s, transform 0.2s;
+    background: var(--color-background-alt);
+  }
+  
+  .carousel-thumb:hover {
+    border-color: var(--color-text);
+  }
+  
+  .carousel-thumb.active {
+    border: var(--carousel-thumb-active, 3px solid var(--color-accent));
+    transform: scale(1.05);
+  }
+  
+  .carousel-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  @media (max-width: 768px) {
+    .main-image-wrapper {
+      padding: 35px 50px 15px; /* Maintain spacing from nav on mobile */
+    }
+    
+    .nav-btn {
+      padding: 15px 10px;
+    }
+    
+    .nav-prev { left: 5px; }
+    .nav-next { right: 5px; }
+  }
+</style>
+
+<script>
+  const thumbs = document.querySelectorAll('.carousel-thumb');
+  const mainImage = document.querySelector('#main-image img') as HTMLImageElement;
+  const titleEl = document.getElementById('artwork-title');
+  const moreInfoLink = document.getElementById('more-info-link') as HTMLAnchorElement;
+  const track = document.getElementById('carousel-track');
+  
+  let currentIndex = 0;
+  
+  // Parse initial index from hash
+  const hash = window.location.hash;
+  if (hash.startsWith('#/')) {
+    const idx = parseInt(hash.slice(2));
+    if (!isNaN(idx) && idx >= 0 && idx < thumbs.length) {
+      currentIndex = idx;
+    }
+  }
+  
+  function showSlide(index: number) {
+    if (index < 0) index = thumbs.length - 1;
+    if (index >= thumbs.length) index = 0;
+    
+    currentIndex = index;
+    const thumb = thumbs[index] as HTMLElement;
+    
+    // Update main image
+    if (mainImage && thumb.dataset.image) {
+      mainImage.src = thumb.dataset.image;
+      mainImage.alt = thumb.dataset.title || '';
+    }
+    
+    // Update title
+    if (titleEl && thumb.dataset.title) {
+      titleEl.textContent = thumb.dataset.title;
+    }
+    
+    // Update more info link
+    if (moreInfoLink && thumb.dataset.slug) {
+      moreInfoLink.href = `/gallery/${thumb.dataset.slug}`;
+    }
+    
+    // Update active state
+    thumbs.forEach((t, i) => {
+      t.classList.toggle('active', i === index);
+    });
+    
+    // Scroll thumb into view
+    thumb.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    
+    // Update hash
+    window.history.replaceState(null, '', `#/${index}`);
+  }
+  
+  // Show initial slide
+  showSlide(currentIndex);
+  
+  // Navigation buttons
+  document.getElementById('prev-btn')?.addEventListener('click', () => showSlide(currentIndex - 1));
+  document.getElementById('next-btn')?.addEventListener('click', () => showSlide(currentIndex + 1));
+  
+  // Carousel nav
+  document.getElementById('carousel-prev')?.addEventListener('click', () => {
+    if (track) track.scrollBy({ left: -300, behavior: 'smooth' });
+  });
+  document.getElementById('carousel-next')?.addEventListener('click', () => {
+    if (track) track.scrollBy({ left: 300, behavior: 'smooth' });
+  });
+  
+  // Thumbnail clicks
+  thumbs.forEach((thumb, index) => {
+    thumb.addEventListener('click', () => showSlide(index));
+  });
+  
+  // Keyboard navigation
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowLeft') showSlide(currentIndex - 1);
+    if (e.key === 'ArrowRight') showSlide(currentIndex + 1);
+    if (e.key === 'Home') showSlide(0);
+    if (e.key === 'End') showSlide(thumbs.length - 1);
+  });
+
+  // Check if thumbnails need centering (don't fill width)
+  let isCentered = false;
+  let resizeTimeout: number;
+
+  function checkCarouselCentering() {
+    const container = document.querySelector('.carousel-container');
+    if (!container || !track) return;
+
+    const trackWidth = track.scrollWidth;
+    const containerWidth = container.clientWidth - 100; // Account for nav buttons padding
+
+    const BUFFER = 50; // Hysteresis buffer to prevent flicker
+
+    // Use different thresholds for adding vs removing the class
+    const shouldCenter = isCentered
+      ? trackWidth < containerWidth - BUFFER  // Need MORE space to uncenter
+      : trackWidth < containerWidth + BUFFER; // Need LESS space to center
+
+    if (shouldCenter !== isCentered) {
+      isCentered = shouldCenter;
+      container.classList.toggle('centered', shouldCenter);
+    }
+  }
+
+  // Debounced version for resize
+  function debouncedCheck() {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = window.setTimeout(checkCarouselCentering, 100);
+  }
+
+  // Check on load and resize
+  checkCarouselCentering();
+  window.addEventListener('resize', debouncedCheck);
+</script>

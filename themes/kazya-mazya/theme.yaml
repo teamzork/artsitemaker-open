@@ -1,0 +1,81 @@
+name: Kazya Mazya
+version: 1.0.0
+author: Dmitri Zdorov
+description: Rusty organic with a dreamy mood
+supported_pages:
+  - home
+  - gallery
+  - slider
+  - art_piece
+  - about
+  - article
+  - contact
+  - service
+layout:
+  gallery: justified
+  galleryRowHeight: 140
+  galleryGap: 25
+  cornerRadius: 12
+  maxContentWidth: 1400
+colors:
+  background: '#cbcbc6'
+  backgroundAlt: '#323232'
+  text: '#323232'
+  textMuted: '#a4a4a0'
+  accent: '#efb600'
+  border: '#dfe0d3'
+  shadow: rgba(101, 101, 101, 0.5)
+  textLight: '#aabd8b'
+  link: '#057565'
+fonts:
+  heading:
+    family: sans-serif
+    file: null
+    weight: 900
+    recommendedFont: Xarrovv-Bold
+  body:
+    family: sans-serif
+    file: null
+    weight: 400
+    recommendedFont: DimkaSans
+  mono:
+    family: monospace
+    file: null
+    weight: 400
+background:
+  type: solid
+  solid: '#cbcbc6'
+galleryItem:
+  border: '4px solid #DFE0D3'
+  borderRadius: 30
+  shadow: true
+  shadowColor: rgba(101, 101, 101, 0.5)
+  shadowBlur: 5
+  shadowOffset:
+    - 1
+    - 1
+  hoverEffect: lift
+carousel:
+  thumbnailShape: circle
+  thumbnailSize: 80
+  thumbnailBorder: '3px solid #666'
+  activeBorder: '3px solid #efb600'
+  gap: '12'
+  arrowStyle: floating
+nav:
+  style: pills
+  position: top-right
+  backgroundColor: '#323232'
+  activeColor: '#efb600'
+logo:
+  file: null
+  width: 126
+  position: top-left
+artworkDetail:
+  imageMaxHeight: 70vh
+  showBorder: true
+  metaPosition: below
+footer:
+  backgroundColor: '#323232'
+  logo: null
+  showCredits: true

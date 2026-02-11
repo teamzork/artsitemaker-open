@@ -1,0 +1,239 @@
+---
+// packages/site/src/pages/gallery.astro
+// Redirects to root when gallery is the designated home page
+// Otherwise renders the gallery at /gallery
+import PageLayout from '@layouts/PageLayout.astro';
+import type { ArtworkData, SettingsData } from '../types/content';
+import { getImageBaseUrl } from '../lib/paths';
+import { loadSettings, listArtworks } from '../lib/content-service';
+import { getPageSettings } from '../lib/pageTypes';
+
+const settings: SettingsData | null = await loadSettings();
+const pageSettings = await getPageSettings();
+const imageBaseUrl = getImageBaseUrl();
+const isPreviewMode = Boolean(globalThis.__ARTSITEMAKER_PREVIEW__);
+
+// Check if gallery is the home page
+const homePage = pageSettings.homePage || 'gallery';
+
+// If gallery is the home page, redirect to / to avoid duplicate content
+if (homePage === 'gallery' && !isPreviewMode) {
+  return Astro.redirect('/');
+}
+
+// Gallery is not the home page - render it here at /gallery
+const galleryClickBehavior = settings?.home?.galleryClick || 'slideshow';
+const artworks: ArtworkData[] = await listArtworks();
+
+function getArtworkLink(artwork: ArtworkData, index: number): string {
+  if (galleryClickBehavior === 'detail') {
+    return `/gallery/${artwork.slug}`;
+  }
+  return `/slideshow#/${index}`;
+}
+---
+
+<PageLayout title="Gallery">
+  <div class="gallery-page" data-testid="gallery-page">
+    <div id="gallery" class="max-w-content mx-auto gallery-container" data-testid="gallery-container">
+      {artworks.length === 0 ? (
+        <p class="text-km-text-muted text-center py-20" data-testid="gallery-empty">
+          No artworks to display yet.
+        </p>
+      ) : (
+        <div id="justified-gallery" class="justified-gallery" data-row-height="140" data-testid="gallery-grid">
+          {artworks.map((artwork, index) => (
+            <a
+              href={getArtworkLink(artwork, index)}
+              class="gallery-item"
+              data-testid="gallery-item"
+              data-artwork-slug={artwork.slug}
+              data-width={artwork.processing?.originalDimensions?.[0] || 800}
+              data-height={artwork.processing?.originalDimensions?.[1] || 800}
+            >
+              <img
+                src={artwork.processing?.processedAt
+                  ? `${imageBaseUrl}/small/${artwork.slug}.webp`
+                  : '/placeholder.svg'
+                }
+                alt={artwork.title}
+                loading="lazy"
+                data-testid="gallery-item-image"
+              />
+              <div class="caption">{artwork.title}</div>
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  </div>
+</PageLayout>
+
+<style>
+  .gallery-page {
+    /* Let theme CSS handle the padding */
+  }
+  
+  .gallery-container {
+    /* Padding set in theme CSS */
+  }
+  
+  .justified-gallery {
+    font-size: 0;
+    line-height: 0;
+    text-align: left;
+  }
+  
+  .gallery-item {
+    display: inline-block;
+    vertical-align: top;
+    overflow: hidden;
+    position: relative;
+    text-decoration: none;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  
+  .gallery-item img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  .gallery-item .caption {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    color: var(--color-text-inverted, #fff);
+    padding: 8px 12px;
+    font-size: 12px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+  }
+  
+  .gallery-item:hover .caption {
+    opacity: 1;
+  }
+  
+  @media (max-width: 720px) {
+    .gallery-item .caption {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  function runJustifiedGallery() {
+    const gallery = document.getElementById('justified-gallery');
+    if (!gallery) return;
+    
+    const items = Array.from(gallery.querySelectorAll('.gallery-item')) as HTMLElement[];
+    if (items.length === 0) return;
+    
+    const galleryStyle = window.getComputedStyle(gallery);
+    const paddingLeft = parseFloat(galleryStyle.paddingLeft) || 0;
+    const paddingRight = parseFloat(galleryStyle.paddingRight) || 0;
+    const containerWidth = gallery.clientWidth - paddingLeft - paddingRight;
+    if (containerWidth <= 0) return;
+    
+    const isMobile = window.innerWidth <= 720;
+    const baseRowHeight = isMobile ? 100 : 180;
+    const gap = isMobile ? 12 : 20;
+    
+    interface ImgData {
+      el: HTMLElement;
+      aspect: number;
+      natW: number;
+    }
+    
+    const images: ImgData[] = items.map(item => {
+      const w = parseFloat(item.dataset.width || '800');
+      const h = parseFloat(item.dataset.height || '800');
+      const aspect = w / h;
+      return { el: item, aspect: aspect, natW: baseRowHeight * aspect };
+    });
+    
+    const rows: ImgData[][] = [];
+    let row: ImgData[] = [];
+    let rowW = 0;
+    
+    for (let i = 0; i < images.length; i++) {
+      const img = images[i];
+      const gapW = row.length > 0 ? gap : 0;
+      const needed = img.natW + gapW;
+      
+      if (rowW + needed > containerWidth && row.length > 0) {
+        rows.push(row);
+        row = [img];
+        rowW = img.natW;
+      } else {
+        row.push(img);
+        rowW += needed;
+      }
+    }
+    if (row.length > 0) rows.push(row);
+    
+    for (let ri = 0; ri < rows.length; ri++) {
+      const currentRow = rows[ri];
+      const isLastRow = ri === rows.length - 1;
+      const sumNatW = currentRow.reduce((s, img) => s + img.natW, 0);
+      const numGaps = currentRow.length - 1;
+      const gapsW = numGaps * gap;
+      const availW = containerWidth - gapsW;
+      
+      let scale: number;
+      if (isLastRow && sumNatW < availW * 0.75) {
+        scale = 1;
+      } else {
+        scale = availW / sumNatW;
+      }
+      
+      const rowHeight = Math.round(baseRowHeight * scale);
+      let usedWidth = 0;
+      
+      for (let ci = 0; ci < currentRow.length; ci++) {
+        const img = currentRow[ci];
+        const isLastInRow = ci === currentRow.length - 1;
+        
+        let imgWidth: number;
+        if (isLastInRow && !isLastRow) {
+          imgWidth = containerWidth - usedWidth - gapsW;
+        } else if (isLastInRow && isLastRow && sumNatW >= availW * 0.75) {
+          imgWidth = containerWidth - usedWidth - gapsW;
+        } else {
+          imgWidth = Math.floor(img.natW * scale);
+        }
+        
+        img.el.style.width = imgWidth + 'px';
+        img.el.style.height = rowHeight + 'px';
+        img.el.style.marginRight = isLastInRow ? '0px' : gap + 'px';
+        img.el.style.marginBottom = gap + 'px';
+        
+        usedWidth += imgWidth;
+      }
+    }
+  }
+  
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      requestAnimationFrame(() => runJustifiedGallery());
+    });
+  } else {
+    requestAnimationFrame(() => runJustifiedGallery());
+  }
+  
+  let resizeTimer: number;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = window.setTimeout(runJustifiedGallery, 100);
+  });
+  
+  document.querySelectorAll('.gallery-item img').forEach(img => {
+    if (!(img as HTMLImageElement).complete) {
+      img.addEventListener('load', runJustifiedGallery);
+    }
+  });
+</script>

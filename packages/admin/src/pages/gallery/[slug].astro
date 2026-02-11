@@ -1,0 +1,781 @@
+---
+import AdminLayout from '@layouts/AdminLayout.astro';
+import fs from 'fs/promises';
+import path from 'path';
+import yaml from 'js-yaml';
+import { getContentPath, getImageBaseUrl } from '../../lib/paths';
+import { Toggle } from '../../components/ui/Toggle';
+import Button from '../../components/ui/Button.astro';
+import { Toaster } from '../../components/ui/Toast';
+import Modal from '../../components/Modal.astro';
+import galleryDetailFormScriptUrl from '../../scripts/gallery-detail-form?url';
+
+const { slug } = Astro.params;
+
+// Get content path from centralized config
+const contentPath = getContentPath();
+
+// Load artwork
+let artwork: any = null;
+let error = '';
+
+try {
+  const artworkPath = path.join(contentPath, 'artworks', `${slug}.yaml`);
+  const content = await fs.readFile(artworkPath, 'utf-8');
+  artwork = yaml.load(content) as any;
+} catch (e) {
+  error = `Artwork "${slug}" not found`;
+}
+
+// Load collections for dropdown
+let collections: any[] = [];
+try {
+  const collectionsPath = path.join(contentPath, 'collections');
+  const files = await fs.readdir(collectionsPath);
+  for (const file of files) {
+    if (file.endsWith('.yaml')) {
+      const content = await fs.readFile(path.join(collectionsPath, file), 'utf-8');
+      collections.push(yaml.load(content));
+    }
+  }
+} catch (e) {}
+
+// Load all artworks for prev/next navigation
+let allArtworks: any[] = [];
+let prevArtwork: any = null;
+let nextArtwork: any = null;
+
+try {
+  const artworksPath = path.join(contentPath, 'artworks');
+  const files = await fs.readdir(artworksPath);
+  for (const file of files) {
+    if (file.endsWith('.yaml')) {
+      const content = await fs.readFile(path.join(artworksPath, file), 'utf-8');
+      allArtworks.push(yaml.load(content));
+    }
+  }
+  allArtworks.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+  
+  const currentIndex = allArtworks.findIndex(a => a.slug === slug);
+  if (currentIndex > 0) prevArtwork = allArtworks[currentIndex - 1];
+  if (currentIndex < allArtworks.length - 1) nextArtwork = allArtworks[currentIndex + 1];
+} catch (e) {}
+
+// If not found, redirect
+if (!artwork && !error) {
+  return Astro.redirect('/gallery');
+}
+
+// Load settings for image sizes
+let settings: any = {};
+try {
+  const { getSettingsFilePath } = await import('../../lib/config-paths');
+  const content = await fs.readFile(getSettingsFilePath(), 'utf-8');
+  settings = yaml.load(content) as any;
+} catch (e) {}
+
+const LARGE_SIZE = settings.images?.sizes?.large || 2124;
+const imageBaseUrl = getImageBaseUrl();
+
+// Get dimensions
+const origWidth = artwork?.processing?.originalDimensions?.[0] || 0;
+const origHeight = artwork?.processing?.originalDimensions?.[1] || 0;
+const hasBeenProcessed = !!artwork?.processing?.processedAt;
+
+// Calculate large size based on settings
+let largeWidth = 0;
+let largeHeight = 0;
+if (origWidth && origHeight) {
+  if (origWidth >= origHeight) {
+    largeWidth = Math.min(origWidth, LARGE_SIZE);
+    largeHeight = Math.round(largeWidth / (origWidth / origHeight));
+  } else {
+    largeHeight = Math.min(origHeight, LARGE_SIZE);
+    largeWidth = Math.round(largeHeight * (origWidth / origHeight));
+  }
+}
+
+// Additional images
+const additionalImages = artwork?.additional || [];
+---
+
+<AdminLayout title={artwork ? `Edit: ${artwork.title}` : 'Artwork Not Found'}>
+  {error ? (
+    <div class="card text-center py-16 border-l-4 border-red-500" data-testid="artwork-error">
+      <div class="mb-4">
+        <p class="text-admin-muted text-lg mb-2">⚠️ {error}</p>
+        <p class="text-sm text-admin-muted/75">The artwork file may have been moved or deleted.</p>
+      </div>
+      <div class="flex gap-3 justify-center">
+        <a href="/gallery" class="btn btn-secondary">← Back to Gallery</a>
+        <button type="button" class="btn btn-secondary" onclick="location.reload()">🔄 Try Again</button>
+      </div>
+    </div>
+  ) : (
+    <form id="artwork-form" data-testid="artwork-form" class="space-y-6">
+      <input type="hidden" name="slug" value={artwork.slug} />
+      
+      <!-- Header with navigation -->
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-4">
+          <a href="/gallery" class="text-admin-muted hover:text-admin-text">← Gallery</a>
+          
+          <!-- Prev/Next Navigation -->
+          <div class="flex items-center gap-2 text-sm">
+            {prevArtwork ? (
+              <a href={`/gallery/${prevArtwork.slug}`} class="btn btn-secondary py-1 px-2 text-xs">
+                ← {prevArtwork.title.length > 15 ? prevArtwork.title.slice(0, 15) + '…' : prevArtwork.title}
+              </a>
+            ) : (
+              <span class="btn btn-secondary py-1 px-2 text-xs opacity-50 cursor-not-allowed">← First</span>
+            )}
+            {nextArtwork ? (
+              <a href={`/gallery/${nextArtwork.slug}`} class="btn btn-secondary py-1 px-2 text-xs">
+                {nextArtwork.title.length > 15 ? nextArtwork.title.slice(0, 15) + '…' : nextArtwork.title} →
+              </a>
+            ) : (
+              <span class="btn btn-secondary py-1 px-2 text-xs opacity-50 cursor-not-allowed">Last →</span>
+            )}
+          </div>
+        </div>
+        
+        <div class="flex flex-wrap items-center gap-4">
+          <Toggle client:load name="published" label="Published" labelOff="Unpublished" defaultPressed={artwork.published !== false} />
+          <Button type="button" id="delete-btn" variant="secondary" class="text-red-400 hover:bg-red-900/50">🗑️ Delete</Button>
+          <Button type="button" id="reprocess-btn" variant="secondary">🔄 Reprocess</Button>
+          <Button type="submit" id="save-btn" variant="accent" disabled tooltip="No changes to save">💾 Save</Button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Main content -->
+        <div class="lg:col-span-2 space-y-6">
+          <!-- Image preview -->
+          <div class="card">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-semibold">Primary Image</h3>
+              <div class="flex items-center gap-2">
+                <Button type="button" id="update-image-btn" variant="secondary" size="sm" class="py-1">📤 Update Image</Button>
+                <span id="process-status" class={`text-xs px-2 py-1 rounded ${hasBeenProcessed ? 'bg-green-900 text-green-300' : 'bg-orange-900 text-orange-300'}`}>
+                  {hasBeenProcessed ? '✓ Processed' : '⏳ Needs processing'}
+                </span>
+              </div>
+            </div>
+            
+            <!-- Hidden file input for update -->
+            <input type="file" id="update-image-input" class="hidden" accept=".jpg,.jpeg,.png,.tiff,.tif,.heic,.heif,.webp" />
+            
+            <div class="relative rounded-lg overflow-hidden bg-admin-sidebar">
+              {hasBeenProcessed ? (
+                <img 
+                  id="preview-image"
+                  src={imageBaseUrl 
+                    ? `${imageBaseUrl}/medium/${artwork.slug}.webp` 
+                    : `/medium/${artwork.slug}.webp`
+                  }
+                  alt={artwork.title}
+                  class="w-full max-h-[400px] object-contain"
+                  onerror="this.style.display='none';document.getElementById('image-error').style.display='flex';"
+                />
+                <div id="image-error" class="hidden items-center justify-center h-[200px] text-admin-muted">
+                  <span>Image not found - try reprocessing</span>
+                </div>
+              ) : (
+                <div class="flex items-center justify-center h-[200px] text-admin-muted">
+                  <div class="text-center">
+                    <span class="text-5xl block mb-2">📷</span>
+                    <span>Click "Reprocess" to generate image</span>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <!-- Dimensions info -->
+            <div class="mt-4 grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+              <div>
+                <span class="text-admin-muted block text-xs">Original</span>
+                <span class="font-mono">{origWidth && origHeight ? `${origWidth} × ${origHeight}` : '—'}</span>
+              </div>
+              <div>
+                <span class="text-admin-muted block text-xs">Large (processed)</span>
+                <span class="font-mono">{largeWidth && largeHeight ? `${largeWidth} × ${largeHeight}` : '—'}</span>
+              </div>
+              <div>
+                <span class="text-admin-muted block text-xs">Aspect Ratio</span>
+                <span>{artwork.processing?.aspectRatio?.toFixed(2) || '—'}</span>
+              </div>
+              <div>
+                <span class="text-admin-muted block text-xs">Processed</span>
+                <span>{artwork.processing?.processedAt ? new Date(artwork.processing.processedAt).toLocaleDateString() : 'Never'}</span>
+              </div>
+            </div>
+            
+            {artwork.processing?.warnings?.length > 0 && (
+              <div class="mt-4 p-3 bg-orange-900/30 rounded text-sm text-orange-300">
+                ⚠️ {artwork.processing.warnings.join(', ')}
+              </div>
+            )}
+          </div>
+
+          <!-- Additional Images -->
+          <div class="card">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-semibold">Additional Images ({additionalImages.length})</h3>
+              <Button type="button" id="add-additional-btn" variant="secondary" size="sm" class="py-1">+ Add Images</Button>
+            </div>
+            
+            <input type="file" id="additional-image-input" class="hidden" accept=".jpg,.jpeg,.png,.tiff,.tif,.heic,.heif,.webp" multiple />
+            
+            {additionalImages.length === 0 ? (
+              <div class="text-center py-8 text-admin-muted border-2 border-dashed border-admin-border rounded-lg">
+                <span class="text-3xl block mb-2">🖼️</span>
+                <span>No additional images</span>
+              </div>
+            ) : (
+              <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" id="additional-images-grid">
+                {additionalImages.map((img: any, index: number) => {
+                  // Handle both old string format and new object format
+                  const file = typeof img === 'string' ? img : img.file;
+                  const title = typeof img === 'string' ? `Detail ${index + 1}` : (img.title || `Detail ${index + 1}`);
+                  return (
+                    <div class="relative group bg-admin-sidebar rounded overflow-hidden" data-index={index}>
+                      <div class="aspect-square">
+                        <img 
+                          src={imageBaseUrl 
+                            ? `${imageBaseUrl}/thumbnails/${file.replace('.webp', '.png')}` 
+                            : `/thumbnails/${file.replace('.webp', '.png')}`
+                          }
+                          alt={title}
+                          class="w-full h-full object-cover"
+                          onerror="this.src='/placeholder.svg'"
+                        />
+                        <button 
+                          type="button" 
+                          class="remove-additional absolute top-1 right-1 bg-red-600 text-white w-5 h-5 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                          data-index={index}
+                        >×</button>
+                      </div>
+                      <input 
+                        type="text" 
+                        class="additional-title w-full text-xs p-2 bg-admin-bg border-t border-admin-border"
+                        data-index={index}
+                        value={title}
+                        placeholder="Title..."
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <!-- Description -->
+          <div class="card">
+            <h3 class="text-lg font-semibold mb-4">Description</h3>
+            <textarea 
+              name="description" 
+              rows="5"
+              class="w-full bg-admin-sidebar"
+              placeholder="Enter description (Markdown supported)..."
+            >{artwork.description || ''}</textarea>
+          </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="space-y-6">
+          
+          <!-- Basic info -->
+          <div class="card">
+            <h3 class="text-lg font-semibold mb-4">Details</h3>
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm text-admin-muted mb-1">Title</label>
+                <input type="text" name="title" value={artwork.title} class="w-full" required />
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-sm text-admin-muted mb-1">Year</label>
+                  <input type="number" name="year" value={artwork.year || ''} class="w-full" placeholder="2009" />
+                </div>
+                <div>
+                  <label class="block text-sm text-admin-muted mb-1">Sort Order</label>
+                  <input type="number" name="sortOrder" value={artwork.sortOrder || 0} class="w-full" />
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm text-admin-muted mb-1">Medium</label>
+                <input type="text" name="medium" value={artwork.medium || ''} class="w-full" placeholder="Digital illustration" />
+              </div>
+              <div>
+                <label class="block text-sm text-admin-muted mb-1">Dimensions</label>
+                <input type="text" name="dimensions" value={artwork.dimensions || ''} class="w-full" placeholder="120 x 100 cm" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Organization -->
+          <div class="card">
+            <h3 class="text-lg font-semibold mb-4">Organization</h3>
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm text-admin-muted mb-1">Collection</label>
+                <select name="collection" class="w-full bg-admin-sidebar">
+                  <option value="">Uncategorized</option>
+                  {collections.map((c) => (
+                    <option value={c.slug} selected={artwork.collection === c.slug}>{c.title}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm text-admin-muted mb-1">Tags</label>
+                <input type="text" name="tags" value={artwork.tags?.join(', ') || ''} class="w-full" placeholder="surreal, creature" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Sales -->
+          <div class="card">
+            <h3 class="text-lg font-semibold mb-4">Sales</h3>
+            <div class="flex flex-col gap-6">
+              <Toggle client:load name="sold" label="Sold" defaultPressed={artwork.sold} />
+              <div>
+                <label class="block text-sm text-admin-muted mb-1">Price (USD)</label>
+                <input type="number" name="price" value={artwork.price || ''} class="w-full" placeholder="0 = not for sale" />
+              </div>
+              <Toggle client:load name="inquireOnly" label="Inquire Only" defaultPressed={artwork.inquireOnly} />
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Save status -->
+      <div id="save-status" class="text-center text-sm text-admin-muted"></div>
+    </form>
+  )}
+  <Modal id="delete-modal" title="Delete Artwork" variant="danger" confirmText="Delete">
+    <p>Are you sure you want to delete "<span class="font-semibold">{artwork.title}</span>"?</p>
+    <p class="mt-2 text-sm text-admin-muted">This will delete the artwork record. Original files will remain.</p>
+  </Modal>
+
+  <Modal id="replace-image-modal" title="Replace Image" confirmText="Replace">
+    <p>Replace the original image with "<span id="replace-filename" class="font-mono text-admin-accent"></span>"?</p>
+    <p class="mt-2 text-sm text-admin-muted">The image will be re-processed automatically.</p>
+  </Modal>
+
+  <Modal id="remove-additional-modal" title="Remove Image" variant="danger" confirmText="Remove">
+    <p>Are you sure you want to remove this additional image?</p>
+  </Modal>
+
+  <Toaster client:load />
+</AdminLayout>
+
+<script define:vars={{ slug: artwork?.slug, artworkTitle: artwork?.title, additionalImages: artwork?.additional || [] }}>
+  // packages/admin/src/pages/gallery/[slug].astro
+  // NOTE: `define:vars` scripts are emitted as classic scripts (not bundled).
+  // We only use this to expose SSR values to the bundled module script below.
+  window.__ARTIS_GALLERY_DETAIL__ = { slug, artworkTitle, additionalImages };
+</script>
+
+<script type="module" src={galleryDetailFormScriptUrl}></script>
+
+<script>
+  // packages/admin/src/pages/gallery/[slug].astro
+  const vars = window.__ARTIS_GALLERY_DETAIL__ || {};
+  const slug = typeof vars.slug === 'string' ? vars.slug : '';
+
+  // Delete handler
+  const deleteModal = document.getElementById('delete-modal') as any;
+  const deleteBtn = document.getElementById('delete-btn') as HTMLButtonElement | null;
+  
+  deleteBtn?.addEventListener('click', () => {
+    deleteModal?.open?.();
+  });
+  
+  deleteModal?.addEventListener('confirm', async () => {
+    deleteModal?.close?.();
+    
+    if (deleteBtn) {
+      deleteBtn.disabled = true;
+      deleteBtn.textContent = '⏳ Deleting...';
+    }
+    
+    try {
+      const res = await fetch(`/api/artwork/${slug}`, { method: 'DELETE' });
+      
+      if (res.ok) {
+        window.location.href = '/gallery';
+      } else {
+        const err = await res.json();
+        window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
+          detail: {
+            title: 'Delete failed',
+            description: err.error || 'Unknown error',
+            variant: 'destructive'
+          }
+        }));
+        if (deleteBtn) {
+          deleteBtn.disabled = false;
+          deleteBtn.textContent = '🗑️ Delete';
+        }
+      }
+    } catch (e) {
+      window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
+        detail: {
+            title: 'Delete failed',
+            description: 'An unexpected error occurred.',
+            variant: 'destructive'
+        }
+      }));
+      if (deleteBtn) {
+        deleteBtn.disabled = false;
+        deleteBtn.textContent = '🗑️ Delete';
+      }
+    }
+  });
+  
+  // Reprocess handler
+  const reprocessBtn = document.getElementById('reprocess-btn') as HTMLButtonElement | null;
+  reprocessBtn?.addEventListener('click', async () => {
+    if (reprocessBtn) {
+      reprocessBtn.disabled = true;
+      reprocessBtn.textContent = '⏳ Processing...';
+    }
+    
+    try {
+      const res = await fetch('/api/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slugs: [slug] })
+      });
+      
+      const data = await res.json();
+      
+      if (data.processed?.length > 0) {
+        location.reload();
+      } else if (data.errors?.length > 0) {
+        window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
+          detail: {
+            title: 'Processing failed',
+            description: data.errors.join(', '),
+            variant: 'destructive'
+          }
+        }));
+        if (reprocessBtn) {
+          reprocessBtn.disabled = false;
+          reprocessBtn.textContent = '🔄 Reprocess';
+        }
+      } else {
+        window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
+          detail: {
+            title: 'No image found',
+            description: 'Could not find a source image to process.',
+            variant: 'warning'
+          }
+        }));
+        if (reprocessBtn) {
+          reprocessBtn.disabled = false;
+          reprocessBtn.textContent = '🔄 Reprocess';
+        }
+      }
+    } catch (e) {
+      window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
+        detail: {
+            title: 'Processing failed',
+            description: 'An unexpected error occurred.',
+            variant: 'destructive'
+        }
+      }));
+      if (reprocessBtn) {
+        reprocessBtn.disabled = false;
+        reprocessBtn.textContent = '🔄 Reprocess';
+      }
+    }
+  });
+  
+  // Update image handler
+  const updateImageBtn = document.getElementById('update-image-btn') as HTMLButtonElement | null;
+  const updateImageInput = document.getElementById('update-image-input') as HTMLInputElement | null;
+  const replaceModal = document.getElementById('replace-image-modal') as any;
+  let pendingFile: File | null = null;
+  
+  updateImageBtn?.addEventListener('click', () => {
+    updateImageInput?.click();
+  });
+  
+  updateImageInput?.addEventListener('change', (e) => {
+    const input = e.target as HTMLInputElement | null;
+    if (!input?.files?.length) return;
+    
+    pendingFile = input.files[0];
+    const nameEl = document.getElementById('replace-filename');
+    if (nameEl && pendingFile) nameEl.textContent = pendingFile.name;
+    
+    replaceModal?.open?.();
+  });
+  
+  replaceModal?.addEventListener('close', () => {
+    if (updateImageInput) updateImageInput.value = '';
+    pendingFile = null;
+  });
+  
+  replaceModal?.addEventListener('confirm', async () => {
+    replaceModal?.close?.();
+    if (!pendingFile) return;
+    
+    const file = pendingFile;
+    
+    if (updateImageBtn) {
+      updateImageBtn.disabled = true;
+      updateImageBtn.textContent = '⏳ Uploading...';
+    }
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('slug', slug);
+    
+    try {
+      const res = await fetch('/api/artwork/update-image', {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (res.ok) {
+        location.reload();
+      } else {
+        const err = await res.json();
+        window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
+          detail: {
+            title: 'Upload failed',
+            description: err.error || 'Unknown error',
+            variant: 'destructive'
+          }
+        }));
+        if (updateImageBtn) {
+          updateImageBtn.disabled = false;
+          updateImageBtn.textContent = '📤 Update Image';
+        }
+      }
+    } catch (e) {
+      window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
+          detail: {
+            title: 'Upload failed',
+            description: 'An unexpected error occurred.',
+            variant: 'destructive'
+          }
+      }));
+      if (updateImageBtn) {
+        updateImageBtn.disabled = false;
+        updateImageBtn.textContent = '📤 Update Image';
+      }
+    }
+    
+    if (updateImageInput) updateImageInput.value = '';
+    pendingFile = null;
+  });
+  
+  // Additional images handler
+  const addAdditionalBtn = document.getElementById('add-additional-btn') as HTMLButtonElement | null;
+  const additionalInput = document.getElementById('additional-image-input') as HTMLInputElement | null;
+  
+  addAdditionalBtn?.addEventListener('click', () => {
+    additionalInput?.click();
+  });
+  
+  additionalInput?.addEventListener('change', async (e) => {
+    const input = e.target as HTMLInputElement | null;
+    if (!input?.files?.length) return;
+    
+    if (addAdditionalBtn) {
+      addAdditionalBtn.disabled = true;
+      addAdditionalBtn.textContent = '⏳ Uploading...';
+    }
+    
+    const formData = new FormData();
+    for (const file of input.files) {
+      formData.append('files', file);
+    }
+    formData.append('slug', slug);
+    
+    try {
+      const res = await fetch('/api/artwork/additional', {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (res.ok) {
+        location.reload();
+      } else {
+        const err = await res.json();
+        window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
+          detail: {
+            title: 'Upload failed',
+            description: err.error || 'Unknown error',
+            variant: 'destructive'
+          }
+        }));
+        if (addAdditionalBtn) {
+          addAdditionalBtn.disabled = false;
+          addAdditionalBtn.textContent = '+ Add Images';
+        }
+      }
+    } catch (e) {
+      window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
+          detail: {
+            title: 'Upload failed',
+            description: 'An unexpected error occurred.',
+            variant: 'destructive'
+          }
+      }));
+      if (addAdditionalBtn) {
+        addAdditionalBtn.disabled = false;
+        addAdditionalBtn.textContent = '+ Add Images';
+      }
+    }
+    
+    input.value = '';
+  });
+  
+  // Remove additional image handler
+  const removeModal = document.getElementById('remove-additional-modal') as any;
+  let pendingRemoveIndex = -1;
+
+  document.querySelectorAll('.remove-additional').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement | null;
+      const indexStr = target?.dataset?.index;
+      pendingRemoveIndex = parseInt(indexStr || '-1');
+      removeModal?.open?.();
+    });
+  });
+  
+  removeModal?.addEventListener('confirm', async () => {
+     removeModal?.close?.();
+     if (pendingRemoveIndex === -1) return;
+     const index = pendingRemoveIndex;
+
+      try {
+        const res = await fetch('/api/artwork/additional', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug, index })
+        });
+        
+        if (res.ok) {
+          location.reload();
+        } else {
+          window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
+            detail: {
+              title: 'Failed to remove image',
+              variant: 'destructive'
+            }
+          }));
+        }
+      } catch (e) {
+        window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
+          detail: {
+            title: 'Failed to remove image',
+            variant: 'destructive'
+          }
+        }));
+      }
+  });
+  
+  // Update additional image title handler (on blur)
+  document.querySelectorAll('.additional-title').forEach(el => {
+    const input = el as HTMLInputElement;
+    let originalValue = input.value;
+    
+    input.addEventListener('blur', async (e) => {
+      const target = e.target as HTMLInputElement | null;
+      const index = parseInt(target?.dataset?.index || '-1');
+      const title = (target?.value || '').trim();
+      
+      // Skip if unchanged
+      if (title === originalValue) return;
+      
+      try {
+        const res = await fetch('/api/artwork/additional', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug, index, title })
+        });
+        
+        if (res.ok) {
+          originalValue = title;
+          // Brief visual feedback
+          input.style.backgroundColor = '#1a3d1a';
+          setTimeout(() => { input.style.backgroundColor = ''; }, 500);
+        } else {
+          window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
+            detail: {
+              title: 'Failed to save title',
+              variant: 'destructive'
+            }
+          }));
+          if (target) target.value = originalValue;
+        }
+      } catch (err) {
+        window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
+          detail: {
+            title: 'Failed to save title',
+            variant: 'destructive'
+          }
+        }));
+        if (target) target.value = originalValue;
+      }
+    });
+    
+    // Also save on Enter key
+    input.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        (e.target as HTMLInputElement | null)?.blur();
+      }
+    });
+  });
+  
+  // Published toggle handler - save independently
+  const publishedInput = document.querySelector('[name="published"]') as HTMLInputElement | null;
+  if (publishedInput) {
+    publishedInput.addEventListener('change', async () => {
+      // Access the pressed state from the toggle container
+      const toggleContainer = publishedInput.closest('.flex.items-center.gap-4.group.cursor-pointer') as any;
+      const isPressed = toggleContainer?.pressed ?? false;
+      
+      try {
+        const res = await fetch(`/api/artwork/${slug}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ published: isPressed })
+        });
+        
+        if (res.ok) {
+          window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
+            detail: {
+              title: isPressed ? 'Artwork published' : 'Artwork unpublished',
+              variant: 'success'
+            }
+          }));
+        } else {
+          const err = await res.json();
+          window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
+            detail: {
+              title: 'Failed to update status',
+              description: err.error || 'Unknown error',
+              variant: 'destructive'
+            }
+          }));
+          // Revert will happen on page reload or manual intervention
+        }
+      } catch (err) {
+        window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
+          detail: {
+            title: 'Failed to update status',
+            description: 'An unexpected error occurred.',
+            variant: 'destructive'
+          }
+        }));
+      }
+    });
+  }
+</script>

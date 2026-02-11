@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Admin-specific styles */
+:root {
+    --admin-bg: #1a1a2e;
+    --admin-sidebar: #16213e;
+    --admin-card: #0f3460;
+    --admin-text: #eaeaea;
+    --admin-muted: #82829b;
+    --admin-accent: #e94560;
+    --admin-success: #4ade80;
+    --admin-warning: #fbbf24;
+    --admin-error: #ef4444;
+    --admin-border: #2a2a4a;
+    --admin-primary: #1a73e8;
+    --admin-primary-light: #4285f4;
+    --admin-primary-bright: #01edf9;
+}
+
+/* Smooth scrolling */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Selection */
+::selection {
+    background: var(--admin-accent);
+    color: var(--admin-bg);
+}
+
+/* Form inputs */
+input,
+textarea,
+select {
+    @apply bg-admin-sidebar border border-admin-border rounded-lg px-3 py-2 text-admin-text;
+    @apply focus:outline-none focus:ring-2 focus:ring-admin-accent focus:border-transparent;
+}
+
+/* Buttons */
+.btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-colors duration-200;
+}
+
+.btn-sm {
+    @apply px-3 py-1.5 text-sm;
+}
+
+.btn-primary {
+    @apply bg-admin-accent text-white hover:bg-opacity-80;
+}
+
+.btn-secondary {
+    @apply bg-admin-card text-admin-text hover:bg-opacity-80;
+}
+
+.btn-success {
+    @apply bg-green-600 text-white hover:bg-green-700;
+}
+
+/* Cards */
+.card {
+    @apply bg-admin-card border border-admin-primary-light rounded-xl p-6;
+}

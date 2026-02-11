@@ -1,0 +1,17 @@
+# artis.config.example
+# Artis Site Configuration (template)
+# Copy to artis.config.yaml and adjust. Never commit artis.config.yaml.
+#
+# After running: pnpm init:user-data myproject
+# point userDataPath at user-data/myproject (absolute or relative to repo root).
+
+userDataPath: ./user-data
+
+# Image storage: "local" (files in repo) or "r2" (Cloudflare R2).
+# For R2, set the following and add credentials to .env (see .env.example).
+imageStorage: local
+
+# Uncomment and set when using Cloudflare R2:
+# r2PublicUrl: https://your-r2-public-url.example.com
+# r2BucketName: your-bucket-name
+# r2ProjectPrefix: your-project-prefix

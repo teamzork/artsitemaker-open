@@ -1,0 +1,368 @@
+---
+import AdminLayout from '@layouts/AdminLayout.astro';
+import fs from 'fs/promises';
+import path from 'path';
+import yaml from 'js-yaml';
+import { getContentPath, getThemesPath } from '../../lib/paths';
+import { getSettingsFilePath } from '../../lib/config-paths';
+import Modal from '../../components/Modal.astro';
+
+const themesPath = getThemesPath();
+const contentPath = getContentPath();
+
+// Load settings for current theme
+let settings: any = {};
+try {
+  const content = await fs.readFile(getSettingsFilePath(), 'utf-8');
+  settings = yaml.load(content) as any;
+} catch (e) {}
+
+const currentTheme = settings.theme || 'modern';
+
+// Available themes with metadata
+interface ThemeInfo {
+  id: string;
+  name: string;
+  active: boolean;
+  description?: string;
+  colors?: {
+    background?: string;
+    accent?: string;
+    backgroundAlt?: string;
+  };
+  preview?: string;
+}
+
+let themes: ThemeInfo[] = [];
+try {
+  const dirs = await fs.readdir(themesPath, { withFileTypes: true });
+
+  for (const d of dirs) {
+    if (!d.isDirectory()) continue;
+    // Skip non-theme directories
+    if (d.name === 'recommended-assets') continue;
+    
+    const themeInfo: ThemeInfo = {
+      id: d.name,
+      name: d.name.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+      active: d.name === currentTheme
+    };
+    
+    // Try to load theme.yaml for additional info
+    try {
+      const themeYamlPath = path.join(themesPath, d.name, 'theme.yaml');
+      const themeContent = await fs.readFile(themeYamlPath, 'utf-8');
+      const themeData = yaml.load(themeContent) as any;
+      
+      themeInfo.name = themeData.name || themeInfo.name;
+      themeInfo.description = themeData.description;
+      themeInfo.colors = themeData.colors;
+      
+      // Check for preview image
+      const previewPath = path.join(themesPath, d.name, 'assets', 'preview.png');
+      try {
+        await fs.access(previewPath);
+        themeInfo.preview = `/api/theme-preview/${d.name}`;
+      } catch {
+        // No preview image
+      }
+    } catch {}
+    
+    themes.push(themeInfo);
+  }
+} catch (e) {}
+
+// Check if user needs migration
+const hasCustomFonts = settings.identityKit?.fonts && (
+  (typeof settings.identityKit.fonts.heading === 'object' && settings.identityKit.fonts.heading?.file) ||
+  (typeof settings.identityKit.fonts.body === 'object' && settings.identityKit.fonts.body?.file)
+);
+const hasCustomLogo = !!settings.identityKit?.logo?.file;
+const needsMigration = !hasCustomFonts && !hasCustomLogo;
+---
+
+<AdminLayout title="Theme Gallery">
+  <div class="space-y-6">
+    <!-- Navigation -->
+    <div class="flex items-center gap-4">
+      <a href="/style/customize" class="text-admin-muted hover:text-admin-text">← Back to Customize</a>
+    </div>
+
+    <!-- Migration Notice (shows if user hasn't migrated to pure themes) -->
+    {needsMigration && (
+      <div class="card border-l-4 border-l-yellow-500 bg-yellow-500/10" role="alert" aria-live="polite">
+        <div class="flex flex-col sm:flex-row items-start gap-4">
+          <div class="flex-shrink-0 w-8 h-8 rounded-full bg-yellow-500 flex items-center justify-center text-black font-bold" aria-hidden="true">!</div>
+          <div class="flex-1 min-w-0">
+            <h3 class="font-semibold text-yellow-400 mb-1">Migrate Your Theme Assets</h3>
+            <p class="text-sm text-admin-text/80 mb-3">
+              Move your branding to user-data/ to enable theme independence.
+            </p>
+            <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <button 
+                id="migrate-btn"
+                class="btn btn-primary text-sm"
+                onclick="runMigration()"
+                aria-label="Migrate theme assets to user-data directory"
+              >
+                <span id="migrate-btn-text">Migrate Assets</span>
+                <span id="migrate-btn-loading" class="hidden">Migrating...</span>
+              </button>
+              <a 
+                href="https://github.com/your-org/artis-tablinum/blob/main/Docs/guides/theme-content-separation-migration.md"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-sm text-admin-accent hover:underline"
+              >
+                Learn More →
+              </a>
+            </div>
+
+            <!-- Migration Result (hidden by default) -->
+            <div id="migration-result" class="hidden mt-4" role="status" aria-live="polite"></div>
+          </div>
+        </div>
+      </div>
+    )}
+
+    <!-- Theme Gallery -->
+    <div>
+      <h2 class="text-lg font-semibold mb-4">Available Themes</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {themes.map((theme) => (
+          <div 
+            class:list={[
+              'card p-0 overflow-hidden',
+              theme.active && 'ring-2 ring-admin-success'
+            ]}
+          >
+            <!-- Theme Preview -->
+            <div class="aspect-video relative overflow-hidden">
+              {theme.preview ? (
+                <img 
+                  src={theme.preview} 
+                  alt={`${theme.name} preview`}
+                  class="w-full h-full object-cover"
+                />
+              ) : (
+                <div 
+                  class="w-full h-full flex items-center justify-center"
+                  style={`background: linear-gradient(135deg, ${theme.colors?.background || '#cbcbc6'} 0%, ${theme.colors?.backgroundAlt || '#323232'} 100%);`}
+                >
+                  <!-- Mock gallery preview -->
+                  <div class="grid grid-cols-3 gap-1 p-4 w-full max-w-[200px]">
+                    {[1,2,3,4,5,6].map(() => (
+                      <div 
+                        class="aspect-square rounded"
+                        style={`background: ${theme.colors?.backgroundAlt || '#323232'}; border: 1px solid ${theme.colors?.accent || '#efb600'};`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Accent color indicator */}
+              <div 
+                class="absolute bottom-0 left-0 right-0 h-1"
+                style={`background: ${theme.colors?.accent || '#efb600'};`}
+              />
+            </div>
+            
+            <!-- Theme Info -->
+            <div class="p-4">
+              <div class="flex items-center justify-between mb-2">
+                <div class="font-semibold">{theme.name}</div>
+                {theme.active && (
+                  <span class="text-xs px-2 py-0.5 rounded bg-admin-success text-admin-bg">Active</span>
+                )}
+              </div>
+              
+              {theme.description && (
+                <p class="text-sm text-admin-muted mb-3">{theme.description}</p>
+              )}
+              
+              <div class="flex items-center gap-2">
+                {/* Color swatches */}
+                <div class="flex gap-1 flex-1">
+                  <div 
+                    class="w-6 h-6 rounded-full border border-admin-border" 
+                    style={`background: ${theme.colors?.background || '#cbcbc6'};`}
+                    title="Background"
+                  />
+                  <div 
+                    class="w-6 h-6 rounded-full border border-admin-border" 
+                    style={`background: ${theme.colors?.backgroundAlt || '#323232'};`}
+                    title="Background Alt"
+                  />
+                  <div 
+                    class="w-6 h-6 rounded-full border border-admin-border" 
+                    style={`background: ${theme.colors?.accent || '#efb600'};`}
+                    title="Accent"
+                  />
+                </div>
+                
+                {theme.active ? (
+                  <a 
+                    href="/style/customize"
+                    class="text-sm text-admin-accent hover:underline"
+                  >
+                    Customize
+                  </a>
+                ) : (
+                  <button 
+                    class="text-sm text-admin-accent hover:underline"
+                    onclick={`activateTheme('${theme.id}', '${theme.name}')`}
+                  >
+                    Activate
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+    
+    <!-- Add Theme -->
+    <div class="card">
+      <h2 class="text-lg font-semibold mb-4">Add New Theme</h2>
+      <p class="text-sm text-admin-muted mb-4">
+        Create a new theme folder in <code class="bg-admin-sidebar px-1 rounded">themes/</code> with a <code class="bg-admin-sidebar px-1 rounded">theme.yaml</code> file and optional <code class="bg-admin-sidebar px-1 rounded">styles.css</code>.
+      </p>
+      <div class="flex gap-4">
+        <input type="text" placeholder="New theme name..." class="flex-1" id="new-theme-name" />
+        <button class="btn btn-secondary" id="create-theme-btn">Create Theme</button>
+      </div>
+    </div>
+    
+    <Modal id="activate-theme-modal" title="Activate Theme" confirmText="Activate">
+      <p>Are you sure you want to activate theme "<span id="theme-name-display" class="font-semibold"></span>"?</p>
+      <input type="hidden" id="activate-theme-id" />
+    </Modal>
+  </div>
+</AdminLayout>
+
+<script>
+  // Activate Modal Logic
+  const activateModal = document.getElementById('activate-theme-modal') as HTMLDialogElement & { open: () => void; close: () => void } | null;
+  
+  async function activateTheme(themeId: string, themeName: string) {
+    const display = document.getElementById('theme-name-display');
+    const input = document.getElementById('activate-theme-id') as HTMLInputElement;
+    if (display) display.textContent = themeName || themeId;
+    if (input) input.value = themeId;
+    activateModal?.open?.();
+  }
+  
+  activateModal?.addEventListener('confirm', async () => {
+    const input = document.getElementById('activate-theme-id') as HTMLInputElement;
+    const themeId = input?.value;
+    if (!themeId) return;
+    
+    activateModal?.close?.();
+    
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ theme: themeId })
+      });
+      
+      if (res.ok) {
+        location.reload();
+      } else {
+        window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
+          detail: {
+            title: 'Failed to activate theme',
+            variant: 'destructive'
+          }
+        }));
+      }
+    } catch (e) {
+      window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
+        detail: {
+          title: 'Failed to activate theme',
+          variant: 'destructive'
+        }
+      }));
+    }
+  });
+  
+  // Make function available globally
+  (window as any).activateTheme = activateTheme;
+
+  // Migration function with full UX feedback
+  async function runMigration() {
+    if (!confirm('This will copy theme assets to user-data and update settings. Continue?')) {
+      return;
+    }
+
+    const btn = document.getElementById('migrate-btn') as HTMLButtonElement;
+    const btnText = document.getElementById('migrate-btn-text');
+    const btnLoading = document.getElementById('migrate-btn-loading');
+    const result = document.getElementById('migration-result');
+
+    // Set loading state
+    btn.disabled = true;
+    btn.classList.add('opacity-50', 'cursor-not-allowed');
+    btnText?.classList.add('hidden');
+    btnLoading?.classList.remove('hidden');
+    result?.classList.add('hidden');
+
+    try {
+      const response = await fetch('/api/migrate-theme-assets', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // Success state
+        if (result) {
+          result.innerHTML = `
+            <div class="p-4 bg-green-500/10 border border-green-500 rounded-lg">
+              <h4 class="font-semibold text-green-400 mb-1">Migration Complete!</h4>
+              <p class="text-sm text-admin-text/80">Your assets have been moved to user-data/. Refreshing...</p>
+            </div>
+          `;
+        }
+
+        // Auto-refresh after 2 seconds
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+      } else {
+        throw new Error(data.error || 'Migration failed');
+      }
+    } catch (error: any) {
+      // Error state
+      if (result) {
+        result.innerHTML = `
+          <div class="p-4 bg-red-500/10 border border-red-500 rounded-lg">
+            <h4 class="font-semibold text-red-400 mb-1">Migration Failed</h4>
+            <p class="text-sm text-admin-text/80 mb-2">${error.message}</p>
+            <a href="https://github.com/your-org/artis-tablinum/blob/main/Docs/guides/theme-content-separation-migration.md" 
+               target="_blank" 
+               rel="noopener noreferrer"
+               class="text-sm text-admin-accent hover:underline">
+              Try manual migration →
+            </a>
+          </div>
+        `;
+      }
+    } finally {
+      // Reset button state
+      btn.disabled = false;
+      btn.classList.remove('opacity-50', 'cursor-not-allowed');
+      btnText?.classList.remove('hidden');
+      btnLoading?.classList.add('hidden');
+      result?.classList.remove('hidden');
+    }
+  }
+
+  // Make migration function available globally
+  (window as any).runMigration = runMigration;
+</script>

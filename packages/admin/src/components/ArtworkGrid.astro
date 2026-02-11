@@ -1,0 +1,79 @@
+---
+import { getImageBaseUrl } from '../lib/paths';
+
+interface Props {
+  artworks: any[];
+  collections?: any[];
+  variant?: 'compact' | 'detailed';
+  limit?: number;
+  id?: string;
+}
+
+const { artworks, collections = [], variant = 'compact', limit, id } = Astro.props;
+
+const displayArtworks = limit ? artworks.slice(0, limit) : artworks;
+
+const gridClasses = variant === 'detailed'
+  ? "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4"
+  : "grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3";
+
+const imageBaseUrl = getImageBaseUrl();
+---
+
+<div id={id} class={gridClasses}>
+  {displayArtworks.map((artwork) => (
+    <a 
+      href={`/gallery/${artwork.slug}`}
+      draggable="true"
+      ondragstart={`event.dataTransfer.setData('text/plain', '${artwork.slug}')`}
+      class={`
+        group relative overflow-hidden rounded-lg transition-all hover:ring-2 hover:ring-admin-accent
+        ${variant === 'detailed' ? 'card p-0' : 'aspect-square bg-admin-sidebar flex items-center justify-center'}
+      `}
+      title={artwork.title}
+      data-slug={artwork.slug}
+      data-collection={variant === 'detailed' ? (artwork.collection || '') : undefined}
+      data-title={variant === 'detailed' ? artwork.title : undefined}
+      data-sort={variant === 'detailed' ? (artwork.sortOrder || 0) : undefined}
+      data-created={variant === 'detailed' ? (artwork.createdAt || '') : undefined}
+    >
+      <div class={`
+        relative overflow-hidden
+        ${variant === 'detailed' ? 'aspect-square bg-admin-sidebar flex items-center justify-center' : 'w-full h-full flex items-center justify-center'}
+      `}>
+        {artwork.processing?.processedAt ? (
+          <img 
+            src={imageBaseUrl ? `${imageBaseUrl}/thumbnails/${artwork.slug}.png` : `/thumbnails/${artwork.slug}.png`}
+            alt={artwork.title}
+            class="w-full h-full object-cover group-hover:scale-110 transition-transform"
+            onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"
+          />
+          <span class={`hidden items-center justify-center w-full h-full ${variant === 'detailed' ? 'text-4xl' : 'text-2xl'}`}>🖼️</span>
+        ) : (
+          <span class={`${variant === 'detailed' ? 'text-4xl' : 'text-2xl'} group-hover:scale-110 transition-transform`}>📷</span>
+        )}
+        
+        {/* Status badges */}
+        <div class="absolute top-2 right-2 flex gap-1">
+          {artwork.published === false && (
+            <span class="bg-admin-warning text-xs px-1.5 py-0.5 rounded text-black cursor-help" title="Draft">
+              {variant === 'detailed' ? 'Draft' : 'D'}
+            </span>
+          )}
+          {!artwork.processing?.processedAt && (
+            <span class="bg-orange-600 text-xs px-1.5 py-0.5 rounded cursor-help" title="Needs processing">⏳</span>
+          )}
+        </div>
+      </div>
+
+      {variant === 'detailed' && (
+        <div class="p-3">
+          <div class="font-medium truncate text-sm">{artwork.title}</div>
+          <div class="text-xs text-admin-muted truncate">
+            {collections.find(c => c.slug === artwork.collection)?.title || artwork.collection || 'Uncategorized'}
+          </div>
+        </div>
+      )}
+    </a>
+  ))}
+</div>

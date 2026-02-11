@@ -1,0 +1,509 @@
+---
+import AdminLayout from '@layouts/AdminLayout.astro';
+import Modal from '@components/Modal.astro';
+---
+
+<AdminLayout title="Upload Images">
+  <div class="space-y-6" data-testid="upload-page">
+    <!-- Back link -->
+    <a href="/gallery" class="text-admin-muted hover:text-admin-text" data-testid="back-to-gallery">← Back to Gallery</a>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+      <!-- Upload area -->
+      <div
+        id="drop-zone"
+        class="card border-2 border-dashed border-admin-border hover:border-admin-accent transition-colors cursor-pointer h-full flex flex-col justify-center"
+        data-testid="drop-zone"
+      >
+        <div class="text-center py-16">
+          <div class="text-6xl mb-4">📤</div>
+          <h2 class="text-xl font-semibold mb-2">Drop images here</h2>
+          <p class="text-admin-muted mb-4">or click to select files</p>
+          <p class="text-sm text-admin-muted">
+            Supports: JPG, PNG, TIFF, HEIC, WebP (max 50MB each)
+          </p>
+          <input
+            type="file"
+            id="file-input"
+            multiple
+            accept=".jpg,.jpeg,.png,.tiff,.tif,.heic,.heif,.webp"
+            class="hidden"
+            data-testid="file-input"
+          />
+        </div>
+      </div>
+      
+      <!-- FTP/SFTP Upload Instructions -->
+      <div class="card bg-admin-sidebar h-full">
+        <div class="flex items-start gap-4">
+          <div class="text-3xl">💡</div>
+          <div>
+            <h3 class="font-semibold mb-2">Bulk Upload via FTP/SFTP</h3>
+            <p class="text-sm text-admin-muted mb-3">
+              For uploading many large files, you can use FTP or SFTP to transfer images directly to the server. 
+              This is faster and more reliable for large batches.
+            </p>
+            
+            <div class="bg-admin-bg rounded-lg p-4 mb-3">
+              <h4 class="text-sm font-medium mb-2">Upload Steps:</h4>
+              <ol class="text-sm text-admin-muted space-y-2 list-decimal list-inside">
+                <li>Connect to your server via FTP/SFTP client (FileZilla, Cyberduck, etc.)</li>
+                <li>Navigate to: <code class="bg-admin-card px-1.5 py-0.5 rounded">files/originals/</code></li>
+                <li>Upload your image files (name them as the artwork slug, e.g., <code class="bg-admin-card px-1.5 py-0.5 rounded">my-artwork.jpg</code>)</li>
+                <li>Return here and click <strong>"Scan for New Images"</strong> below</li>
+                <li>Process the images to generate web-optimized versions</li>
+              </ol>
+            </div>
+            
+            <div class="flex gap-4">
+              <button id="scan-images-btn" class="btn btn-secondary text-sm">
+                🔍 Scan for New Images
+              </button>
+              <button id="show-ftp-details" class="text-sm text-admin-muted hover:text-admin-text">
+                Show connection details
+              </button>
+            </div>
+            
+            <div id="ftp-details" class="hidden mt-4 bg-admin-bg rounded-lg p-4">
+              <h4 class="text-sm font-medium mb-2">Connection Details:</h4>
+              <div class="grid grid-cols-2 gap-2 text-sm">
+                <div class="text-admin-muted">Protocol:</div>
+                <div>SFTP (recommended)</div>
+                <div class="text-admin-muted">Host:</div>
+                <div><code class="bg-admin-card px-1.5 py-0.5 rounded">your-server.com</code></div>
+                <div class="text-admin-muted">Port:</div>
+                <div>22 (SFTP) or 21 (FTP)</div>
+                <div class="text-admin-muted">Path:</div>
+                <div><code class="bg-admin-card px-1.5 py-0.5 rounded">/path/to/artis/files/originals/</code></div>
+              </div>
+              <p class="text-xs text-admin-muted mt-3">
+                Use your server SSH credentials. Contact your hosting provider if you need help setting up SFTP access.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Upload queue -->
+    <div id="queue-section" class="hidden">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-semibold">Upload Queue</h3>
+        <div class="flex gap-4">
+          <button id="upload-all-btn" class="btn btn-primary">
+            📤 Upload All
+          </button>
+          <button id="clear-queue-btn" class="btn btn-secondary">
+            Clear Queue
+          </button>
+        </div>
+      </div>
+      
+      <div id="upload-queue" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    </div>
+
+    <!-- Upload Results -->
+    <div id="results-section" class="hidden">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-3">
+          <h3 class="text-lg font-semibold">Ready to Process</h3>
+          <span class="bg-blue-500/10 text-blue-400 text-xs px-2 py-1 rounded-full border border-blue-500/20">Uploaded to Server</span>
+        </div>
+        <div class="flex gap-4">
+          <button id="process-all-btn" class="btn btn-primary">
+            ⚡ Process All & Create Artworks
+          </button>
+          <button id="clear-results-btn" class="btn btn-secondary">
+            Dismiss
+          </button>
+        </div>
+      </div>
+      
+      <div id="results" class="space-y-2"></div>
+    </div>
+
+    <!-- Scan Results (For FTP/SFTP) -->
+    <div id="scan-results-section" class="hidden card bg-admin-accent/5 border-admin-accent/20">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-3">
+          <h3 class="text-lg font-semibold">Found in Files</h3>
+          <span id="scan-count" class="bg-admin-accent text-white text-xs px-2 py-1 rounded-full">0</span>
+        </div>
+        <div class="flex gap-4">
+          <button id="process-scanned-btn" class="btn btn-primary">
+            ⚡ Process & Catalog These
+          </button>
+        </div>
+      </div>
+      <p class="text-sm text-admin-muted mb-4">
+        These images were found in the <code class="bg-admin-card px-1 rounded">files/originals/</code> folder but aren't in your gallery yet.
+      </p>
+      <div id="scan-results" class="max-h-48 overflow-y-auto bg-admin-bg/50 rounded-lg p-3 text-xs font-mono text-admin-muted">
+      </div>
+    </div>
+  </div>
+
+  <Modal id="info-modal" title="Results" confirmText="OK" showActions={true}>
+    <div id="info-modal-content"></div>
+  </Modal>
+</AdminLayout>
+
+<style>
+  #drop-zone.dragover {
+    border-color: var(--color-accent, #e94560);
+    background: rgba(233, 69, 96, 0.1);
+  }
+  
+  .queue-item {
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    background: var(--admin-card);
+    border-radius: 12px;
+    border: 1px solid var(--admin-border);
+  }
+  
+  .queue-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  
+  .queue-item-preview {
+    width: 100%;
+    height: 140px;
+    object-fit: cover;
+    border-radius: 8px;
+  }
+  
+  .queue-item-info {
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .queue-item-name {
+    font-weight: 500;
+    word-break: break-all;
+    font-size: 14px;
+    margin-bottom: 2px;
+  }
+  
+  .queue-item-size {
+    font-size: 12px;
+    color: var(--admin-muted);
+  }
+  
+  .queue-item-remove {
+    background: var(--admin-bg);
+    border: 1px solid var(--admin-border);
+    color: var(--admin-muted);
+    cursor: pointer;
+    font-size: 18px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  
+  .queue-item-remove:hover {
+    color: #ff6b6b;
+    border-color: #ff6b6b;
+    background: rgba(255, 107, 107, 0.1);
+  }
+</style>
+
+<script>
+  const dropZone = document.getElementById('drop-zone');
+  const fileInput = document.getElementById('file-input') as HTMLInputElement;
+  const queueSection = document.getElementById('queue-section');
+  const uploadQueue = document.getElementById('upload-queue');
+  const resultsSection = document.getElementById('results-section');
+  const results = document.getElementById('results');
+  const scanResultsSection = document.getElementById('scan-results-section');
+  const scanResults = document.getElementById('scan-results');
+  const scanCount = document.getElementById('scan-count');
+  const infoModal = document.getElementById('info-modal') as any;
+  const infoModalContent = document.getElementById('info-modal-content') as HTMLDivElement | null;
+  const infoModalTitle = document.getElementById('info-modal-title') as HTMLHeadingElement | null;
+  
+  let files: File[] = [];
+  
+  // Click to select
+  dropZone?.addEventListener('click', () => fileInput?.click());
+  
+  // File input change
+  fileInput?.addEventListener('change', (e) => {
+    const input = e.target as HTMLInputElement;
+    if (input.files) {
+      addFiles(Array.from(input.files));
+    }
+  });
+  
+  // Drag and drop
+  dropZone?.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+  });
+  
+  dropZone?.addEventListener('dragleave', () => {
+    dropZone.classList.remove('dragover');
+  });
+  
+  dropZone?.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    if (e.dataTransfer?.files) {
+      addFiles(Array.from(e.dataTransfer.files));
+    }
+  });
+  
+  function addFiles(newFiles: File[]) {
+    // Filter to images only
+    const imageFiles = newFiles.filter(f => 
+      /\.(jpg|jpeg|png|tiff|tif|heic|heif|webp)$/i.test(f.name)
+    );
+    
+    files.push(...imageFiles);
+    renderQueue();
+  }
+  
+  function renderQueue() {
+    if (!uploadQueue) return;
+    
+    uploadQueue.innerHTML = '';
+    
+    files.forEach((file, index) => {
+      const item = document.createElement('div');
+      item.className = 'queue-item';
+      
+      item.innerHTML = `
+        <div class="queue-item-header">
+          <div class="queue-item-info">
+            <div class="queue-item-name">${file.name}</div>
+            <div class="queue-item-size">${(file.size / 1024 / 1024).toFixed(2)} MB</div>
+          </div>
+          <button class="queue-item-remove" data-index="${index}" title="Remove">×</button>
+        </div>
+        <img class="queue-item-preview" src="${URL.createObjectURL(file)}" alt="" />
+      `;
+      
+      uploadQueue.appendChild(item);
+    });
+    
+    // Show/hide queue section
+    if (queueSection) {
+      queueSection.classList.toggle('hidden', files.length === 0);
+    }
+  }
+  
+  // Remove from queue
+  uploadQueue?.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    if (target.classList.contains('queue-item-remove')) {
+      const index = parseInt(target.dataset.index || '0');
+      files.splice(index, 1);
+      renderQueue();
+    }
+  });
+  
+  // Clear queue
+  document.getElementById('clear-queue-btn')?.addEventListener('click', () => {
+    files = [];
+    renderQueue();
+  });
+  
+  // Upload all
+  document.getElementById('upload-all-btn')?.addEventListener('click', async () => {
+    const btn = document.getElementById('upload-all-btn') as HTMLButtonElement;
+    btn.disabled = true;
+    btn.textContent = '⏳ Uploading...';
+    
+    const formData = new FormData();
+    files.forEach(file => formData.append('images', file));
+    
+    try {
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      });
+      
+      const data = await res.json();
+      
+      // Show results
+      if (results && resultsSection) {
+        results.innerHTML = data.uploaded?.map((u: any) => `
+          <div class="card p-3">
+            ✅ ${u.filename} → ${u.slug}
+          </div>
+        `).join('') || '';
+        
+        if (data.errors?.length) {
+          results.innerHTML += data.errors.map((e: string) => `
+            <div class="card p-3 text-red-400">
+              ❌ ${e}
+            </div>
+          `).join('');
+        }
+        
+        resultsSection.classList.remove('hidden');
+      }
+      
+      // Clear queue
+      renderQueue();
+      
+    } catch (e) {
+      window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
+        detail: {
+            title: 'Upload failed',
+            description: 'An unexpected error occurred.',
+            variant: 'destructive'
+        }
+      }));
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '📤 Upload All';
+    }
+  });
+  
+  // Global process logic (reused for both upload and scan)
+  async function runProcessing(buttonId: string) {
+    const btn = document.getElementById(buttonId) as HTMLButtonElement;
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '⏳ Processing...';
+    
+    try {
+      const res = await fetch('/api/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}) // Processes all uncataloged
+      });
+      
+      const data = await res.json();
+      
+      if (data && infoModalTitle && infoModalContent) {
+        infoModalTitle.textContent = 'Processing Complete';
+        infoModalContent.innerHTML = `
+          <div class="flex flex-col gap-4">
+            <div class="flex items-center gap-3 text-green-400">
+              <span class="text-3xl">✨</span>
+              <p class="text-lg font-semibold">Successfully processed ${data.processed?.length || 0} images!</p>
+            </div>
+            <div class="bg-admin-bg/50 rounded-lg p-4 space-y-3">
+              <p class="text-sm">Here's what happened behind the scenes:</p>
+              <ul class="text-sm text-admin-muted space-y-2">
+                <li class="flex gap-2">
+                  <span class="text-admin-accent">•</span>
+                  <span><strong>Optimized:</strong> Generated web-ready versions (WebP/AVIF) in multiple sizes.</span>
+                </li>
+                <li class="flex gap-2">
+                  <span class="text-admin-accent">•</span>
+                  <span><strong>Cataloged:</strong> Created new database entries for each artwork.</span>
+                </li>
+                <li class="flex gap-2">
+                  <span class="text-admin-accent">•</span>
+                  <span><strong>Organized:</strong> Moved original files to permanent storage.</span>
+                </li>
+              </ul>
+            </div>
+            <p class="text-sm text-admin-muted italic">You can now head to the gallery to add details, prices, and organize your collection.</p>
+          </div>
+        `;
+        
+        const confirmBtn = infoModal.querySelector('.confirm-modal');
+        if (confirmBtn) confirmBtn.textContent = 'Go to Gallery';
+        
+        infoModal.open();
+        
+        infoModal.addEventListener('confirm', () => {
+          window.location.href = '/gallery';
+        }, { once: true });
+      }
+    } catch (e) {
+      window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
+        detail: {
+            title: 'Processing failed',
+            description: 'An unexpected error occurred.',
+            variant: 'destructive'
+        }
+      }));
+    } finally {
+      btn.disabled = false;
+      btn.textContent = originalText;
+    }
+  }
+
+  // Process all button (from upload)
+  document.getElementById('process-all-btn')?.addEventListener('click', () => {
+    runProcessing('process-all-btn');
+  });
+
+  // Process scanned button (from FTP scan)
+  document.getElementById('process-scanned-btn')?.addEventListener('click', () => {
+    runProcessing('process-scanned-btn');
+  });
+
+  // Clear results
+  document.getElementById('clear-results-btn')?.addEventListener('click', () => {
+    if (resultsSection) resultsSection.classList.add('hidden');
+  });
+  
+  // Toggle FTP details
+  document.getElementById('show-ftp-details')?.addEventListener('click', () => {
+    const details = document.getElementById('ftp-details');
+    details?.classList.toggle('hidden');
+  });
+  
+  // Scan for new images
+  document.getElementById('scan-images-btn')?.addEventListener('click', async () => {
+    const btn = document.getElementById('scan-images-btn') as HTMLButtonElement;
+    btn.disabled = true;
+    btn.textContent = '🔍 Scanning...';
+    
+    try {
+      const res = await fetch('/api/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+      
+      const data = await res.json();
+      
+      if (data.found?.length > 0) {
+        if (scanResultsSection && scanResults && scanCount) {
+          scanCount.textContent = data.found.length.toString();
+          scanResults.innerHTML = data.found.map((f: string) => `<div>${f}</div>`).join('');
+          scanResultsSection.classList.remove('hidden');
+          scanResultsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+      } else if (infoModalTitle && infoModalContent) {
+        infoModalTitle.textContent = 'Scan Results';
+        infoModalContent.innerHTML = `
+          <div class="text-center py-4">
+            <div class="text-4xl mb-4">∅</div>
+            <p>No new images found in <code class="bg-admin-card px-1 rounded">files/originals/</code></p>
+          </div>
+        `;
+        infoModal.open();
+      }
+      
+    } catch (e) {
+      window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
+        detail: {
+            title: 'Scan failed',
+            description: 'Make sure the files/originals/ folder exists.',
+            variant: 'destructive'
+        }
+      }));
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '🔍 Scan for New Images';
+    }
+  });
+</script>

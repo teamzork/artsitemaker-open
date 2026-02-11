@@ -1,0 +1,443 @@
+---
+// packages/admin/src/pages/content/[slug].astro
+import AdminLayout from '@layouts/AdminLayout.astro';
+import fs from 'fs/promises';
+import path from 'path';
+import yaml from 'js-yaml';
+import { getContentPath, getImageBaseUrl } from '../../lib/paths';
+import { isCoreContentFile, getCoreContentFileDefault } from '../../lib/pages';
+import { YamlManager } from '../../lib/yaml-manager';
+import Button from '../../components/ui/Button.astro';
+import Modal from '../../components/Modal.astro';
+import ArtworkPicker from '../../components/ArtworkPicker.astro';
+
+const { slug } = Astro.params;
+
+const contentPath = getContentPath();
+const isCorePage = Boolean(slug && isCoreContentFile(slug));
+let siteUrl = '';
+let adminUrl = '';
+try {
+  const { getSettingsFilePath } = await import('../../lib/config-paths');
+  const settingsContent = await fs.readFile(getSettingsFilePath(), 'utf-8');
+  const settings = yaml.load(settingsContent) as any;
+  siteUrl = settings?.site?.url || '';
+  adminUrl = settings?.site?.adminUrl || '';
+} catch (e) {}
+
+// Load page with self-heal for core content files
+let page: any = null;
+let error = '';
+let selfHealed = false;
+
+try {
+  const pagePath = path.join(contentPath, 'pages', `${slug}.yaml`);
+  const content = await fs.readFile(pagePath, 'utf-8');
+  page = yaml.load(content) as any;
+} catch (e) {
+  // Check if this is a core content file that should be auto-recreated
+  if (slug && isCoreContentFile(slug)) {
+    const defaultContent = getCoreContentFileDefault(slug);
+    if (defaultContent) {
+      try {
+        const pagesDir = path.join(contentPath, 'pages');
+        await fs.mkdir(pagesDir, { recursive: true });
+        const pagePath = path.join(pagesDir, `${slug}.yaml`);
+        await fs.writeFile(pagePath, yaml.dump(defaultContent), 'utf-8');
+        page = defaultContent;
+        selfHealed = true;
+        console.log(`[Self-heal] Recreated ${slug}.yaml`);
+      } catch (writeError) {
+        error = `Page "${slug}" not found and could not be recreated`;
+      }
+    } else {
+      error = `Page "${slug}" not found`;
+    }
+  } else {
+    error = `Page "${slug}" not found`;
+  }
+}
+
+const isAboutTemplate = page?.template === 'about' || page?.slug === 'about';
+let artworkPickerItems: Array<{
+  slug: string;
+  title: string;
+  thumbnailUrl: string;
+  published: boolean;
+}> = [];
+let artworkPickerValue = page?.featuredArtwork || '';
+let artworkPickerDebug: Record<string, string> = {};
+
+try {
+  const manager = new YamlManager(contentPath);
+  const artworks = (await manager.getAllArtworks()) as Array<{
+    slug: string;
+    title?: string;
+    published?: boolean;
+    primary?: string;
+    images?: { thumbnail?: string };
+  }>;
+  const baseUrl = getImageBaseUrl();
+  const normalizedBaseUrl = baseUrl ? baseUrl.replace(/\/$/, '') : '';
+  const thumbnailsBase = normalizedBaseUrl ? `${normalizedBaseUrl}/thumbnails` : '/thumbnails';
+  artworkPickerDebug = {
+    contentPath,
+    imageBaseUrl: normalizedBaseUrl || '(empty)',
+    thumbnailsBase,
+    featuredImage: String(page?.featuredImage || ''),
+    featuredArtwork: String(page?.featuredArtwork || ''),
+  };
+
+  if (!artworkPickerValue) {
+    const featuredImagePath = String(page?.featuredImage || '').trim();
+    const sanitizedPath = featuredImagePath.split('#')[0]?.split('?')[0] || '';
+    const filename = sanitizedPath ? sanitizedPath.split('/').pop() : '';
+    if (filename) {
+      const match = artworks.find((artwork) => artwork.primary === filename);
+      if (match) {
+        artworkPickerValue = match.slug;
+      }
+    }
+  }
+
+  artworkPickerItems = artworks.map((artwork) => {
+    const remoteThumbnail = artwork?.images?.thumbnail;
+    const localThumbnail = `${thumbnailsBase}/${artwork.slug}.png`;
+
+    return {
+      slug: artwork.slug,
+      title: artwork.title || artwork.slug,
+      thumbnailUrl: remoteThumbnail || localThumbnail,
+      published: artwork.published !== false,
+    };
+  });
+} catch (e) {
+  artworkPickerItems = [];
+  artworkPickerDebug = {
+    contentPath,
+    imageBaseUrl: '',
+    thumbnailsBase: '',
+    featuredImage: String(page?.featuredImage || ''),
+    featuredArtwork: String(page?.featuredArtwork || ''),
+  };
+}
+---
+
+<AdminLayout title={page ? `Edit: ${page.title}` : 'Page Not Found'}>
+  {page && !error && (
+    <div
+      slot="header-actions"
+      class="flex items-center gap-3"
+    >
+      <span id="save-status" class="text-sm text-admin-muted"></span>
+      <Button
+        type="submit"
+        form="page-form"
+        id="save-page-btn"
+        variant="accent"
+        disabled
+        tooltip="No changes to save"
+        tooltipSide="bottom"
+      >
+        💾 Save Page
+      </Button>
+    </div>
+  )}
+  {error ? (
+    <div class="card text-center py-16">
+      <p class="text-admin-muted text-lg mb-4">{error}</p>
+      <a href="/content" class="btn btn-secondary">← Back to Content</a>
+    </div>
+  ) : (
+    <>
+      {selfHealed && (
+        <div class="card bg-admin-accent/10 border-admin-accent mb-4">
+          <p class="text-sm text-admin-accent">
+            ℹ️ This page was recreated with default settings because the content file was missing.
+          </p>
+        </div>
+      )}
+    <form id="page-form" class="space-y-6 max-w-3xl">
+      <input type="hidden" name="slug" value={page.slug} />
+
+      <div
+        id="page-meta"
+        data-page-slug={page?.slug || slug || ''}
+        data-page-type={page?.pageType || ''}
+        data-site-url={siteUrl}
+        data-admin-url={adminUrl}
+        class="hidden"
+      ></div>
+      
+      <!-- Header -->
+      <div class="flex items-center">
+        <a href="/content" class="text-admin-muted hover:text-admin-text">← Back to Content</a>
+      </div>
+
+      <!-- Basic Info -->
+      <div class="card">
+        <h2 class="text-lg font-semibold mb-4">Page Details</h2>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm text-admin-muted mb-2">Title</label>
+            <input type="text" name="title" value={page.title} class="w-full" required />
+          </div>
+          <div>
+            <label class="block text-sm text-admin-muted mb-2">Template</label>
+            <select name="template" class="w-full bg-admin-sidebar">
+              <option value="default" selected={page.template === 'default'}>Default</option>
+              <option value="about" selected={page.template === 'about'}>About</option>
+              <option value="contact" selected={page.template === 'contact'}>Contact</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm text-admin-muted mb-2">Sort Order</label>
+            <input type="number" name="sortOrder" value={page.sortOrder || 0} class="w-full" />
+          </div>
+        </div>
+
+        <!-- Visibility Options -->
+        <div class="mt-4 pt-4 border-t border-admin-border">
+          <label class="block text-sm text-admin-muted mb-3">Show this page in:</label>
+          <div class="grid grid-cols-3 gap-4">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="showInNav" id="showInNav" checked={page.showInNav !== false} class="w-4 h-4" />
+              <span class="text-sm">Navigation</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="showInFooter" id="showInFooter" checked={page.showInFooter === true} class="w-4 h-4" />
+              <span class="text-sm">Footer</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="showInCopyright" id="showInCopyright" checked={page.showInCopyright === true} class="w-4 h-4" />
+              <span class="text-sm">Copyright Bar</span>
+            </label>
+          </div>
+          <p class="text-xs text-admin-muted mt-2">Service pages (Terms, Privacy) typically appear in the copyright bar</p>
+        </div>
+      </div>
+
+      {isAboutTemplate && (
+        <div class="card">
+          <ArtworkPicker
+            name="featuredArtwork"
+            value={artworkPickerValue}
+            label="About Image"
+            description="Choose an artwork from your portfolio to feature on the About page."
+            labelClass="text-lg font-semibold text-admin-text mb-2"
+            descriptionClass="text-sm text-admin-muted mb-4"
+            variant="inline"
+            artworks={artworkPickerItems}
+            debugInfo={artworkPickerDebug}
+          />
+        </div>
+      )}
+
+      <!-- Content -->
+      <div class="card">
+        <h2 class="text-lg font-semibold mb-4">Content</h2>
+        <textarea 
+          name="content" 
+          rows="15" 
+          class="w-full bg-admin-sidebar font-mono text-sm"
+          placeholder="Enter content (Markdown supported)..."
+        >{page.content || ''}</textarea>
+        <p class="text-xs text-admin-muted mt-2">Supports Markdown formatting</p>
+      </div>
+
+    </form>
+
+      {!isCorePage && (
+        <div class="mt-6 max-w-3xl">
+          <Button
+            id="delete-page-btn"
+            type="button"
+            variant="danger"
+            tooltipSide="top"
+          >
+            🗑️ Delete Page
+          </Button>
+        </div>
+      )}
+
+      <Modal
+        id="delete-page-modal"
+        title="Delete Page"
+        confirmText="Delete Page"
+        variant="danger"
+      >
+        <p>
+          Are you sure you want to delete "<span class="font-semibold">{page.title}</span>"?
+        </p>
+        <p class="mt-2 text-sm text-admin-muted">
+          This page will be deleted forever.
+        </p>
+      </Modal>
+    </>
+  )}
+</AdminLayout>
+
+<script>
+  import { createFormController } from '../../lib/form-save-handler';
+
+  const form = document.getElementById('page-form') as HTMLFormElement | null;
+  const saveBtn = document.getElementById('save-page-btn') as HTMLButtonElement | null;
+  const saveStatus = document.getElementById('save-status');
+
+  if (!form || !saveBtn) {
+    console.error('Page form or save button not found');
+  } else {
+    const controller = createFormController({
+      form,
+      saveButton: saveBtn,
+      statusElement: saveStatus,
+      successToast: {
+        title: 'Page saved',
+        description: 'Content updated successfully.',
+        variant: 'success',
+      },
+      errorToast: (err) => ({
+        title: 'Save failed',
+        description: err.message,
+        variant: 'destructive',
+      }),
+      saveFn: async (formData: FormData) => {
+        const slug = String(formData.get('slug') || '');
+        if (!slug) {
+          throw new Error('Missing page slug');
+        }
+
+        const data: Record<string, any> = {
+          slug,
+          title: String(formData.get('title') || ''),
+          template: String(formData.get('template') || 'default'),
+          sortOrder: Number(formData.get('sortOrder')) || 0,
+          showInNav: formData.get('showInNav') === 'on',
+          showInFooter: formData.get('showInFooter') === 'on',
+          showInCopyright: formData.get('showInCopyright') === 'on',
+          content: formData.get('content') ? String(formData.get('content')) : '',
+        };
+
+        if (formData.has('featuredArtwork')) {
+          const featuredArtwork = formData.get('featuredArtwork')
+            ? String(formData.get('featuredArtwork'))
+            : '';
+          data.featuredArtwork = featuredArtwork;
+          if (featuredArtwork) {
+            data.featuredImage = '';
+          }
+        }
+
+        return fetch(`/api/page/${slug}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+      },
+    });
+
+    controller.initialize();
+  }
+
+  const pageMeta = document.getElementById("page-meta");
+  const pageSlug = pageMeta?.dataset.pageSlug || "";
+  const pageType = pageMeta?.dataset.pageType || "";
+  const siteUrl = pageMeta?.dataset.siteUrl || "";
+  const adminUrl = pageMeta?.dataset.adminUrl || "";
+  const deleteBtn = document.getElementById("delete-page-btn") as HTMLButtonElement | null;
+  const deleteModal = document.getElementById("delete-page-modal") as any;
+
+  function resolveSiteBaseUrl() {
+    if (siteUrl) return siteUrl;
+    if (adminUrl) {
+      try {
+        const parsed = new URL(adminUrl);
+        if (parsed.port === "4322") {
+          return `${parsed.protocol}//${parsed.hostname}:4321`;
+        }
+        return `${parsed.protocol}//${parsed.host}`;
+      } catch (e) {}
+    }
+    const origin = window.location.origin;
+    return origin.includes(":4322") ? origin.replace(":4322", ":4321") : origin;
+  }
+
+  function getPageViewPath() {
+    if (!pageSlug) return "/";
+    return pageType === "service" ? `/service/${pageSlug}` : `/${pageSlug}`;
+  }
+
+  const pendingNewPage = sessionStorage.getItem("artsitemaker:new-page");
+  if (pendingNewPage) {
+    try {
+      const pending = JSON.parse(pendingNewPage);
+      if (!pending.slug || pending.slug === pageSlug) {
+        sessionStorage.removeItem("artsitemaker:new-page");
+        const viewUrl = new URL(getPageViewPath(), resolveSiteBaseUrl()).toString();
+        window.dispatchEvent(
+          new CustomEvent("artsitemaker:toast", {
+            detail: {
+              title: "Page created",
+              description: "Start adding content or view the page now.",
+              variant: "success",
+              action: {
+                label: "View page",
+                onClick: () => window.open(viewUrl, "_blank"),
+              },
+            },
+          }),
+        );
+      }
+    } catch (e) {
+      sessionStorage.removeItem("artsitemaker:new-page");
+    }
+  }
+
+  deleteBtn?.addEventListener("click", () => {
+    deleteModal?.open?.();
+  });
+
+  deleteModal?.addEventListener("confirm", async () => {
+    deleteModal?.close?.();
+    if (!pageSlug) return;
+
+    if (deleteBtn) {
+      deleteBtn.disabled = true;
+      deleteBtn.textContent = "⏳ Deleting...";
+    }
+
+    try {
+      const res = await fetch(`/api/page/${pageSlug}`, { method: "DELETE" });
+      if (res.ok) {
+        window.location.href = "/content";
+        return;
+      }
+
+      const error = await res.json().catch(() => ({}));
+      window.dispatchEvent(
+        new CustomEvent("artsitemaker:toast", {
+          detail: {
+            title: "Delete failed",
+            description: error.error || "Unable to delete this page.",
+            variant: "destructive",
+          },
+        }),
+      );
+    } catch (e) {
+      window.dispatchEvent(
+        new CustomEvent("artsitemaker:toast", {
+          detail: {
+            title: "Delete failed",
+            description: "An unexpected error occurred.",
+            variant: "destructive",
+          },
+        }),
+      );
+    } finally {
+      if (deleteBtn) {
+        deleteBtn.disabled = false;
+        deleteBtn.textContent = "🗑️ Delete Page";
+      }
+    }
+  });
+</script>

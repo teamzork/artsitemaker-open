@@ -1,0 +1,2176 @@
+---
+import AdminLayout from "@layouts/AdminLayout.astro";
+import fs from "fs/promises";
+import path from "path";
+import yaml from "js-yaml";
+import {
+  getContentPath,
+  getThemesPath,
+  getContentAssetsBaseUrl,
+} from "../../lib/paths";
+import { getSettingsFilePath, getIdentityConfigPath } from "../../lib/config-paths";
+import Modal from "../../components/Modal.astro";
+import Button from "../../components/ui/Button.astro";
+import Combobox from "../../components/ui/Combobox.astro";
+import { Toggle } from "../../components/ui/Toggle";
+
+import { loadFontData } from "../../lib/fonts";
+
+// Load current settings
+const contentPath = getContentPath();
+const themesPath = getThemesPath();
+let settings: any = {};
+let identityKit: any = {};
+
+try {
+  const content = await fs.readFile(getSettingsFilePath(), "utf-8");
+  settings = yaml.load(content) as any;
+} catch (e) {
+  console.error("Failed to load settings:", e);
+}
+
+// Load identity kit from identity.yaml
+try {
+  const content = await fs.readFile(getIdentityConfigPath(), "utf-8");
+  identityKit = yaml.load(content) as any || {};
+} catch (e) {
+  console.error("Failed to load identity kit:", e);
+}
+
+// Load fonts
+const { sections: fontSections, css: contentFontsCss } = await loadFontData(contentPath);
+
+// Load current theme config for fallback values
+let themeConfig: any = {};
+const currentTheme = settings.theme || "minimalist";
+try {
+  const themeConfigPath = path.join(themesPath, currentTheme, "theme.yaml");
+  const themeContent = await fs.readFile(themeConfigPath, "utf-8");
+  themeConfig = yaml.load(themeContent) as any;
+} catch (e) {
+  console.error("Failed to load theme config:", e);
+}
+
+// Helper to resolve asset URL for preview - checks identityKit first, then theme
+function resolveAssetPreview(
+  identityPath: string | undefined | null,
+  themePath: string | undefined | null,
+): { url: string | null; isFromTheme: boolean } {
+  // First check identityKit
+  if (identityPath) {
+    const baseUrl = getContentAssetsBaseUrl();
+    const normalizedPath = identityPath.startsWith("/")
+      ? identityPath.slice(1)
+      : identityPath;
+    return { url: `${baseUrl}/${normalizedPath}`, isFromTheme: false };
+  }
+
+  // Fall back to theme config
+  if (themePath) {
+    return {
+      url: `/themes/${currentTheme}/assets/${themePath}`,
+      isFromTheme: true,
+    };
+  }
+
+  return { url: null, isFromTheme: false };
+}
+
+// Helper to extract font family from string or object format
+function getFontFamily(fontConfig: any): string {
+  if (!fontConfig) return "";
+  if (typeof fontConfig === "string") return fontConfig;
+  if (typeof fontConfig === "object" && fontConfig.family)
+    return fontConfig.family;
+  return "";
+}
+
+// Get logo and texture preview info
+const logoPreview = resolveAssetPreview(
+  identityKit?.logo?.file,
+  themeConfig.logo?.file,
+);
+const texturePreview = resolveAssetPreview(
+  identityKit?.background?.texture,
+  themeConfig.background?.texture,
+);
+
+// Load available themes
+let themes: string[] = [];
+try {
+  const dirs = await fs.readdir(themesPath, { withFileTypes: true });
+  themes = dirs
+    .filter((d) => d.isDirectory())
+    .filter((d) => d.name !== "recommended-assets") // Skip non-theme directories
+    .map((d) => d.name);
+} catch (e) {}
+---
+
+<AdminLayout title="Settings">
+  <!-- Save button in header -->
+  <Button
+    type="submit"
+    form="settings-form"
+    id="save-btn"
+    slot="header-actions"
+    variant="accent"
+    disabled
+    tooltip="No changes to save"
+    tooltipSide="bottom">💾 Save Settings</Button
+  >
+
+  <form id="settings-form" class="space-y-8 max-w-4xl">
+    <!-- Status bar -->
+    <div class="flex items-center gap-4">
+      <span id="save-status" class="text-sm text-admin-muted" aria-live="polite"></span>
+    </div>
+
+    <!-- Import Content Modal -->
+    <!-- Import Content Modal -->
+    <Modal
+      id="import-modal"
+      title="Import Content"
+      confirmText="Import"
+      closeText="Cancel"
+    >
+      <div class="space-y-4">
+        <!-- Tabs -->
+        <div class="flex border-b border-admin-border mb-4">
+          <button
+            type="button"
+            class="px-4 py-2 text-sm font-medium border-b-2 border-admin-accent text-admin-text import-tab-btn"
+            data-tab="local"
+          >
+            Local Path
+          </button>
+          <button
+            type="button"
+            class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-admin-muted hover:text-admin-text import-tab-btn"
+            data-tab="upload"
+          >
+            Upload File
+          </button>
+        </div>
+
+        <!-- Local Path Tab -->
+        <div id="tab-local" class="import-tab-content space-y-4">
+          <div>
+            <label class="block text-sm text-admin-muted mb-2" for="import-source-path"
+              >Source Folder Path</label
+            >
+            <div>
+              <input
+                type="text"
+                id="import-source-path"
+                class="w-full"
+                placeholder="~/Git/my-content or /absolute/path"
+              />
+            </div>
+            <p class="text-xs text-admin-muted mt-1">
+              Enter the absolute path to the folder on the server.
+            </p>
+          </div>
+        </div>
+
+        <!-- Upload Tab -->
+        <div id="tab-upload" class="import-tab-content space-y-4 hidden">
+          <div>
+            <label class="block text-sm text-admin-muted mb-2"
+              >Select Archive or YAML</label
+            >
+            <div
+              class="border-2 border-dashed border-admin-border rounded-lg p-6 text-center hover:bg-admin-sidebar cursor-pointer transition-colors"
+              id="upload-dropzone"
+              role="button"
+              tabindex="0"
+            >
+              <div class="text-3xl mb-2">📤</div>
+              <p class="text-sm font-medium">Click to select files</p>
+              <p class="text-xs text-admin-muted mt-1">
+                Supports .zip (full content backup) or .yaml (individual items)
+              </p>
+              <input
+                type="file"
+                id="import-file-input"
+                accept=".zip,.yaml,.yml"
+                multiple
+                class="hidden"
+              />
+              <div
+                id="upload-file-name"
+                class="mt-2 text-sm text-admin-accent font-mono hidden"
+              >
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Common Options -->
+        <div class="pt-4 border-t border-admin-border">
+          <label class="block text-sm text-admin-muted mb-2">Import Mode</label>
+          <div class="space-y-2">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="import-mode"
+                value="replace"
+                checked
+                class="w-4 h-4"
+              />
+              <span class="text-sm"
+                >Replace all content (recommended for backups)</span
+              >
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="import-mode"
+                value="merge"
+                class="w-4 h-4"
+              />
+              <span class="text-sm"
+                >Merge with existing content (recommended for partial updates)</span
+              >
+            </label>
+          </div>
+        </div>
+
+        <div id="import-status" class="text-sm hidden" aria-live="polite"></div>
+      </div>
+    </Modal>
+
+    <!-- Restore Defaults Confirmation Modal -->
+    <Modal
+      id="restore-modal"
+      title="Restore Default Content"
+      confirmText="Restore Defaults"
+      variant="danger"
+    >
+      <p class="text-sm text-admin-muted mb-4">
+        This will replace your current content with the default placeholder
+        content (Valero Kanz portfolio). A backup will be created automatically
+        before restoring.
+      </p>
+      <div id="restore-status" class="text-sm hidden mb-4" aria-live="polite"></div>
+    </Modal>
+
+    <!-- Delete Backup Modal -->
+    <Modal
+      id="delete-backup-modal"
+      title="Delete Backup"
+      confirmText="Delete"
+      variant="danger"
+    >
+      <p class="text-sm text-admin-muted">
+        Are you sure you want to delete this backup? This action cannot be
+        undone.
+      </p>
+      <input type="hidden" id="delete-backup-filename" />
+    </Modal>
+
+    <!-- Delete Logo Modal -->
+    <Modal
+      id="delete-logo-modal"
+      title="Delete Logo"
+      confirmText="Delete"
+      variant="danger"
+    >
+      <p class="text-sm text-admin-muted">
+        Are you sure you want to delete this logo file? This action cannot be
+        undone.
+      </p>
+      <input type="hidden" id="delete-logo-path" />
+    </Modal>
+
+    <!-- Delete Texture Modal -->
+    <Modal
+      id="delete-texture-modal"
+      title="Delete Texture"
+      confirmText="Delete"
+      variant="danger"
+    >
+      <p class="text-sm text-admin-muted">
+        Are you sure you want to delete this texture file? This action cannot be
+        undone.
+      </p>
+      <input type="hidden" id="delete-texture-path" />
+    </Modal>
+
+    <!-- Site Settings -->
+    <div id="site-settings" class="card scroll-mt-24">
+      <h2 class="text-lg font-semibold mb-6">Site Settings</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Left column: Fields without links -->
+        <div>
+          <label class="block text-sm text-admin-muted mb-2">Site Title</label>
+          <input
+            type="text"
+            name="site.title"
+            value={settings.site?.title || ""}
+            class="w-full"
+          />
+        </div>
+        <!-- Right column: Fields with links -->
+        <div>
+          <label class="block text-sm text-admin-muted mb-2">Site URL</label>
+          <div class="flex gap-2">
+            <input
+              type="url"
+              name="site.url"
+              value={settings.site?.url || ""}
+              class="flex-1"
+              placeholder="https://valerokanz.artistablinum.com"
+            />
+              <a
+                href={settings.site?.url || "#"}
+                target="_blank"
+                rel="noopener"
+                class="url-link-btn"
+                data-url-field="site.url"
+                title="Open in new tab"
+                aria-label="Open in new tab">↗</a
+              >
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm text-admin-muted mb-2">Tagline</label>
+          <input
+            type="text"
+            name="site.tagline"
+            value={settings.site?.tagline || ""}
+            class="w-full"
+          />
+        </div>
+        <div>
+          <label class="block text-sm text-admin-muted mb-2">Admin URL</label>
+          <div class="flex gap-2">
+            <input
+              type="url"
+              name="site.adminUrl"
+              value={settings.site?.adminUrl || ""}
+              class="flex-1"
+              placeholder="https://admin.valerokanz.artistablinum.com"
+            />
+              <a
+                href={settings.site?.adminUrl || "#"}
+                target="_blank"
+                rel="noopener"
+                class="url-link-btn"
+                data-url-field="site.adminUrl"
+                title="Open in new tab"
+                aria-label="Open in new tab">↗</a
+              >
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm text-admin-muted mb-2">Language</label>
+          <select name="site.language" class="w-full bg-admin-sidebar">
+            <option value="en" selected={settings.site?.language === "en"}
+              >English</option
+            >
+            <option value="ru" selected={settings.site?.language === "ru"}
+              >Russian</option
+            >
+            <option value="he" selected={settings.site?.language === "he"}
+              >Hebrew</option
+            >
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm text-admin-muted mb-2"
+            >Image Base URL</label
+          >
+          <div class="flex gap-2">
+            <input
+              type="url"
+              name="site.imageBaseUrl"
+              value={settings.site?.imageBaseUrl || ""}
+              class="flex-1"
+              placeholder="https://images.valerokanz.artistablinum.com"
+            />
+              <a
+                href={settings.site?.imageBaseUrl || "#"}
+                target="_blank"
+                rel="noopener"
+                class="url-link-btn"
+                data-url-field="site.imageBaseUrl"
+                title="Open in new tab"
+                aria-label="Open in new tab">↗</a
+              >
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEO Settings -->
+    <div id="seo" class="card scroll-mt-24">
+      <h2 class="text-lg font-semibold mb-6">SEO</h2>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm text-admin-muted mb-2" for="seo-description"
+            >Meta Description</label
+          >
+          <textarea
+            id="seo-description"
+            name="seo.description"
+            rows="3"
+            class="w-full bg-admin-sidebar"
+            >{settings.seo?.description || ""}</textarea
+          >
+        </div>
+        <div>
+          <label class="block text-sm text-admin-muted mb-2" for="seo-keywords"
+            >Keywords (comma-separated)</label
+          >
+          <input
+            type="text"
+            id="seo-keywords"
+            name="seo.keywords"
+            value={settings.seo?.keywords?.join(", ") || ""}
+            class="w-full"
+          />
+        </div>
+        <div class="pt-4 border-t border-admin-border">
+          <label class="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              name="seo.disallowAiTraining"
+              checked={settings.seo?.disallowAiTraining}
+              class="w-4 h-4"
+            />
+            <span class="text-sm"
+              >Disallow AI crawlers from using content for training</span
+            >
+          </label>
+          <p class="text-xs text-admin-muted mt-2 ml-7">
+            When enabled, adds directives to robots.txt to block known AI
+            training bots (GPTBot, Claude-Web, etc.)
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Identity Kit -->
+    <div id="identity-kit" class="card border-admin-accent scroll-mt-24">
+      <h2 class="text-lg font-semibold mb-2">🎨 Identity Kit</h2>
+      <p class="text-sm text-admin-muted mb-6">
+        Your brand identity that persists across theme changes.
+      </p>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Main Background Color -->
+        <div>
+          <label class="block text-sm text-admin-muted mb-2"
+            >Main Background Color</label
+          >
+          <div class="color-picker-group">
+            <input
+              type="color"
+              name="identityKit.backgroundColor"
+              value={identityKit?.backgroundColor || "#cbcbc6"}
+              class="color-input"
+            />
+            <input
+              type="text"
+              value={identityKit?.backgroundColor || "#cbcbc6"}
+              class="color-text flex-1"
+              readonly
+            />
+          </div>
+        </div>
+
+        <!-- Main Accent Color -->
+        <div>
+          <label class="block text-sm text-admin-muted mb-2"
+            >Main Accent Color</label
+          >
+          <div class="color-picker-group">
+            <input
+              type="color"
+              name="identityKit.accentColor"
+              value={identityKit?.accentColor || "#efb600"}
+              class="color-input"
+            />
+            <input
+              type="text"
+              value={identityKit?.accentColor || "#efb600"}
+              class="color-text flex-1"
+              readonly
+            />
+          </div>
+        </div>
+
+        <!-- Main Text Color -->
+        <div>
+          <label class="block text-sm text-admin-muted mb-2"
+            >Main Text Color</label
+          >
+          <div class="color-picker-group">
+            <input
+              type="color"
+              name="identityKit.textColor"
+              value={identityKit?.textColor || "#333333"}
+              class="color-input"
+            />
+            <input
+              type="text"
+              value={identityKit?.textColor || "#333333"}
+              class="color-text flex-1"
+              readonly
+            />
+          </div>
+        </div>
+
+        <!-- Inverted Text Color -->
+        <div>
+          <label class="block text-sm text-admin-muted mb-2"
+            >Inverted Text Color</label
+          >
+          <div class="color-picker-group">
+            <input
+              type="color"
+              name="identityKit.invertedTextColor"
+              value={identityKit?.invertedTextColor || "#e0e0e0"}
+              class="color-input"
+            />
+            <input
+              type="text"
+              value={identityKit?.invertedTextColor || "#e0e0e0"}
+              class="color-text flex-1"
+              readonly
+            />
+          </div>
+          <p class="text-xs text-admin-muted mt-1">
+            For contrast areas (light text on dark backgrounds)
+          </p>
+        </div>
+
+        <!-- Link Color -->
+        <div>
+          <label class="block text-sm text-admin-muted mb-2">Link Color</label>
+          <div class="color-picker-group">
+            <input
+              type="color"
+              name="identityKit.linkColor"
+              value={identityKit?.linkColor || "#1a73e8"}
+              class="color-input"
+            />
+            <input
+              type="text"
+              value={identityKit?.linkColor || "#1a73e8"}
+              class="color-text flex-1"
+              readonly
+            />
+          </div>
+          <p class="text-xs text-admin-muted mt-1">
+            Hover uses accent color, visited uses text color
+          </p>
+        </div>
+      </div>
+
+      <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Title/Header Font -->
+        <Combobox
+          label="Title/Header Font"
+          name="identityKit.fonts.heading"
+          value={getFontFamily(identityKit?.fonts?.heading) || "Aziu"}
+          placeholder="Aziu"
+          description="Type any font family or choose from Content Folder fonts."
+          sections={fontSections}
+          emptyLabel="No matching fonts"
+        />
+
+        <!-- Body Text Font -->
+        <Combobox
+          label="Body Text Font"
+          name="identityKit.fonts.body"
+          value={getFontFamily(identityKit?.fonts?.body) ||
+            "DimkaSans"}
+          placeholder="DimkaSans"
+          description='Type any font family (e.g., "DimkaSans" or "Arial, sans-serif").'
+          sections={fontSections}
+          emptyLabel="No matching fonts"
+        />
+      </div>
+
+      <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Logo File Upload -->
+        <div class="md:col-span-2">
+          <label class="block text-sm text-admin-muted mb-2">Logo</label>
+          <div class="flex items-start gap-6">
+            <!-- Preview -->
+            <div>
+              <div id="logo-preview-container" class="media-preview-container">
+                {
+                  logoPreview.url ? (
+                    <img
+                      id="logo-preview"
+                      src={logoPreview.url}
+                      alt="Logo preview"
+                      class="media-preview-image contain"
+                      width="126"
+                      height="100"
+                    />
+                  ) : (
+                    <div
+                      id="logo-preview-placeholder"
+                      class="logo-preview-placeholder text-admin-muted"
+                    >
+                      <span class="text-2xl mb-1">🖼️</span>
+                      <span class="text-xs">No logo</span>
+                    </div>
+                  )
+                }
+              </div>
+              {
+                logoPreview.isFromTheme && (
+                  <span class="text-xs text-admin-muted block mt-1">
+                    📦 From theme
+                  </span>
+                )
+              }
+              {
+                identityKit?.logo?.file && (
+                  <button
+                    type="button"
+                    id="clear-logo-btn"
+                    class="text-sm text-red-400 hover:text-red-300 mt-1"
+                  >
+                    Remove logo
+                  </button>
+                )
+              }
+            </div>
+
+            <!-- Upload controls -->
+            <div class="flex-1">
+              <input
+                type="hidden"
+                name="identityKit.logo.file"
+                id="logo-file-input"
+                value={identityKit?.logo?.file || ""}
+              />
+
+              <div
+                id="logo-dropzone"
+                class="media-dropzone mb-2"
+                role="button"
+                tabindex="0"
+              >
+                <div class="text-2xl mb-1">📤</div>
+                <p class="text-sm font-medium">Click to upload logo</p>
+                <p class="text-xs text-admin-muted">or drag and drop</p>
+                <p class="text-xs text-admin-muted mt-1">
+                  PNG, JPG, WebP, SVG (max 5MB)
+                </p>
+              </div>
+
+              <input
+                type="file"
+                id="logo-file-upload"
+                accept=".png,.jpg,.jpeg,.webp,.svg"
+                class="hidden"
+              />
+
+              <div id="logo-upload-status" class="text-sm hidden" aria-live="polite"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Logo Library -->
+        <div class="md:col-span-2">
+          <div class="flex items-center justify-between">
+            <label class="block text-sm text-admin-muted">Logo Library</label>
+            <button
+              type="button"
+              id="logo-library-refresh"
+              class="btn btn-sm btn-secondary"
+            >
+              Refresh
+            </button>
+          </div>
+          <div id="logo-library-status" class="text-xs hidden mt-2"></div>
+          <div id="logo-library-grid" class="logo-library-grid mt-3"></div>
+          <div id="logo-library-empty" class="text-xs text-admin-muted mt-3 hidden">
+            No logos found in {contentPath}/assets/logos.
+          </div>
+        </div>
+
+        <!-- Logo Width -->
+        <div>
+          <label class="block text-sm text-admin-muted mb-2" for="logo-width"
+            >Logo Width (px)</label
+          >
+          <input
+            type="number"
+            id="logo-width"
+            name="identityKit.logo.width"
+            value={identityKit?.logo?.width || 126}
+            class="w-full"
+          />
+        </div>
+
+        <!-- Background Image -->
+        <div class="md:col-span-2">
+          <label class="block text-sm text-admin-muted mb-2"
+            >Background Image</label
+          >
+          <input
+            type="hidden"
+            name="identityKit.background.texture"
+            id="texture-file-input"
+            value={identityKit?.background?.texture || ""}
+          />
+
+          <div class="flex items-start gap-6">
+            <!-- Preview -->
+            <div>
+              <div
+                id="texture-preview-container"
+                class="media-preview-container"
+              >
+                {
+                  texturePreview.url ? (
+                    <img
+                      id="texture-preview"
+                      src={texturePreview.url}
+                      alt="Background preview"
+                      class="media-preview-image cover"
+                      width="200"
+                      height="145"
+                    />
+                  ) : (
+                    <div
+                      id="texture-preview-placeholder"
+                      class="texture-preview-placeholder text-admin-muted"
+                    >
+                      <span class="text-2xl mb-1">🖼️</span>
+                      <span class="text-xs">No image</span>
+                    </div>
+                  )
+                }
+              </div>
+              {
+                texturePreview.isFromTheme && (
+                  <span class="text-xs text-admin-muted block mt-1">
+                    📦 From theme
+                  </span>
+                )
+              }
+              {
+                identityKit?.background?.texture && (
+                  <button
+                    type="button"
+                    id="clear-texture-btn"
+                    class="text-sm text-red-400 hover:text-red-300 mt-1"
+                  >
+                    Remove image
+                  </button>
+                )
+              }
+            </div>
+
+            <!-- Upload controls -->
+            <div class="flex-1">
+              <div
+                id="texture-dropzone"
+                class="media-dropzone mb-2"
+                role="button"
+                tabindex="0"
+              >
+                <div class="text-2xl mb-1">📤</div>
+                <p class="text-sm font-medium">Click to upload background</p>
+                <p class="text-xs text-admin-muted">or drag and drop</p>
+                <p class="text-xs text-admin-muted mt-1">
+                  PNG, JPG, WebP (max 5MB)
+                </p>
+              </div>
+
+              <input
+                type="file"
+                id="texture-file-upload"
+                accept=".png,.jpg,.jpeg,.webp"
+                class="hidden"
+              />
+
+              <div id="texture-upload-status" class="text-sm hidden" aria-live="polite"></div>
+            </div>
+          </div>
+
+          <div class="mt-4">
+            <div class="flex items-center justify-between">
+              <label class="block text-sm text-admin-muted"
+                >Texture Library</label
+              >
+              <button
+                type="button"
+                id="texture-library-refresh"
+                class="btn btn-sm btn-secondary"
+              >
+                Refresh
+              </button>
+            </div>
+            <p class="text-xs text-admin-muted mt-1">
+              Assets are stored in: {contentPath}/assets/textures
+            </p>
+            <div id="texture-library-status" class="text-xs hidden mt-2"></div>
+            <div id="texture-library-grid" class="texture-library-grid mt-3"></div>
+            <div
+              id="texture-library-empty"
+              class="text-xs text-admin-muted mt-3 hidden"
+            >
+              No textures found in {contentPath}/assets/textures.
+            </div>
+          </div>
+        </div>
+
+        <!-- Texture Mode -->
+        <div>
+          <label class="block text-sm text-admin-muted mb-2">Texture Mode</label
+          >
+          <select
+            name="identityKit.background.textureMode"
+            id="texture-mode-select"
+            class="w-full bg-admin-sidebar"
+          >
+            <option
+              value="tile"
+              selected={identityKit?.background?.textureMode ===
+                "tile" || !identityKit?.background?.textureMode}
+              >Tile (Repeat)</option
+            >
+            <option
+              value="cover"
+              selected={identityKit?.background?.textureMode ===
+                "cover"}>Cover (Full)</option
+            >
+            <option
+              value="stretch"
+              selected={identityKit?.background?.textureMode ===
+                "stretch"}>Stretch</option
+            >
+          </select>
+        </div>
+
+        <!-- Background Image Toggle -->
+        <div>
+          <label class="block text-sm text-admin-muted mb-2"
+            >Background Image</label
+          >
+          <Toggle
+            client:load
+            name="identityKit.background.useTexture"
+            label="Use background image"
+            labelOff="Background image off"
+            defaultPressed={identityKit?.background?.useTexture !== false}
+          />
+          <p class="text-xs text-admin-muted mt-2">
+            Turn this off to ignore any uploaded texture without deleting it.
+          </p>
+        </div>
+      </div>
+
+      <p class="text-xs text-admin-muted mt-4">
+        💡 These settings persist when you change themes. Assets are stored in: <code
+          class="bg-admin-sidebar px-1 rounded">/assets/textures/</code
+        >
+      </p>
+    </div>
+
+    <!-- Theme & Style -->
+    <div id="theme" class="card scroll-mt-24">
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h2 class="text-lg font-semibold">🎨 Theme & Style</h2>
+          <p class="text-sm text-admin-muted">
+            Customize your site's appearance and layout.
+          </p>
+        </div>
+        <a href="/style/customize" class="btn btn-primary">Customize →</a>
+      </div>
+
+      <!-- Theme Selection -->
+      <div class="mb-6">
+        <label class="block text-sm text-admin-muted mb-2">Active Theme</label>
+        <div class="flex gap-4">
+          <select name="theme" class="flex-1 bg-admin-sidebar">
+            {
+              themes.map((theme) => (
+                <option value={theme} selected={settings.theme === theme}>
+                  {theme}
+                </option>
+              ))
+            }
+          </select>
+          <a href="/style/themes" class="btn btn-secondary">Browse Themes</a>
+        </div>
+      </div>
+
+      <!-- Quick Style Overview -->
+      <div class="grid grid-cols-3 gap-4">
+        <div class="p-4 bg-admin-sidebar rounded-lg">
+          <div class="text-sm text-admin-muted">Gallery Layout</div>
+          <div class="font-semibold mt-1">Justified</div>
+        </div>
+        <div class="p-4 bg-admin-sidebar rounded-lg">
+          <div class="text-sm text-admin-muted">Navigation</div>
+          <div class="font-semibold mt-1">Top</div>
+        </div>
+        <div class="p-4 bg-admin-sidebar rounded-lg">
+          <div class="text-sm text-admin-muted">Corner Radius</div>
+          <div class="font-semibold mt-1">12px</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Content Location (informational, outside form) -->
+    <div class="card bg-admin-sidebar/50">
+      <h2 class="text-lg font-semibold mb-4">Content Location</h2>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm text-admin-muted mb-1">Content Path</label
+          >
+          <div class="flex items-center gap-3">
+            <code
+              class="flex-1 px-3 py-2 bg-admin-bg rounded text-sm font-mono overflow-x-auto"
+              >{contentPath}</code
+            >
+            <span class="text-green-500 text-sm whitespace-nowrap">✓ Found</span
+            >
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm text-admin-muted mb-1">Themes Path</label>
+          <div class="flex items-center gap-3">
+            <code
+              class="flex-1 px-3 py-2 bg-admin-bg rounded text-sm font-mono overflow-x-auto"
+              >{themesPath}</code
+            >
+            <span class="text-green-500 text-sm whitespace-nowrap">✓ Found</span
+            >
+          </div>
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button
+            type="button"
+            id="import-content-btn"
+            class="btn btn-secondary text-sm"
+          >
+            📥 Import Content
+          </button>
+          <button
+            type="button"
+            id="restore-defaults-btn"
+            class="btn btn-secondary text-sm"
+          >
+            🔄 Restore Defaults
+          </button>
+        </div>
+        <p class="text-xs text-admin-muted">
+          Import content from another folder or restore to the default
+          placeholder content.
+        </p>
+      </div>
+    </div>
+  </form>
+</AdminLayout>
+
+{
+  contentFontsCss && (
+    <style is:global>{contentFontsCss}</style>
+  )
+}
+
+<style>
+  /* Color picker styling for Identity Kit */
+  .color-picker-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .color-input {
+    width: 48px;
+    height: 40px;
+    padding: 2px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 2px solid var(--admin-border);
+    background: var(--admin-sidebar);
+    flex-shrink: 0;
+  }
+
+  .color-input::-webkit-color-swatch-wrapper {
+    padding: 2px;
+  }
+
+  .color-input::-webkit-color-swatch {
+    border-radius: 4px;
+    border: none;
+  }
+
+  .color-text {
+    flex: 1;
+    font-family: monospace;
+    font-size: 13px;
+    min-width: 0;
+  }
+
+  /* Logo upload styles */
+  .media-preview-container {
+    width: 200px;
+    height: 145px;
+    background: var(--admin-primary);
+    border: 1px solid var(--admin-border);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .media-preview-image {
+    max-width: 100%;
+    max-height: 100%;
+    padding: 0;
+  }
+
+  .media-preview-image.contain {
+    object-fit: contain;
+    padding: 8px;
+  }
+
+  .media-preview-image.cover {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .logo-preview-placeholder,
+  .texture-preview-placeholder {
+    font-size: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+
+  .media-dropzone {
+    border: 2px dashed var(--admin-border);
+    border-radius: 8px;
+    padding: 20px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
+    background: var(--admin-sidebar);
+    min-height: 145px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .media-dropzone:hover {
+    border-color: var(--admin-accent);
+    background: var(--admin-card);
+  }
+
+  .media-dropzone.drag-over {
+    border-color: var(--admin-accent);
+    background: var(--admin-primary-10, rgba(239, 182, 0, 0.1));
+  }
+
+  .media-dropzone.uploading {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  :global(.logo-library-grid) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  :global(.logo-library-item) {
+    border: 1px solid var(--admin-border);
+    background: var(--admin-sidebar);
+    border-radius: 8px;
+    padding: 8px 10px;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  :global(.logo-library-item:hover) {
+    border-color: var(--admin-accent);
+    box-shadow: 0 0 0 1px rgba(239, 182, 0, 0.2);
+  }
+
+  :global(.logo-library-item.is-selected) {
+    box-shadow: 0 0 0 2px rgba(239, 182, 0, 0.2);
+  }
+
+  :global(.logo-library-thumb) {
+    width: 50px;
+    height: 50px;
+    background: var(--admin-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: none;
+  }
+
+  :global(.logo-library-thumb img) {
+    max-width: 50px;
+    max-height: 50px;
+    object-fit: contain;
+  }
+
+  :global(.logo-library-name) {
+    font-size: 12px;
+    color: var(--admin-muted);
+    word-break: break-word;
+    flex: 1;
+  }
+
+  :global(.texture-library-grid) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  :global(.texture-library-item) {
+    border: 1px solid var(--admin-border);
+    background: var(--admin-sidebar);
+    border-radius: 8px;
+    padding: 8px 10px;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  :global(.texture-library-item:hover) {
+    border-color: var(--admin-accent);
+    box-shadow: 0 0 0 1px rgba(239, 182, 0, 0.2);
+  }
+
+  :global(.texture-library-item.is-selected) {
+    border-color: var(--admin-accent);
+    box-shadow: 0 0 0 2px rgba(239, 182, 0, 0.3);
+  }
+
+  :global(.texture-library-thumb) {
+    width: 50px;
+    height: 50px;
+    background: var(--admin-primary);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  :global(.texture-library-thumb img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  :global(.texture-library-name) {
+    font-size: 12px;
+    color: var(--admin-muted);
+    word-break: break-word;
+    flex: 1;
+  }
+
+  @media (max-width: 640px) {
+    :global(.logo-library-grid),
+    :global(.texture-library-grid) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* External link button for URL fields */
+  .url-link-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: var(--admin-sidebar);
+    border: 1px solid var(--admin-border);
+    border-radius: 8px;
+    color: var(--admin-accent);
+    font-size: 16px;
+    text-decoration: none;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+  }
+
+  .url-link-btn:hover {
+    background: var(--admin-card);
+    border-color: var(--admin-accent);
+  }
+
+  .url-link-btn[href="#"] {
+    opacity: 0.4;
+    pointer-events: none;
+  }
+
+  /* Navigation items drag feedback */
+  .card[data-dragging="true"] {
+    opacity: 0.5;
+    transform: scale(0.95);
+    rotate: 2deg;
+    cursor: grabbing !important;
+  }
+
+  /* Drop zone indicators */
+  .drop-zone-active {
+    position: relative;
+  }
+
+  .drop-zone-active::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--admin-accent);
+    border-radius: 2px;
+    z-index: 10;
+    transition: all 0.2s ease;
+  }
+
+  .drop-zone-active[data-drop-position="before"]::before {
+    top: -2px;
+  }
+
+  .drop-zone-active[data-drop-position="after"]::before {
+    bottom: -2px;
+  }
+
+  .drop-zone-active {
+    border-color: var(--admin-accent) !important;
+    box-shadow: 0 0 0 2px var(--admin-accent);
+  }
+
+  /* Prevent text selection during drag */
+  .draggable-core-page,
+  .draggable-custom-item {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .draggable-core-page input,
+  .draggable-custom-item input {
+    user-select: text;
+    -webkit-user-select: text;
+  }
+
+  /* Accessibility: Respect reduced motion preferences */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+
+    .card[data-dragging="true"] {
+      transform: none;
+      rotate: 0deg;
+    }
+
+    .drop-zone-active::before {
+      transition: none !important;
+    }
+  }
+</style>
+
+<script>
+  import { createFormChangeDetector } from "../../lib/form-change-detector";
+  import { createFormSaveHandler } from "../../lib/form-save-handler";
+  import { IdentityKitManager } from "./identity-kit";
+
+  const form = document.getElementById("settings-form") as HTMLFormElement;
+  const saveBtn = document.getElementById("save-btn") as HTMLButtonElement;
+  const saveStatus = document.getElementById("save-status");
+
+  function updateStatus(text: string) {
+    if (saveStatus) saveStatus.textContent = text;
+  }
+
+  // Create change detector
+  const changeDetector = createFormChangeDetector({
+    form,
+    saveButton: saveBtn,
+  });
+
+  // Initialize change tracking
+  changeDetector.initialize();
+
+  // Sync URL inputs with external link buttons
+  document.querySelectorAll(".url-link-btn").forEach((btn) => {
+    const fieldName = btn.getAttribute("data-url-field");
+    if (fieldName) {
+      const input = document.querySelector(
+        `input[name="${fieldName}"]`,
+      ) as HTMLInputElement;
+      input?.addEventListener("input", () => {
+        const url = input.value.trim();
+        btn.setAttribute("href", url || "#");
+      });
+    }
+  });
+
+  // Quality slider value display
+  const qualityInput = document.querySelector(
+    'input[name="images.quality"]',
+  ) as HTMLInputElement;
+  const qualityValue = document.getElementById("quality-value");
+  qualityInput?.addEventListener("input", () => {
+    if (qualityValue) qualityValue.textContent = qualityInput.value + "%";
+  });
+
+  const identityKitManager = new IdentityKitManager({ changeDetector });
+  identityKitManager.init();
+
+  // Create save handler with complex settings-specific logic
+  const saveHandler = createFormSaveHandler({
+    form,
+    saveButton: saveBtn,
+    statusElement: saveStatus,
+    successToast: {
+      title: "Settings saved successfully",
+      variant: "success",
+    },
+    errorToast: (err) => ({
+      title: `Failed to save: ${err.message}`,
+      variant: "destructive",
+    }),
+    onBeforeSave: async () => {
+      // Validate navigation items if they exist
+      if (typeof (window as any).validateNavigationItems === "function") {
+        const isValid = (window as any).validateNavigationItems();
+        if (!isValid) {
+          throw new Error("Navigation validation failed");
+        }
+      }
+
+      await identityKitManager.commitPendingTexture(updateStatus);
+    },
+    saveFn: async (formData) => {
+      const data: any = {};
+
+      const booleanFields = new Set([
+        "git.autoCommit",
+        "seo.disallowAiTraining",
+        "identityKit.background.useTexture",
+      ]);
+
+      // Helper function to parse a form field value based on its type
+      const parseFieldValue = (key: string, value: FormDataEntryValue): any => {
+        // Numeric fields
+        if (
+          key.includes(".sizes.") ||
+          key === "images.quality" ||
+          key === "images.maxAspectRatio" ||
+          key === "identityKit.logo.width"
+        ) {
+          return Number(value);
+        }
+
+        // Keywords array (comma-separated)
+        if (key === "seo.keywords") {
+          const keywordsStr = String(value).trim();
+          return keywordsStr
+            ? keywordsStr
+                .split(",")
+                .map((k) => k.trim())
+                .filter(Boolean)
+            : [];
+        }
+
+        // Checkbox/toggle fields
+        if (booleanFields.has(key)) {
+          return value === "on";
+        }
+
+        // Default: preserve as-is (including empty strings)
+        return value;
+      };
+
+      // Ensure SEO object exists if any SEO fields are present
+      const hasSeoFields = Array.from(formData.keys()).some((k) =>
+        k.startsWith("seo."),
+      );
+      if (hasSeoFields) {
+        data.seo = {};
+      }
+
+      // Parse dot notation into nested objects
+      for (const [key, value] of formData.entries()) {
+        // Skip nav.items (handled separately)
+        if (key === "nav.items") continue;
+
+        const keys = key.split(".");
+        let current = data;
+
+        // Create nested structure
+        for (let i = 0; i < keys.length - 1; i++) {
+          if (!current[keys[i]]) current[keys[i]] = {};
+          current = current[keys[i]];
+        }
+
+        // Set the final value with appropriate type conversion
+        const finalKey = keys[keys.length - 1];
+        current[finalKey] = parseFieldValue(key, value);
+      }
+
+      // Handle unchecked checkboxes (not present in formData)
+      if (!formData.has("git.autoCommit")) {
+        if (!data.git) data.git = {};
+        data.git.autoCommit = false;
+      }
+
+      if (!formData.has("seo.disallowAiTraining")) {
+        if (!data.seo) data.seo = {};
+        data.seo.disallowAiTraining = false;
+      }
+
+      // Handle nav.showLogo toggle
+      if (formData.has("nav.showLogo")) {
+        if (!data.nav) data.nav = {};
+        data.nav.showLogo = formData.get("nav.showLogo") === "on";
+      } else {
+        if (!data.nav) data.nav = {};
+        data.nav.showLogo = false;
+      }
+
+      // Parse nav.items JSON
+      if (data.nav && data.nav.items) {
+        try {
+          data.nav.items = JSON.parse(data.nav.items);
+        } catch (e) {
+          console.error("Failed to parse nav.items:", e);
+          data.nav.items = [];
+        }
+      }
+
+      // Normalize font values - keep as simple strings for backward compatibility
+      if (data.identityKit?.fonts) {
+        // Clean up heading font
+        if (data.identityKit.fonts.heading) {
+          const heading = data.identityKit.fonts.heading;
+          // If it's the corrupted "[object Object]" string, clear it
+          if (heading === "[object Object]") {
+            data.identityKit.fonts.heading = "";
+          }
+          // Keep as string (the UI only allows string input now)
+        }
+
+        // Clean up body font
+        if (data.identityKit.fonts.body) {
+          const body = data.identityKit.fonts.body;
+          // If it's the corrupted "[object Object]" string, clear it
+          if (body === "[object Object]") {
+            data.identityKit.fonts.body = "";
+          }
+          // Keep as string (the UI only allows string input now)
+        }
+      }
+
+      // Ensure all SEO fields have defaults when SEO section is present
+      if (hasSeoFields) {
+        if (!("description" in data.seo)) data.seo.description = "";
+        if (!("keywords" in data.seo)) data.seo.keywords = [];
+        if (!("disallowAiTraining" in data.seo))
+          data.seo.disallowAiTraining = false;
+      }
+
+      // Split identity kit from settings - they go to separate files
+      const identityKitData = data.identityKit || {};
+      delete data.identityKit;
+
+      // Save both in parallel
+      const [settingsRes, identityRes] = await Promise.all([
+        fetch("/api/settings", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        }),
+        fetch("/api/identity", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(identityKitData),
+        }),
+      ]);
+
+      // Return identity response if settings succeeded, otherwise return settings error
+      if (!settingsRes.ok) return settingsRes;
+      return identityRes;
+    },
+    onAfterSave: () => {
+      // Show navigation-specific success message if navigation was saved
+      if (typeof (window as any).showNavigationSuccess === "function") {
+        (window as any).showNavigationSuccess();
+      }
+
+      // Reset change detector state after successful save
+      changeDetector.reset();
+    },
+  });
+
+  saveHandler.attach();
+
+  // ========== Backups Management ==========
+  const backupList = document.getElementById("backup-list");
+  const createBackupBtn = document.getElementById(
+    "create-backup-btn",
+  ) as HTMLButtonElement | null;
+
+  function formatBytes(bytes: number) {
+    if (!bytes) return "0 B";
+    const k = 1024;
+    const sizes = ["B", "KB", "MB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
+  }
+
+  async function loadBackups() {
+    if (!backupList) return;
+
+    try {
+      const res = await fetch("/api/backup");
+      const backups = await res.json();
+
+      if (!backups.length) {
+        backupList.innerHTML =
+          '<div class="text-center py-8 text-admin-muted">No backups found</div>';
+        return;
+      }
+
+      backupList.innerHTML = backups
+        .map(
+          (b: any) => `
+        <div class="flex items-center justify-between p-3 bg-admin-sidebar rounded-lg">
+          <div class="flex items-center gap-3">
+            <div class="text-2xl">📦</div>
+            <div>
+              <div class="font-medium text-sm">${new Date(b.createdAt).toLocaleDateString()} ${new Date(b.createdAt).toLocaleTimeString()}</div>
+              <div class="text-xs text-admin-muted">${b.filename} • ${formatBytes(b.size)}</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <a href="/api/backup/${b.filename}" class="btn btn-sm btn-secondary" title="Download" aria-label="Download backup">⬇️</a>
+            <button onclick="deleteBackup('${b.filename}')" class="btn btn-sm text-red-400 hover:bg-admin-bg" title="Delete" aria-label="Delete backup">🗑️</button>
+          </div>
+        </div>
+      `,
+        )
+        .join("");
+    } catch (e) {
+      backupList.innerHTML =
+        '<div class="text-red-400 text-sm">Failed to load backups</div>';
+    }
+  }
+
+  // Expose delete function to window
+  // Delete Backup Logic
+  const deleteBackupModal = document.getElementById("delete-backup-modal");
+
+  (window as any).deleteBackup = (filename: string) => {
+    const input = document.getElementById(
+      "delete-backup-filename",
+    ) as HTMLInputElement;
+    if (input) input.value = filename;
+    (deleteBackupModal as any)?.open();
+  };
+
+  deleteBackupModal?.addEventListener("confirm", async () => {
+    const filename = (
+      document.getElementById("delete-backup-filename") as HTMLInputElement
+    )?.value;
+    if (!filename) return;
+
+    // Close modal immediately
+    (deleteBackupModal as any)?.close();
+
+    try {
+      await fetch(`/api/backup/${filename}`, { method: "DELETE" });
+      loadBackups();
+      window.dispatchEvent(
+        new CustomEvent("artsitemaker:toast", {
+          detail: {
+            title: "Backup deleted",
+            variant: "success",
+          },
+        }),
+      );
+    } catch (e) {
+      window.dispatchEvent(
+        new CustomEvent("artsitemaker:toast", {
+          detail: {
+            title: "Failed to delete backup",
+            variant: "destructive",
+          },
+        }),
+      );
+    }
+  });
+
+  createBackupBtn?.addEventListener("click", async () => {
+    if (!createBackupBtn) return;
+    createBackupBtn.disabled = true;
+    createBackupBtn.textContent = "Creating...";
+
+    try {
+      const res = await fetch("/api/backup", { method: "POST" });
+      if (res.ok) {
+        loadBackups();
+        window.dispatchEvent(
+          new CustomEvent("artsitemaker:toast", {
+            detail: {
+              title: "Backup created successfully",
+              variant: "success",
+            },
+          }),
+        );
+      } else {
+        window.dispatchEvent(
+          new CustomEvent("artsitemaker:toast", {
+            detail: {
+              title: "Failed to create backup",
+              variant: "destructive",
+            },
+          }),
+        );
+      }
+    } catch (e) {
+      window.dispatchEvent(
+        new CustomEvent("artsitemaker:toast", {
+          detail: {
+            title: "Failed to create backup",
+            variant: "destructive",
+          },
+        }),
+      );
+    } finally {
+      if (createBackupBtn) {
+        createBackupBtn.disabled = false;
+        createBackupBtn.innerHTML =
+          '<span class="mr-2">⚡</span> Create Backup';
+      }
+    }
+  });
+
+  // Load initially
+  loadBackups();
+
+  // ========== Pages Management ==========
+  interface PageType {
+    id: string;
+    label: string;
+    multiInstance: boolean;
+    isCore: boolean;
+    defaultEnabled: boolean;
+  }
+
+  let pageTypes: PageType[] = [];
+  let pageSettings: any = {};
+  let supportedPages: string[] = [];
+
+  const pageTogglesContainer = document.getElementById("page-toggles");
+  const homePageSelect = document.getElementById(
+    "home-page-select",
+  ) as HTMLSelectElement;
+  const pagesError = document.getElementById("pages-error");
+
+  async function loadPageSettings() {
+    try {
+      const res = await fetch("/api/pages");
+      if (!res.ok) throw new Error("Failed to load");
+
+      const data = await res.json();
+      pageTypes = data.pageTypes;
+      pageSettings = data.pages;
+      supportedPages = data.supportedPages;
+
+      renderPageToggles();
+      renderHomePageSelect();
+    } catch (e) {
+      if (pageTogglesContainer) {
+        pageTogglesContainer.innerHTML =
+          '<div class="text-red-400 text-sm col-span-full">Failed to load page settings</div>';
+      }
+    }
+  }
+
+  function renderPageToggles() {
+    if (!pageTogglesContainer) return;
+
+    // Define linking options for each page that has them
+    const linkingConfig: Record<
+      string,
+      {
+        key: string;
+        label: string;
+        options: { value: string; label: string }[];
+      }
+    > = {
+      gallery: {
+        key: "galleryClick",
+        label: "Image click →",
+        options: [
+          { value: "art_piece", label: "Art Piece Page" },
+          { value: "slider", label: "Slider (Lightbox)" },
+          { value: "none", label: "None" },
+        ],
+      },
+      art_piece: {
+        key: "artPieceBack",
+        label: "Back button →",
+        options: [
+          { value: "gallery", label: "Gallery" },
+          { value: "slider", label: "Slider (Lightbox)" },
+          { value: "collections_list", label: "Collections List" },
+          { value: "history", label: "Browser history" },
+        ],
+      },
+      collections_list: {
+        key: "collectionClick",
+        label: "Click →",
+        options: [
+          { value: "gallery", label: "Gallery (filtered)" },
+          { value: "none", label: "None" },
+        ],
+      },
+      search_results: {
+        key: "searchResultClick",
+        label: "Result click →",
+        options: [
+          { value: "art_piece", label: "Art Piece Page" },
+          { value: "slider", label: "Slider (Lightbox)" },
+        ],
+      },
+    };
+
+    const linking = pageSettings.linking || {};
+
+    pageTogglesContainer.innerHTML = pageTypes
+      .map((pt) => {
+        const isEnabled = pageSettings.enabled?.[pt.id] ?? pt.defaultEnabled;
+        const isSupported = supportedPages.includes(pt.id);
+        const disabledClass = !isSupported ? "opacity-50" : "";
+        const checkedAttr = isEnabled ? "checked" : "";
+        const disabledAttr = !isSupported ? "disabled" : "";
+        const coreIcon = pt.isCore ? "★ " : "";
+        const unsupportedBadge = !isSupported
+          ? '<span class="text-xs text-admin-muted ml-1">(unsupported)</span>'
+          : "";
+
+        // Check if this page has linking options
+        const linkConfig = linkingConfig[pt.id];
+        let linkingDropdown = "";
+
+        if (linkConfig) {
+          const currentValue =
+            linking[linkConfig.key] || linkConfig.options[0].value;
+          const options = linkConfig.options
+            .map(
+              (opt) =>
+                `<option value="${opt.value}" ${currentValue === opt.value ? "selected" : ""}>${opt.label}</option>`,
+            )
+            .join("");
+
+          linkingDropdown = `
+          <div class="flex items-center gap-2 ml-auto">
+            <span class="text-xs text-admin-muted">${linkConfig.label}</span>
+            <select class="page-linking-select bg-admin-card text-sm rounded px-2 py-1 border border-admin-border" 
+                    data-link-key="${linkConfig.key}"
+                    ${disabledAttr}>
+              ${options}
+            </select>
+          </div>
+        `;
+        }
+
+        return `
+        <div class="flex items-center gap-3 p-3 bg-admin-sidebar rounded-lg ${disabledClass}">
+          <label class="flex items-center gap-2 cursor-pointer ${!isSupported ? "cursor-not-allowed" : ""}">
+            <input type="checkbox" 
+                   class="page-toggle w-4 h-4" 
+                   data-page-id="${pt.id}"
+                   ${checkedAttr}
+                   ${disabledAttr} />
+            <span class="text-sm">${coreIcon}${pt.label}</span>
+            ${unsupportedBadge}
+          </label>
+          ${linkingDropdown}
+        </div>
+      `;
+      })
+      .join("");
+
+    // Add event listeners for toggles
+    document.querySelectorAll(".page-toggle").forEach((toggle) => {
+      toggle.addEventListener("change", handlePageToggle);
+    });
+
+    // Add event listeners for linking selects
+    document.querySelectorAll(".page-linking-select").forEach((select) => {
+      select.addEventListener("change", (e) => {
+        const target = e.target as HTMLSelectElement;
+        const linkKey = target.dataset.linkKey;
+        if (linkKey) {
+          handleLinkingChange(linkKey, target.value);
+        }
+      });
+    });
+  }
+
+  function renderHomePageSelect() {
+    if (!homePageSelect) return;
+
+    const enabledPages = pageTypes.filter(
+      (pt) =>
+        (pageSettings.enabled?.[pt.id] ?? pt.defaultEnabled) &&
+        supportedPages.includes(pt.id),
+    );
+
+    homePageSelect.innerHTML = enabledPages
+      .map((pt) => {
+        const selected = pageSettings.homePage === pt.id ? "selected" : "";
+        return `<option value="${pt.id}" ${selected}>${pt.label}</option>`;
+      })
+      .join("");
+
+    homePageSelect.addEventListener("change", handleHomePageChange);
+  }
+
+  async function handlePageToggle(e: Event) {
+    const target = e.target as HTMLInputElement;
+    const pageId = target.dataset.pageId;
+    const newState = target.checked;
+
+    // Hide error
+    if (pagesError) pagesError.classList.add("hidden");
+
+    try {
+      const res = await fetch("/api/pages", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          enabled: { [pageId!]: newState },
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        // Revert the toggle
+        target.checked = !newState;
+        if (pagesError && data.error) {
+          pagesError.textContent = data.error;
+          pagesError.classList.remove("hidden");
+        }
+        return;
+      }
+
+      // Update local state and re-render home page select
+      pageSettings = data.pages;
+      renderHomePageSelect();
+      updateStatus("✓ Saved!");
+      setTimeout(() => {
+        updateStatus("");
+      }, 2000);
+    } catch (e) {
+      target.checked = !newState;
+      updateStatus("✗ Save failed");
+    }
+  }
+
+  async function handleHomePageChange() {
+    const newHome = homePageSelect?.value;
+    if (!newHome) return;
+
+    try {
+      const res = await fetch("/api/pages", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ homePage: newHome }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        pageSettings = data.pages;
+        updateStatus("✓ Saved!");
+        setTimeout(() => {
+          updateStatus("");
+        }, 2000);
+      }
+    } catch (e) {
+      updateStatus("✗ Save failed");
+    }
+  }
+
+  async function handleLinkingChange(key: string, value: string) {
+    try {
+      const res = await fetch("/api/pages", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ linking: { [key]: value } }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        pageSettings = data.pages;
+        updateStatus("✓ Saved!");
+        setTimeout(() => {
+          updateStatus("");
+        }, 2000);
+      }
+    } catch (e) {
+      updateStatus("✗ Save failed");
+    }
+  }
+
+  // Load page settings on init
+  loadPageSettings();
+
+  // ========== Import Content ==========
+  const importModal = document.getElementById("import-modal");
+  const importBtn = document.getElementById("import-content-btn");
+  const importSourcePath = document.getElementById(
+    "import-source-path",
+  ) as HTMLInputElement;
+  const importStatus = document.getElementById("import-status");
+
+  // New Upload Elements
+  const importFileInput = document.getElementById(
+    "import-file-input",
+  ) as HTMLInputElement;
+  const uploadDropzone = document.getElementById("upload-dropzone");
+  const uploadFileName = document.getElementById("upload-file-name");
+  const tabBtns = document.querySelectorAll(".import-tab-btn");
+
+  let activeTab = "local";
+
+  // Tab Switching
+  tabBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const tab = btn.getAttribute("data-tab");
+      if (!tab) return;
+      activeTab = tab;
+
+      // Update buttons
+      tabBtns.forEach((b) => {
+        b.classList.remove("border-admin-accent", "text-admin-text");
+        b.classList.add("border-transparent", "text-admin-muted");
+      });
+      btn.classList.remove("border-transparent", "text-admin-muted");
+      btn.classList.add("border-admin-accent", "text-admin-text");
+
+      // Show content
+      document
+        .querySelectorAll(".import-tab-content")
+        .forEach((el) => el.classList.add("hidden"));
+      document.getElementById(`tab-${tab}`)?.classList.remove("hidden");
+    });
+  });
+
+  // Open Modal
+  importBtn?.addEventListener("click", () => {
+    (importModal as any)?.open();
+    if (activeTab === "local") importSourcePath?.focus();
+  });
+
+  // Upload File Handling
+  uploadDropzone?.addEventListener("click", () => importFileInput?.click());
+
+  importFileInput?.addEventListener("change", (e) => {
+    const files = (e.target as HTMLInputElement).files;
+    if (files && files.length > 0 && uploadFileName) {
+      if (files.length === 1) {
+        const file = files[0];
+        uploadFileName.textContent = `Selected: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+      } else {
+        uploadFileName.textContent = `Selected: ${files.length} files`;
+      }
+      uploadFileName.classList.remove("hidden");
+    }
+  });
+
+  // Handle Close
+  importModal?.addEventListener("close", () => {
+    if (importStatus) {
+      importStatus.classList.add("hidden");
+      importStatus.textContent = "";
+    }
+  });
+
+  // Handle Confirm
+  importModal?.addEventListener("confirm", async () => {
+    const importConfirmBtn = importModal.querySelector(
+      ".confirm-modal",
+    ) as HTMLButtonElement;
+    const mode =
+      (
+        document.querySelector(
+          'input[name="import-mode"]:checked',
+        ) as HTMLInputElement
+      )?.value || "replace";
+
+    if (importConfirmBtn) {
+      importConfirmBtn.disabled = true;
+      importConfirmBtn.textContent = "Importing...";
+    }
+
+    if (importStatus) {
+      importStatus.classList.remove("hidden");
+      importStatus.textContent =
+        activeTab === "local" ? "Validating path..." : "Uploading file...";
+      importStatus.className = "text-sm text-admin-muted";
+    }
+
+    try {
+      let res;
+
+      if (activeTab === "local") {
+        // Local Path Import
+        const sourcePath = importSourcePath?.value?.trim();
+        if (!sourcePath) throw new Error("Please enter a source path");
+
+        res = await fetch("/api/content-import", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sourcePath, mode }),
+        });
+      } else {
+        // File Upload Import
+        const files = importFileInput?.files;
+        if (!files || files.length === 0)
+          throw new Error("Please select files to upload");
+
+        const formData = new FormData();
+        for (let i = 0; i < files.length; i++) {
+          formData.append("file", files[i]);
+        }
+        formData.append("mode", mode);
+
+        res = await fetch("/api/content-upload", {
+          method: "POST",
+          body: formData,
+        });
+      }
+
+      const data = await res.json();
+
+      if (res.ok) {
+        if (importStatus) {
+          importStatus.textContent = `✓ Content imported successfully! Backup: ${data.backupFile || "Yes"}`;
+          importStatus.className = "text-sm text-green-400";
+        }
+        setTimeout(() => window.location.reload(), 2000);
+      } else {
+        throw new Error(data.error || "Import failed");
+      }
+    } catch (e: any) {
+      if (importStatus) {
+        importStatus.textContent = `✗ ${e.message}`;
+        importStatus.className = "text-sm text-red-400";
+      }
+      if (importConfirmBtn) {
+        importConfirmBtn.disabled = false;
+        importConfirmBtn.textContent = "Import";
+      }
+    }
+  });
+
+  // ========== Restore Defaults ==========
+  const restoreModal = document.getElementById("restore-modal");
+  const restoreBtn = document.getElementById("restore-defaults-btn");
+  const restoreStatus = document.getElementById("restore-status");
+
+  restoreBtn?.addEventListener("click", () => {
+    (restoreModal as any)?.open();
+  });
+
+  // Handle Close
+  restoreModal?.addEventListener("close", () => {
+    if (restoreStatus) {
+      restoreStatus.classList.add("hidden");
+      restoreStatus.textContent = "";
+    }
+  });
+
+  // Handle Confirm
+  restoreModal?.addEventListener("confirm", async () => {
+    const restoreConfirmBtn = restoreModal.querySelector(
+      ".confirm-modal",
+    ) as HTMLButtonElement;
+
+    if (restoreConfirmBtn) {
+      restoreConfirmBtn.disabled = true;
+      restoreConfirmBtn.textContent = "Restoring...";
+    }
+
+    if (restoreStatus) {
+      restoreStatus.textContent = "Creating backup and restoring defaults...";
+      restoreStatus.className = "text-sm text-admin-muted";
+      restoreStatus.classList.remove("hidden");
+    }
+
+    try {
+      const res = await fetch("/api/content-restore", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        if (restoreStatus) {
+          restoreStatus.textContent = `✓ Defaults restored! Backup created: ${data.backupFile || "yes"}`;
+          restoreStatus.className = "text-sm text-green-400";
+        }
+        // Reload page after 2 seconds
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+      } else {
+        throw new Error(data.error || "Restore failed");
+      }
+    } catch (e: any) {
+      if (restoreStatus) {
+        restoreStatus.textContent = `✗ ${e.message}`;
+        restoreStatus.className = "text-sm text-red-400";
+      }
+      // Re-enable button on error
+      if (restoreConfirmBtn) {
+        restoreConfirmBtn.disabled = false;
+        restoreConfirmBtn.textContent = "Restore Defaults";
+      }
+    }
+  });
+  // Accessibility: Add Enter/Space support for dropzones
+  const dropzones = document.querySelectorAll<HTMLElement>('[role="button"][tabindex="0"]');
+  dropzones.forEach((dropzone) => {
+    dropzone.addEventListener("keydown", (e: KeyboardEvent) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        dropzone.click();
+      }
+    });
+  });
+</script>

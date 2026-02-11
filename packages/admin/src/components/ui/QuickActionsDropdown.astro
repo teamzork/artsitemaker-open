@@ -1,0 +1,199 @@
+---
+/**
+ * QuickActionsDropdown Component
+ * 
+ * A dropdown menu for secondary actions that appear in the admin header.
+ * Positioned to expand over the canvas without competing for horizontal space.
+ */
+
+interface Props {
+  unprocessedCount?: number;
+}
+
+const { unprocessedCount = 0 } = Astro.props;
+---
+
+<div class="relative" id="quick-actions-wrapper">
+  <button
+    id="quick-actions-btn"
+    class="inline-flex items-center justify-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md
+           text-admin-muted hover:text-admin-text hover:bg-admin-sidebar
+           border border-transparent hover:border-admin-border
+           transition-colors whitespace-nowrap"
+    aria-haspopup="true"
+    aria-expanded="false"
+  >
+    <span>⚡</span>
+    <span class="hidden sm:inline">Quick Actions</span>
+    <svg 
+      class="w-4 h-4 transition-transform" 
+      id="quick-actions-chevron"
+      fill="none" 
+      stroke="currentColor" 
+      viewBox="0 0 24 24"
+    >
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+    </svg>
+  </button>
+  
+  <div 
+    id="quick-actions-menu" 
+    class="hidden absolute right-0 top-full mt-2 w-56 z-40"
+  >
+    <div class="bg-admin-card border border-admin-primary rounded-lg shadow-xl overflow-hidden">
+      <!-- Process All Images -->
+      <button 
+        id="quick-action-process"
+        class="w-full flex items-center gap-3 px-4 py-3 text-sm text-left
+               text-admin-text hover:bg-admin-sidebar transition-colors
+               border-b border-admin-border last:border-0"
+      >
+        <span class="text-lg">⚡</span>
+        <span class="flex-1">Process All Images</span>
+        {unprocessedCount > 0 && (
+          <span class="px-2 py-0.5 text-xs bg-admin-accent/20 text-admin-accent rounded-full">
+            {unprocessedCount}
+          </span>
+        )}
+      </button>
+      
+      <!-- Upload Images -->
+      <a 
+        href="/gallery/upload"
+        class="flex items-center gap-3 px-4 py-3 text-sm text-left
+               text-admin-text hover:bg-admin-sidebar transition-colors
+               border-b border-admin-border last:border-0"
+      >
+        <span class="text-lg">📤</span>
+        <span>Upload Images</span>
+      </a>
+
+       <!-- Open Identity Kit -->
+       <a 
+         href="/settings#identity-kit"
+         class="flex items-center gap-3 px-4 py-3 text-sm text-left
+                text-admin-text hover:bg-admin-sidebar transition-colors
+                border-b border-admin-border last:border-0"
+       >
+         <span class="text-lg">🎨</span>
+         <span>Open Identity Kit</span>
+       </a>
+
+       <!-- Open Secrets Vault -->
+       <button 
+         id="quick-action-vault"
+         class="w-full flex items-center gap-3 px-4 py-3 text-sm text-left
+                text-admin-text hover:bg-admin-sidebar transition-colors
+                border-b border-admin-border last:border-0"
+       >
+         <span class="text-lg">🔐</span>
+         <span>Open Secrets Vault</span>
+       </button>
+       
+       <!-- View Demo Gallery -->
+       <button
+        id="quick-action-demo"
+        class="w-full flex items-center gap-3 px-4 py-3 text-sm text-left
+               text-admin-text hover:bg-admin-sidebar transition-colors
+               border-b border-admin-border last:border-0"
+      >
+        <span class="text-lg">🖼️</span>
+        <span>View Demo Site</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Overlay for closing dropdown when clicking outside -->
+<div 
+  id="quick-actions-overlay" 
+  class="hidden fixed inset-0 z-30 bg-transparent"
+  aria-hidden="true"
+></div>
+
+<script>
+  import { processImagesWithToasts } from '../../lib/process-images-client';
+
+  (function() {
+    const btn = document.getElementById('quick-actions-btn');
+    const menu = document.getElementById('quick-actions-menu');
+    const overlay = document.getElementById('quick-actions-overlay');
+    const chevron = document.getElementById('quick-actions-chevron');
+    
+    if (!btn || !menu || !overlay) return;
+    
+    let isOpen = false;
+    
+    function open() {
+      isOpen = true;
+      menu?.classList.remove('hidden');
+      overlay?.classList.remove('hidden');
+      btn?.setAttribute('aria-expanded', 'true');
+      if (chevron) chevron.style.transform = 'rotate(180deg)';
+    }
+    
+    function close() {
+      isOpen = false;
+      menu?.classList.add('hidden');
+      overlay?.classList.add('hidden');
+      btn?.setAttribute('aria-expanded', 'false');
+      if (chevron) chevron.style.transform = 'rotate(0deg)';
+    }
+    
+    function toggle() {
+      if (isOpen) close();
+      else open();
+    }
+    
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggle();
+    });
+    
+    overlay.addEventListener('click', close);
+    
+    // Close on escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && isOpen) close();
+    });
+    
+    // Handle menu item clicks
+    const processBtn = document.getElementById('quick-action-process');
+    const demoBtn = document.getElementById('quick-action-demo');
+    const vaultBtn = document.getElementById('quick-action-vault');
+    
+    vaultBtn?.addEventListener('click', () => {
+      close();
+      window.openSecretsVault?.();
+    });
+    
+    processBtn?.addEventListener('click', async () => {
+      close();
+      
+      // Check if processing modal is open - if so, delegate to it
+      const modal = document.getElementById('processing-modal');
+      const modalIsOpen = modal && !modal.classList.contains('hidden');
+      
+      if (modalIsOpen) {
+        // Let the modal handle processing (it has logging UI)
+        window.dispatchEvent(new CustomEvent('artsitemaker:process-images'));
+      } else {
+        // Process directly when modal is not open
+        try {
+          await processImagesWithToasts({
+            showStartToast: true,
+            reloadOnComplete: true,
+            reloadDelayMs: 1500,
+          });
+        } catch (e) {
+          // Errors are already surfaced via centralized toasts
+        }
+      }
+    });
+    
+    demoBtn?.addEventListener('click', () => {
+      close();
+      window.open('/demo', '_blank');
+    });
+  })();
+</script>

@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Theme variables are now set dynamically by generateCSSVariables() in theme.ts */
+/* This ensures Identity Kit values take precedence over theme defaults */
+
+/* Selection styling */
+::selection {
+  background: var(--color-accent);
+  color: var(--color-background);
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Body background with texture support */
+body {
+  background-color: var(--color-background);
+  background-image: var(--background-texture, none);
+  background-repeat: var(--background-repeat, repeat);
+  background-size: var(--background-size, auto);
+  background-attachment: fixed;
+  min-height: 100vh;
+  color: var(--color-text);
+  font-family: var(--font-body);
+  line-height: 1.6;
+}
+
+/* Wrapper with inset shadow for depth */
+.page-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: none;
+}
+
+/* Link styling - uses Identity Kit link color */
+a {
+  color: var(--color-link);
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+a:hover {
+  color: var(--color-link-hover);
+  border-bottom: 1px dashed var(--color-link-hover);
+}

@@ -1,0 +1,130 @@
+---
+import type { HTMLAttributes } from 'astro/types';
+
+interface Props extends HTMLAttributes<'button'> {
+  variant?: 'primary' | 'primary-light' | 'secondary' | 'success' | 'danger' | 'ghost' | 'blue' | 'accent';
+  size?: 'sm' | 'md' | 'lg';
+  disabled?: boolean;
+  tooltip?: string;
+  tooltipSide?: 'top' | 'bottom' | 'left' | 'right';
+}
+
+const {
+  variant = 'primary',
+  size = 'md',
+  disabled = false,
+  tooltip,
+  tooltipSide = 'top',
+  class: className,
+  ...rest
+} = Astro.props;
+
+// Base styles for all buttons
+const baseStyles = "btn relative group transition-all duration-200 flex items-center justify-center gap-2";
+
+// Size styles
+const sizeStyles = {
+  sm: "btn-sm",
+  md: "", // Default btn class handles md
+  lg: "text-lg px-6 py-3"
+};
+
+// Disabled styles (Global override)
+const disabledStyles = "disabled:bg-gray-700 disabled:text-gray-400 disabled:cursor-not-allowed !opacity-100";
+
+// Variant styles (only applied if not disabled)
+const variantStyles = {
+  primary: "btn-primary",
+  "primary-light": "bg-admin-primary-light text-white hover:bg-opacity-80",
+  secondary: "btn-secondary",
+  success: "btn-success",
+  danger: "bg-admin-error text-white hover:bg-opacity-80",
+  ghost: "bg-transparent text-admin-text hover:bg-admin-sidebar",
+  blue: "bg-admin-primary text-white hover:bg-opacity-80",
+  accent: "bg-admin-accent text-white hover:bg-opacity-80"
+};
+
+// Compute final class list
+const styles = [
+  baseStyles,
+  sizeStyles[size],
+  variantStyles[variant],
+  disabledStyles,
+  className
+];
+
+// Tooltip positioning
+const tooltipPositions = {
+  top: "bottom-full left-1/2 -translate-x-1/2 mb-2",
+  bottom: "top-full left-1/2 -translate-x-1/2 mt-2",
+  left: "right-full top-1/2 -translate-y-1/2 mr-2",
+  right: "left-full top-1/2 -translate-y-1/2 ml-2"
+};
+---
+
+<button
+  class:list={styles}
+  disabled={disabled}
+  data-tooltip={tooltip}
+  data-tooltip-side={tooltipSide}
+  {...rest}
+>
+  <slot />
+  
+  <span class:list={[
+    "tooltip-text absolute whitespace-nowrap px-2 py-1 rounded bg-black/90 text-white text-xs opacity-0 transition-opacity duration-200 pointer-events-none z-50 shadow-lg border border-gray-700",
+    tooltipPositions[tooltipSide],
+    // Only show if data-tooltip is present and not empty
+    "group-hover:opacity-100 hidden",
+    tooltip ? "group-hover:block" : ""
+  ]}>
+    {tooltip}
+  </span>
+</button>
+
+<script>
+  function setupTooltips() {
+    const buttons = document.querySelectorAll('button[data-tooltip]');
+    
+    buttons.forEach(btn => {
+      // Check if already initialized to prevent duplicate observers
+      if ((btn as any).__tooltipInitialized) return;
+      (btn as any).__tooltipInitialized = true;
+
+      // Initialize visibility state based on current attribute
+      const initialTooltip = btn.getAttribute('data-tooltip');
+      const span = btn.querySelector('.tooltip-text');
+      if (span && !initialTooltip) {
+        span.classList.remove('group-hover:block');
+        span.classList.add('hidden');
+      }
+
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.type === 'attributes' && mutation.attributeName === 'data-tooltip') {
+            const tooltipText = btn.getAttribute('data-tooltip');
+            const tooltipSpan = btn.querySelector('.tooltip-text');
+            if (tooltipSpan) {
+              tooltipSpan.textContent = tooltipText;
+              // Toggle visibility based on content
+              if (!tooltipText) {
+                tooltipSpan.classList.add('hidden');
+                tooltipSpan.classList.remove('group-hover:block');
+              } else {
+                tooltipSpan.classList.remove('hidden');
+                tooltipSpan.classList.add('group-hover:block');
+              }
+            }
+          }
+        });
+      });
+      observer.observe(btn, { attributes: true });
+    });
+  }
+
+  // Run immediately for initial load
+  setupTooltips();
+  
+  // Run on subsequent navigations (if View Transitions are used)
+  document.addEventListener('astro:page-load', setupTooltips);
+</script>

@@ -1,0 +1,415 @@
+---
+// packages/site/src/components/nav/SlideshowFooter.astro
+// Slideshow-specific footer with slide-up animation - reads from footer.yaml
+// Logo resolution: Identity Kit (user-assets) only
+
+import fs from "fs/promises";
+import path from "path";
+import yaml from "js-yaml";
+import { loadTheme, loadIdentityKit } from "@lib/theme";
+import type { ThemeConfig, IdentityKit } from "@lib/theme";
+import type { SettingsData, FooterData } from "../../types/content";
+import {
+  getUserDataPath,
+  getSettingsPath,
+  resolveUserAssetUrl,
+} from "@lib/paths";
+
+// Load settings and theme
+let settings: SettingsData | null = null;
+let footer: FooterData = {};
+let themeConfig: ThemeConfig | null = null;
+let identityKit: IdentityKit = {};
+let activeTheme = "modern";
+
+try {
+  const userDataPath = getUserDataPath();
+  const settingsPath = getSettingsPath();
+
+  let settingsContent;
+  let footerContent;
+  try {
+    settingsContent = await fs.readFile(settingsPath, "utf-8");
+    // Try to load footer.yaml from pages/components directory
+    try {
+      const fp = path.join(userDataPath, "pages", "components", "footer.yaml");
+      footerContent = await fs.readFile(fp, "utf-8");
+    } catch (e) {}
+  } catch (e) {}
+
+  if (settingsContent) {
+    settings = yaml.load(settingsContent) as SettingsData;
+    if (settings?.theme) activeTheme = settings.theme;
+  }
+
+  // Load footer from footer.yaml, fallback to settings.footer for backwards compatibility
+  if (footerContent) {
+    footer = yaml.load(footerContent) as FooterData;
+  } else {
+    footer = settings?.footer || {};
+  }
+
+  themeConfig = await loadTheme(activeTheme);
+  identityKit = await loadIdentityKit();
+} catch (e) {
+  console.warn("Failed to load theme config for slideshow footer", e);
+}
+
+// Get footer logo from Identity Kit only
+const showLogo = footer.showLogo !== false;
+const identityKitLogo = identityKit.logo?.file;
+
+const footerLogoUrl =
+  showLogo && identityKitLogo ? resolveUserAssetUrl(identityKitLogo) : null;
+
+const siteTitle = settings?.site?.title || "Gallery";
+
+// Content
+const story = footer.story || settings?.seo?.description || "";
+const contactEmail = footer.contactEmail || "";
+const websiteUrl = footer.websiteUrl || "";
+const websiteLabel = footer.websiteLabel || "";
+const portfolioUrl = footer.portfolioUrl || "";
+const portfolioLabel = footer.portfolioLabel || "";
+const copyrightStart = footer.copyrightStart || 2009;
+const copyrightName = footer.copyrightName || siteTitle;
+const artistName = footer.artistName || "";
+const showCredits = footer.showCredits !== false;
+
+const currentYear = new Date().getFullYear();
+---
+
+<!-- Footer toggle button -->
+<button id="footer-toggle" class="footer-toggle" aria-label="Show footer">
+  <span class="sr-only">Show footer</span>
+</button>
+
+<!-- Hidden footer that slides up -->
+<div id="slideshow-footer" class="slideshow-footer hidden">
+  <div class="footer-content">
+    <!-- Logo -->
+    <div class="footer-logo">
+      {
+        footerLogoUrl ? (
+          <img
+            src={footerLogoUrl}
+            alt={siteTitle}
+            onerror="this.style.display='none'"
+          />
+        ) : (
+          <span class="footer-site-title">{siteTitle}</span>
+        )
+      }
+    </div>
+
+    <!-- Story/Description -->
+    <div class="footer-story">
+      {story && <p>{story}</p>}
+
+      {/* External links */}
+      {
+        (websiteUrl || portfolioUrl) && (
+          <div class="footer-external-links">
+            {websiteUrl && (
+              <a href={websiteUrl} target="_blank" rel="noopener">
+                {websiteLabel || websiteUrl}
+              </a>
+            )}
+            {portfolioUrl && (
+              <a href={portfolioUrl} target="_blank" rel="noopener">
+                {portfolioLabel || portfolioUrl}
+              </a>
+            )}
+          </div>
+        )
+      }
+    </div>
+
+    <!-- Links -->
+    <div class="footer-links">
+      <h5>Links</h5>
+      <ul>
+        <li><a href="/">Gallery</a></li>
+        <li><a href="/about">About</a></li>
+      </ul>
+
+      {
+        contactEmail && (
+          <>
+            <h5>Contact</h5>
+            <ul>
+              <li>
+                <a href={`mailto:${contactEmail}`}>{contactEmail}</a>
+              </li>
+            </ul>
+          </>
+        )
+      }
+    </div>
+
+    <!-- Copyright - synced with standard footer -->
+    {
+      showCredits && (
+        <div class="footer-copyright">
+          <span>
+            &copy; {copyrightStart}-{currentYear} {copyrightName}
+          </span>
+          {artistName && <span> by {artistName}</span>}
+          <span class="separator">·</span>
+          <span>All rights reserved</span>
+          <span class="separator">·</span>
+          <a href="/service/terms">Terms of Use</a>
+          <span class="separator">·</span>
+          <a href="/service/privacy">Privacy Policy</a>
+        </div>
+      )
+    }
+  </div>
+
+  <button id="footer-close" class="footer-close" aria-label="Close footer"
+    >&times;</button
+  >
+</div>
+
+<style>
+  /* Footer toggle button */
+  .footer-toggle {
+    position: fixed;
+    bottom: 0;
+    right: 170px;
+    z-index: 10000;
+    width: 40px;
+    height: 20px;
+    background: var(--color-background-alt, #323232);
+    border-radius: 10px 10px 0 0;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .footer-toggle::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 0;
+    height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-bottom: 8px solid var(--color-accent, #efb600);
+    transition: transform 0.2s ease;
+  }
+
+  /* Arrow flips when footer is open */
+  .footer-toggle.open::before {
+    transform: translate(-50%, -50%) rotate(180deg);
+  }
+
+  .footer-toggle:hover {
+    background-color: var(--color-border, #444);
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+  }
+
+  @media (max-width: 840px) {
+    .footer-toggle {
+      display: none;
+    }
+  }
+
+  /* Slideshow footer */
+  .slideshow-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--color-background-alt, #323232);
+    color: var(--color-text-muted, #95968a);
+    z-index: 9999;
+    transform: translateY(100%);
+    transition: transform 0.4s ease;
+  }
+
+  .slideshow-footer.visible {
+    transform: translateY(0);
+  }
+
+  .slideshow-footer.hidden {
+    transform: translateY(100%);
+  }
+
+  .footer-content {
+    display: grid;
+    grid-template-columns: 1fr 2fr 1fr;
+    gap: 30px;
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    align-items: start; /* Top-align columns - synced with standard footer */
+  }
+
+  .footer-logo img {
+    max-width: 150px;
+    opacity: 0.8;
+  }
+
+  .footer-site-title {
+    font-size: 1.5rem;
+    font-family: var(--font-heading, sans-serif);
+    color: var(--color-text-inverted, #ffffff);
+  }
+
+  .footer-story {
+    font-size: 14px;
+    line-height: 1.8;
+  }
+
+  .footer-external-links {
+    margin-top: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .footer-external-links a {
+    color: var(--color-accent, #efb600);
+    text-decoration: none;
+    transition: opacity 0.2s;
+  }
+
+  .footer-external-links a:hover {
+    opacity: 0.8;
+  }
+
+  .footer-links h5 {
+    font-size: 11px;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 15px;
+    color: var(--color-text-inverted, #ffffff);
+  }
+
+  .footer-links ul {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 15px 0;
+  }
+
+  .footer-links li {
+    margin-bottom: 5px;
+  }
+
+  .footer-links a {
+    color: var(--color-accent, #efb600);
+    text-decoration: none;
+    transition: opacity 0.2s;
+  }
+
+  .footer-links a:hover {
+    opacity: 0.8;
+  }
+
+  /* Copyright - no top border (synced with standard footer) */
+  .footer-copyright {
+    grid-column: 1 / -1;
+    text-align: center;
+    font-size: 12px;
+    margin-top: 20px;
+  }
+
+  .footer-copyright .separator {
+    margin: 0 8px;
+    opacity: 0.5;
+  }
+
+  .footer-copyright a {
+    color: var(--color-accent, #efb600);
+    text-decoration: none;
+    transition: opacity 0.2s;
+  }
+
+  .footer-copyright a:hover {
+    opacity: 0.8;
+  }
+
+  .footer-close {
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    background: none;
+    border: none;
+    color: var(--color-text-muted, #666);
+    font-size: 24px;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+
+  .footer-close:hover {
+    color: var(--color-accent, #efb600);
+  }
+
+  @media (max-width: 768px) {
+    .footer-content {
+      grid-template-columns: 1fr;
+      text-align: center;
+    }
+
+    .footer-logo {
+      order: -1;
+    }
+
+    .footer-external-links {
+      align-items: center;
+    }
+
+    .footer-copyright .separator {
+      display: block;
+      height: 0;
+      margin: 4px 0;
+    }
+  }
+</style>
+
+<script>
+  const footerToggle = document.getElementById("footer-toggle");
+  const slideshowFooter = document.getElementById("slideshow-footer");
+  const footerClose = document.getElementById("footer-close");
+
+  // Footer toggle with arrow flip
+  footerToggle?.addEventListener("click", () => {
+    if (slideshowFooter) {
+      const isOpening = slideshowFooter.classList.contains("hidden");
+      slideshowFooter.classList.toggle("hidden");
+      slideshowFooter.classList.toggle("visible");
+      footerToggle.classList.toggle("open", isOpening);
+    }
+  });
+
+  footerClose?.addEventListener("click", () => {
+    if (slideshowFooter) {
+      slideshowFooter.classList.add("hidden");
+      slideshowFooter.classList.remove("visible");
+      footerToggle?.classList.remove("open");
+    }
+  });
+
+  // Close on Escape key
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && slideshowFooter) {
+      slideshowFooter.classList.add("hidden");
+      slideshowFooter.classList.remove("visible");
+      footerToggle?.classList.remove("open");
+    }
+  });
+</script>

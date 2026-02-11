@@ -1,0 +1,296 @@
+---
+// packages/site/src/pages/[slug].astro
+// Dynamic route for custom pages from /content/pages/
+
+import PageLayout from '@layouts/PageLayout.astro';
+import { marked } from 'marked';
+import type { ArtworkData, PageData } from '../types/content';
+import { getImageBaseUrl } from '../lib/paths';
+import { loadArtwork, loadPage, listPages } from '../lib/content-service';
+import { getPageSettings, getPredefinedPageIds } from '../lib/pageTypes';
+
+// Generate static paths for all custom pages
+export async function getStaticPaths() {
+  const pageSettings = await getPageSettings();
+  const allPages = await listPages({ onlyPublished: true });
+  const predefinedPageIds = getPredefinedPageIds();
+  
+  // Filter to only include custom pages (exclude predefined pages) that are enabled
+  const enabledCustomPages = allPages.filter(page => {
+    // Exclude predefined pages (they have their own routes)
+    if (predefinedPageIds.has(page.slug)) {
+      return false;
+    }
+    
+    // Check if page is enabled in pages config (default to true if not explicitly set)
+    const isEnabled = pageSettings.enabled[page.slug] !== false;
+    return isEnabled;
+  });
+  
+  return enabledCustomPages.map(page => ({
+    params: { slug: page.slug },
+    props: { page },
+  }));
+}
+
+interface Props {
+  page: PageData & { slug: string };
+}
+
+const { page } = Astro.props;
+const pageSettings = await getPageSettings();
+
+// Handle home page redirect - if this page is set as home, redirect to /
+if (pageSettings.homePage === page.slug) {
+  return Astro.redirect('/');
+}
+
+const imageBaseUrl = getImageBaseUrl();
+
+// Load featured artwork if specified
+let featuredArtwork: ArtworkData | null = null;
+if (page.featuredArtwork) {
+  featuredArtwork = await loadArtwork(page.featuredArtwork);
+}
+
+const featuredImagePath = page.featuredImage?.trim();
+const featuredImageUrl = featuredImagePath
+  ? (featuredImagePath.startsWith('http')
+    ? featuredImagePath
+    : `${imageBaseUrl}/${featuredImagePath.replace(/^\/+/, '')}`)
+  : (featuredArtwork?.slug
+    ? `${imageBaseUrl}/large/${featuredArtwork.slug}.webp`
+    : null);
+const featuredAltText = featuredImagePath
+  ? (page.title || 'Featured image')
+  : (featuredArtwork?.title || page.title || 'Featured artwork');
+
+// Parse markdown content
+const parsedContent = page.content ? await marked.parse(page.content) : '';
+
+// Page title fallback
+const pageTitle = page.title || page.slug.charAt(0).toUpperCase() + page.slug.slice(1);
+---
+
+<PageLayout title={pageTitle}>
+  <article class="custom-page">
+    <div class="custom-page-content">
+      {
+        featuredImageUrl && (
+          <div class="custom-page-feature">
+            <img
+              src={featuredImageUrl}
+              alt={featuredAltText}
+              class="custom-page-image"
+              loading="lazy"
+            />
+            {!featuredImagePath && featuredArtwork?.title && (
+              <p class="custom-page-caption">{featuredArtwork.title}</p>
+            )}
+          </div>
+        )
+      }
+
+      <!-- Content -->
+      <div class="custom-page-text prose max-w-none">
+        <!-- Page title -->
+        <h1 class="custom-page-title">{pageTitle}</h1>
+
+        {parsedContent ? (
+          <div class="markdown-content" set:html={parsedContent} />
+        ) : (
+          <div class="empty-content">
+            <p>This page has no content yet.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  </article>
+</PageLayout>
+
+<style>
+  .custom-page {
+    width: 100%;
+    background-color: rgba(255, 255, 255, 0.9);
+  }
+
+  .custom-page-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--custom-page-gap, 2rem);
+  }
+
+  .custom-page-title {
+    font-family: var(--font-heading, sans-serif);
+    font-size: var(--custom-page-title-size, 2rem);
+    font-weight: 400;
+    color: var(--color-text);
+    margin: 0 0 1.5rem 0;
+    text-transform: uppercase;
+    letter-spacing: var(--custom-page-title-spacing, 0.05em);
+  }
+
+  .custom-page-text {
+    width: 100%;
+  }
+
+  .custom-page-feature {
+    flex-shrink: 0;
+    max-width: 100%;
+  }
+
+  .custom-page-image {
+    width: 100%;
+    height: auto;
+    border-radius: var(--custom-page-image-radius, var(--corner-radius, 0));
+    box-shadow: var(
+      --custom-page-image-shadow,
+      0 4px 12px rgba(0, 0, 0, 0.1)
+    );
+  }
+
+  .custom-page-caption {
+    font-size: 0.875rem;
+    color: var(
+      --custom-page-caption-color,
+      var(--color-muted, var(--color-text-muted, #666))
+    );
+    text-align: center;
+    margin-top: 0.5rem;
+    font-style: italic;
+  }
+
+  .empty-content {
+    color: var(--color-text-muted, #666);
+    font-style: italic;
+    padding: 2rem 0;
+  }
+
+  /* Markdown content styles */
+  .markdown-content :global(h2) {
+    color: var(--color-accent);
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+  }
+
+  .markdown-content :global(h2:first-child) {
+    margin-top: 0;
+  }
+
+  .markdown-content :global(h3) {
+    color: var(--color-accent);
+    font-family: var(--font-heading);
+    font-size: 1.25rem;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .markdown-content :global(p) {
+    color: var(--color-text);
+    margin-bottom: 1rem;
+    line-height: 1.7;
+  }
+
+  .markdown-content :global(a) {
+    color: var(--color-link);
+    text-decoration: none;
+  }
+
+  .markdown-content :global(a:hover) {
+    color: var(--color-link-hover);
+    text-decoration: underline;
+  }
+
+  .markdown-content :global(ul),
+  .markdown-content :global(ol) {
+    margin-bottom: 1rem;
+    padding-left: 1.5rem;
+  }
+
+  .markdown-content :global(li) {
+    margin-bottom: 0.5rem;
+    color: var(--color-text);
+  }
+
+  .markdown-content :global(ul) {
+    list-style: disc;
+  }
+
+  .markdown-content :global(ol) {
+    list-style: decimal;
+  }
+
+  .markdown-content :global(strong) {
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  .markdown-content :global(em) {
+    font-style: italic;
+  }
+
+  .markdown-content :global(img) {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--corner-radius, 0);
+    margin: 1rem 0;
+  }
+
+  .markdown-content :global(blockquote) {
+    border-left: 3px solid var(--color-accent);
+    padding-left: 1rem;
+    margin: 1rem 0;
+    color: var(--color-text-muted, #666);
+    font-style: italic;
+  }
+
+  .markdown-content :global(code) {
+    background: var(--color-bg-muted, #f5f5f5);
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
+    font-family: monospace;
+    font-size: 0.9em;
+  }
+
+  .markdown-content :global(pre) {
+    background: var(--color-bg-muted, #f5f5f5);
+    padding: 1rem;
+    border-radius: var(--corner-radius, 0);
+    overflow-x: auto;
+    margin: 1rem 0;
+  }
+
+  .markdown-content :global(pre code) {
+    background: none;
+    padding: 0;
+  }
+
+  .markdown-content :global(hr) {
+    border: none;
+    border-top: 1px solid var(--color-border, #ddd);
+    margin: 2rem 0;
+  }
+
+  .markdown-content :global(br) {
+    display: block;
+    margin-bottom: 0.25rem;
+  }
+
+  /* Responsive adjustments */
+  @media (min-width: 768px) {
+    .custom-page-content {
+      flex-direction: row;
+      align-items: flex-start;
+    }
+
+    .custom-page-text {
+      flex: 1;
+    }
+
+    .custom-page-feature {
+      max-width: var(--custom-page-media-width, 40%);
+    }
+  }
+</style>

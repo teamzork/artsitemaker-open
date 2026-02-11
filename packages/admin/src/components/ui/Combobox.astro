@@ -1,0 +1,416 @@
+---
+import Chevron from "../icons/Chevron.astro";
+
+type ComboboxOption = {
+  label: string;
+  value: string;
+  preview?: string;
+  previewFamily?: string;
+};
+
+type ComboboxSection = {
+  label: string;
+  options: ComboboxOption[];
+};
+
+type ComboboxProps = {
+  id?: string;
+  name: string;
+  value?: string;
+  placeholder?: string;
+  label?: string;
+  description?: string;
+  options?: ComboboxOption[];
+  sections?: ComboboxSection[];
+  emptyLabel?: string;
+  inputClass?: string;
+};
+
+const {
+  id,
+  name,
+  value = "",
+  placeholder = "",
+  label,
+  description,
+  options = [],
+  sections = [],
+  emptyLabel = "No options found",
+  inputClass = "",
+} = Astro.props as ComboboxProps;
+
+const baseId = (id ?? name).replace(/[^a-zA-Z0-9-_]/g, "-");
+const inputId = `${baseId}-input`;
+const listId = `${baseId}-list`;
+const buttonId = `${baseId}-toggle`;
+const sectionsToRender =
+  sections.length > 0 ? sections : [{ label: "", options }];
+---
+
+<div class="combo-root relative" data-combobox>
+  {
+    label && (
+      <label class="block text-sm text-admin-muted mb-2" for={inputId}>
+        {label}
+      </label>
+    )
+  }
+  <div class="combo-input relative">
+    <input
+      id={inputId}
+      name={name}
+      type="text"
+      value={value}
+      placeholder={placeholder}
+      class={`w-full pr-10 ${inputClass}`.trim()}
+      autocomplete="off"
+      spellcheck="false"
+      role="combobox"
+      aria-autocomplete="list"
+      aria-expanded="false"
+      aria-controls={listId}
+      aria-activedescendant=""
+      data-combobox-input
+    />
+    <button
+      id={buttonId}
+      type="button"
+      class="combo-toggle text-admin-muted hover:text-admin-text"
+      aria-label="Show options"
+      aria-expanded="false"
+      aria-controls={listId}
+      data-combobox-toggle
+    >
+      <Chevron class="combo-toggle-icon" aria-hidden="true" />
+    </button>
+  </div>
+  <div
+    id={listId}
+    class="combo-list hidden bg-admin-card border border-blue-500/70 rounded-lg shadow-lg"
+    role="listbox"
+    aria-label={label ?? "Options"}
+    tabindex="-1"
+    data-combobox-list
+  >
+    {sectionsToRender.map((section) => (
+      <div class="combo-section" data-combobox-section>
+        {section.label && (
+          <div class="combo-section-label">{section.label}</div>
+        )}
+        {section.options.map((option, optIdx) => {
+          const filterText = `${option.label} ${option.value}`.toLowerCase();
+          const optionId = `${baseId}-opt-${section.label ? section.label.replace(/\s+/g, '-').toLowerCase() + '-' : ''}${optIdx}`;
+          return (
+            <button
+              type="button"
+              id={optionId}
+              class={`combo-option text-admin-text ${
+                option.value === value ? "is-selected" : ""
+              }`}
+              role="option"
+              aria-selected={option.value === value ? "true" : "false"}
+              data-combobox-option
+              data-value={option.value}
+              data-filter={filterText}
+            >
+              <span class="combo-label">{option.label}</span>
+              {option.preview && (
+                <span
+                  class="combo-sample"
+                  style={`font-family: ${
+                    option.previewFamily ?? option.value
+                  };`}
+                >
+                  {option.preview}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    ))}
+    <div class="combo-empty hidden text-admin-muted" data-combobox-empty>
+      {emptyLabel}
+    </div>
+  </div>
+  {description && (
+    <p class="text-xs text-admin-muted mt-1">{description}</p>
+  )}
+</div>
+
+<style>
+  .combo-toggle {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .combo-toggle-icon {
+    width: 16px;
+    height: 16px;
+    display: block;
+  }
+
+  .combo-list {
+    position: absolute;
+    left: 0;
+    right: 0;
+    margin-top: 8px;
+    max-height: 260px;
+    overflow-y: auto;
+    z-index: 40;
+    padding: 6px 0;
+  }
+
+  .combo-section {
+    padding: 2px 0;
+  }
+
+  .combo-section-label {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--admin-muted);
+    padding: 4px 12px;
+  }
+
+  .combo-option {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    background: transparent;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .combo-option:hover,
+  .combo-option.is-active {
+    background: color-mix(in srgb, var(--admin-accent) 16%, transparent);
+  }
+
+  .combo-option.is-selected .combo-label {
+    color: var(--admin-accent);
+  }
+
+  .combo-sample {
+    font-size: 12px;
+    color: var(--admin-muted);
+  }
+
+  .combo-empty {
+    padding: 8px 12px;
+  }
+</style>
+
+<script>
+  document.querySelectorAll("[data-combobox]").forEach((root) => {
+    if (!(root instanceof HTMLElement)) return;
+    if (root.dataset.comboboxInit) return;
+    root.dataset.comboboxInit = "true";
+
+    const input = root.querySelector("[data-combobox-input]");
+    const list = root.querySelector("[data-combobox-list]");
+    const button = root.querySelector("[data-combobox-toggle]");
+    const empty = root.querySelector("[data-combobox-empty]");
+    const options = Array.from(
+      root.querySelectorAll("[data-combobox-option]"),
+    );
+    const sections = Array.from(
+      root.querySelectorAll("[data-combobox-section]"),
+    );
+
+    if (!(input instanceof HTMLInputElement)) return;
+    if (!(list instanceof HTMLElement)) return;
+    if (!(button instanceof HTMLButtonElement)) return;
+
+    let isOpen = false;
+    let activeIndex = -1;
+    let suppressOpen = false;
+
+    const getVisibleOptions = () =>
+      options.filter((option) => !option.classList.contains("hidden"));
+
+    const setExpanded = (expanded: boolean) => {
+      input.setAttribute("aria-expanded", String(expanded));
+      button.setAttribute("aria-expanded", String(expanded));
+    };
+
+    const setActiveDescendant = (id: string) => {
+      input.setAttribute("aria-activedescendant", id);
+    };
+
+    const setActiveIndex = (index: number) => {
+      const visible = getVisibleOptions();
+      visible.forEach((option, idx) => {
+        option.classList.toggle("is-active", idx === index);
+      });
+      activeIndex = index;
+      const activeOption = visible[index];
+      if (activeOption instanceof HTMLElement) {
+        activeOption.scrollIntoView({ block: "nearest" });
+        setActiveDescendant(activeOption.id || "");
+      } else {
+        setActiveDescendant("");
+      }
+    };
+
+    const updateSelectedState = () => {
+      options.forEach((option) => {
+        const value = option.getAttribute("data-value") || "";
+        const selected = value === input.value;
+        option.classList.toggle("is-selected", selected);
+        option.setAttribute("aria-selected", selected ? "true" : "false");
+      });
+    };
+
+    const filterOptions = (query: string) => {
+      const normalized = query.trim().toLowerCase();
+      let visibleCount = 0;
+
+      options.forEach((option) => {
+        const filter = option.getAttribute("data-filter") || "";
+        const match = normalized === "" || filter.includes(normalized);
+        option.classList.toggle("hidden", !match);
+        if (match) visibleCount += 1;
+      });
+
+      sections.forEach((section) => {
+        const sectionOptions = Array.from(
+          section.querySelectorAll("[data-combobox-option]"),
+        );
+        const hasVisible = sectionOptions.some(
+          (option) => !option.classList.contains("hidden"),
+        );
+        section.classList.toggle("hidden", !hasVisible);
+      });
+
+      if (empty instanceof HTMLElement) {
+        empty.classList.toggle("hidden", visibleCount !== 0);
+      }
+
+      const visible = getVisibleOptions();
+      if (visible.length === 0) {
+        activeIndex = -1;
+      } else if (activeIndex >= visible.length) {
+        setActiveIndex(0);
+      }
+    };
+
+    const openList = () => {
+      if (isOpen) return;
+      isOpen = true;
+      list.classList.remove("hidden");
+      setExpanded(true);
+      filterOptions(input.value);
+    };
+
+    const closeList = () => {
+      if (!isOpen) return;
+      isOpen = false;
+      list.classList.add("hidden");
+      setExpanded(false);
+      setActiveIndex(-1);
+      setActiveDescendant("");
+    };
+
+    const commitValue = (value: string) => {
+      input.value = value;
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      updateSelectedState();
+    };
+
+    input.addEventListener("focus", () => {
+      if (suppressOpen) return;
+      openList();
+    });
+
+    input.addEventListener("click", () => {
+      openList();
+    });
+
+    input.addEventListener("input", () => {
+      openList();
+      filterOptions(input.value);
+      updateSelectedState();
+    });
+
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        closeList();
+        return;
+      }
+
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        const visible = getVisibleOptions();
+        if (!isOpen) openList();
+        if (visible.length === 0) return;
+        const nextIndex =
+          activeIndex + 1 >= visible.length ? 0 : activeIndex + 1;
+        setActiveIndex(nextIndex);
+        return;
+      }
+
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        const visible = getVisibleOptions();
+        if (!isOpen) openList();
+        if (visible.length === 0) return;
+        const nextIndex =
+          activeIndex - 1 < 0 ? visible.length - 1 : activeIndex - 1;
+        setActiveIndex(nextIndex);
+        return;
+      }
+
+      if (event.key === "Enter" && isOpen && activeIndex >= 0) {
+        event.preventDefault();
+        const visible = getVisibleOptions();
+        const option = visible[activeIndex];
+        if (option instanceof HTMLElement) {
+          const value = option.getAttribute("data-value") || "";
+          if (value) commitValue(value);
+        }
+        closeList();
+      }
+    });
+
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      if (isOpen) {
+        closeList();
+      } else {
+        openList();
+      }
+      input.focus();
+    });
+
+    options.forEach((option) => {
+      option.addEventListener("click", (event) => {
+        event.preventDefault();
+        const value = option.getAttribute("data-value") || "";
+        if (value) commitValue(value);
+        closeList();
+        suppressOpen = true;
+        input.focus();
+        setTimeout(() => {
+          suppressOpen = false;
+        }, 0);
+      });
+    });
+
+    document.addEventListener("click", (event) => {
+      if (!(event.target instanceof Node)) return;
+      if (root.contains(event.target)) return;
+      closeList();
+    });
+
+    updateSelectedState();
+    filterOptions(input.value);
+  });
+</script>

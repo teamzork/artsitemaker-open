@@ -1,0 +1,323 @@
+---
+// packages/site/src/components/nav/Footer.astro
+// Theme-aware footer component - reads from footer.yaml with fallbacks
+// Logo resolution: Identity Kit (user-assets) only
+
+import fs from "fs/promises";
+import path from "path";
+import yaml from "js-yaml";
+import { loadTheme, loadIdentityKit } from "@lib/theme";
+import type { ThemeConfig, IdentityKit } from "@lib/theme";
+import type { SettingsData, FooterData } from "../../types/content";
+import {
+  getUserDataPath,
+  getSettingsPath,
+  resolveUserAssetUrl,
+} from "@lib/paths";
+import { filterNavigationItems, getPredefinedPageIds } from "@lib/pageTypes";
+
+// Load settings and theme
+let settings: SettingsData | null = null;
+let footer: FooterData = {};
+let themeConfig: ThemeConfig | null = null;
+let identityKit: IdentityKit = {};
+let activeTheme = "modern";
+
+try {
+  const userDataPath = getUserDataPath();
+  const settingsPath = getSettingsPath();
+
+  let settingsContent;
+  let footerContent;
+  try {
+    settingsContent = await fs.readFile(settingsPath, "utf-8");
+    // Try to load footer.yaml from pages/components directory
+    try {
+      const fp = path.join(userDataPath, "pages", "components", "footer.yaml");
+      footerContent = await fs.readFile(fp, "utf-8");
+    } catch (e) {}
+  } catch (e) {}
+
+  if (settingsContent) {
+    settings = yaml.load(settingsContent) as SettingsData;
+    if (settings?.theme) activeTheme = settings.theme;
+  }
+
+  // Load footer from footer.yaml, fallback to settings.footer for backwards compatibility
+  if (footerContent) {
+    footer = yaml.load(footerContent) as FooterData;
+  } else {
+    footer = settings?.footer || {};
+  }
+
+  themeConfig = await loadTheme(activeTheme);
+  identityKit = await loadIdentityKit();
+} catch (e) {
+  console.warn("Failed to load theme config for footer", e);
+}
+
+// Get footer logo from Identity Kit only
+const showLogo = footer.showLogo !== false;
+const identityKitLogo = identityKit.logo?.file;
+
+const footerLogoUrl =
+  showLogo && identityKitLogo ? resolveUserAssetUrl(identityKitLogo) : null;
+
+// Helpful warning if logo is missing
+if (showLogo && !identityKitLogo) {
+  console.warn(
+    `⚠️  No logo configured for footer.\n` +
+      `   Add a logo to user-data/assets/logos/ and configure in identityKit:\n` +
+      `   identityKit:\n` +
+      `     logo:\n` +
+      `       file: "logos/my-logo.svg"\n` +
+      `       width: 126`,
+  );
+}
+
+const siteTitle = settings?.site?.title || "Gallery";
+
+// Story: prefer footer.story, fallback to seo.description
+const story = footer.story || settings?.seo?.description || "";
+
+// Contact email: prefer footer.contactEmail, fallback to contact.email
+const contactEmail = footer.contactEmail || "";
+
+// External links
+const websiteUrl = footer.websiteUrl || "";
+const websiteLabel = footer.websiteLabel || "";
+const portfolioUrl = footer.portfolioUrl || "";
+const portfolioLabel = footer.portfolioLabel || "";
+
+// Copyright
+const copyrightStart = footer.copyrightStart || 2009;
+const copyrightName = footer.copyrightName || siteTitle;
+const artistName = footer.artistName || "";
+const showCredits = footer.showCredits !== false;
+
+// Navigation items from settings.nav
+let navItems = settings?.nav?.items || [
+  { label: "Gallery", href: "/" },
+  { label: "Slideshow", href: "/slideshow" },
+  { label: "About", href: "/about" },
+];
+
+// Filter navigation items based on showInNav setting
+navItems = await filterNavigationItems(navItems);
+
+// Footer-specific visibility for custom pages
+const predefinedPageIds = getPredefinedPageIds();
+const footerPageMap = new Map<string, { label: string; href: string; showInFooter: boolean }>();
+
+try {
+  const pagesDir = path.join(getUserDataPath(), "pages");
+  const files = await fs.readdir(pagesDir);
+  for (const file of files) {
+    if (!file.endsWith(".yaml")) continue;
+    const slug = file.replace(".yaml", "");
+    if (predefinedPageIds.has(slug)) continue;
+
+    const content = await fs.readFile(path.join(pagesDir, file), "utf-8");
+    const page = yaml.load(content) as any;
+    const showInFooter =
+      page?.showInFooter === undefined ? true : page?.showInFooter === true;
+    const href =
+      page?.pageType === "service" ? `/service/${slug}` : `/${slug}`;
+    footerPageMap.set(slug, {
+      label: page?.title || slug,
+      href,
+      showInFooter,
+    });
+  }
+} catch (e) {
+  // If pages directory isn't available, keep default nav
+}
+
+const footerNavItems = navItems.filter((item) => {
+  if (item.external) return true;
+  const href = item.href || "";
+  const slug = href.startsWith("/service/")
+    ? href.replace("/service/", "")
+    : href.replace("/", "");
+  const footerMeta = footerPageMap.get(slug);
+  if (!footerMeta) return true;
+  return footerMeta.showInFooter;
+});
+
+for (const footerMeta of footerPageMap.values()) {
+  if (!footerMeta.showInFooter) continue;
+  if (footerNavItems.some((item) => item.href === footerMeta.href)) continue;
+  footerNavItems.push({
+    label: footerMeta.label,
+    href: footerMeta.href,
+  });
+}
+---
+
+<footer class="footer-container mt-auto">
+  <div class="max-w-content mx-auto px-8 py-8">
+    <div class="footer-grid">
+      <!-- Logo -->
+      <div class="footer-logo-section">
+        {
+          footerLogoUrl ? (
+            <img src={footerLogoUrl} alt={siteTitle} class="footer-logo" />
+          ) : (
+            <span class="text-2xl font-heading">{siteTitle}</span>
+          )
+        }
+      </div>
+
+      <!-- Story/Description -->
+      <div class="footer-text text-sm leading-relaxed">
+        {story && <p>{story}</p>}
+
+        {/* External links */}
+        {
+          (websiteUrl || portfolioUrl) && (
+            <div class="mt-4 space-y-1">
+              {websiteUrl && (
+                <a
+                  href={websiteUrl}
+                  target="_blank"
+                  rel="noopener"
+                  class="footer-link block"
+                >
+                  {websiteLabel || websiteUrl}
+                </a>
+              )}
+              {portfolioUrl && (
+                <a
+                  href={portfolioUrl}
+                  target="_blank"
+                  rel="noopener"
+                  class="footer-link block"
+                >
+                  {portfolioLabel || portfolioUrl}
+                </a>
+              )}
+            </div>
+          )
+        }
+      </div>
+
+      <!-- Links -->
+      <div class="text-sm">
+        <h5 class="footer-heading font-heading text-lg mb-4">Links</h5>
+        <ul class="space-y-2 footer-text">
+          {
+            footerNavItems.map(
+              (item: { label: string; href: string; external?: boolean }) => (
+                <li>
+                  <a
+                    href={item.href}
+                    class="footer-link"
+                    target={item.external ? "_blank" : undefined}
+                    rel={item.external ? "noopener noreferrer" : undefined}
+                  >
+                    {item.label}
+                  </a>
+                </li>
+              ),
+            )
+          }
+        </ul>
+
+        {
+          contactEmail && (
+            <>
+              <h5 class="footer-heading font-heading text-lg mt-6 mb-4">
+                Contact
+              </h5>
+              <a href={`mailto:${contactEmail}`} class="footer-link">
+                {contactEmail}
+              </a>
+            </>
+          )
+        }
+      </div>
+    </div>
+
+    <!-- Copyright -->
+    {
+      showCredits && (
+        <div class="mt-12 text-center text-xs footer-text">
+          <span>
+            © {copyrightStart}-{new Date().getFullYear()} {copyrightName}
+          </span>
+          {artistName && <span> by {artistName}</span>}
+          <span class="mx-2">·</span>
+          <span>All rights reserved</span>
+          <span class="mx-2">·</span>
+          <a href="/service/terms" class="footer-link">
+            Terms of Use
+          </a>
+          <span class="mx-2">·</span>
+          <a href="/service/privacy" class="footer-link">
+            Privacy Policy
+          </a>
+        </div>
+      )
+    }
+  </div>
+</footer>
+
+<style
+  define:vars={{
+    "footer-bg":
+      themeConfig?.footer?.backgroundColor || "var(--color-background-alt)",
+  }}
+>
+  .footer-container {
+    background-color: var(--footer-bg);
+  }
+
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 1fr 2fr 1fr;
+    gap: 2rem 3rem;
+    align-items: start; /* Top-align columns */
+  }
+
+  .footer-logo-section {
+    display: flex;
+    justify-content: flex-start;
+  }
+
+  .footer-logo {
+    width: 200px;
+    height: auto;
+    object-fit: contain;
+    opacity: 0.8;
+  }
+
+  .footer-heading {
+    color: var(--color-text);
+  }
+
+  .footer-text {
+    color: var(--color-text-muted);
+  }
+
+  .footer-link {
+    color: var(--color-accent);
+    text-decoration: none;
+    transition: opacity 0.2s ease;
+  }
+
+  .footer-link:hover {
+    opacity: 0.8;
+    border: none;
+  }
+
+  @media (max-width: 768px) {
+    .footer-grid {
+      grid-template-columns: 1fr;
+      text-align: center;
+    }
+
+    .footer-logo-section {
+      justify-content: center;
+    }
+  }
+</style>

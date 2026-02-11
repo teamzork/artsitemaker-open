@@ -1,0 +1,361 @@
+---
+// packages/site/src/pages/index.astro
+// Dynamic home page that renders different content based on the homePage setting
+import PageLayout from '@layouts/PageLayout.astro';
+import { marked } from 'marked';
+import type { ArtworkData, SettingsData, PageData } from '../types/content';
+import { getImageBaseUrl } from '../lib/paths';
+import { loadSettings, listArtworks, loadPage } from '../lib/content-service';
+import { getPageSettings } from '../lib/pageTypes';
+
+const settings: SettingsData | null = await loadSettings();
+const pageSettings = await getPageSettings();
+const imageBaseUrl = getImageBaseUrl();
+
+// Determine which page should be the home page
+const homePage = pageSettings.homePage || 'gallery';
+
+// Handle slider home page - redirect to slideshow
+// (Slideshow has complex JS that needs its own page)
+if (homePage === 'slider') {
+  return Astro.redirect('/slideshow');
+}
+
+// ============================================================================
+// Gallery Home Page Data
+// ============================================================================
+let artworks: ArtworkData[] = [];
+let galleryClickBehavior = 'slideshow';
+
+if (homePage === 'gallery' || homePage === 'home') {
+  artworks = await listArtworks();
+  galleryClickBehavior = settings?.home?.galleryClick || 'slideshow';
+}
+
+function getArtworkLink(artwork: ArtworkData, index: number): string {
+  if (galleryClickBehavior === 'detail') {
+    return `/gallery/${artwork.slug}`;
+  }
+  return `/slideshow#/${index}`;
+}
+
+// ============================================================================
+// About Home Page Data
+// ============================================================================
+let aboutPage: PageData | null = null;
+let aboutParsedContent = '';
+
+if (homePage === 'about') {
+  aboutPage = await loadPage('about');
+  aboutParsedContent = aboutPage?.content ? await marked.parse(aboutPage.content) : '';
+}
+
+// ============================================================================
+// Page Title
+// ============================================================================
+const pageTitle = homePage === 'about' && aboutPage?.title 
+  ? aboutPage.title 
+  : homePage === 'slider' 
+    ? 'Slideshow'
+    : 'Gallery';
+---
+
+<PageLayout title={pageTitle}>
+  {/* Gallery Home */}
+  {(homePage === 'gallery' || homePage === 'home') && (
+    <div class="gallery-page" data-testid="gallery-page">
+      <div id="gallery" class="max-w-content mx-auto gallery-container" data-testid="gallery-container">
+        {artworks.length === 0 ? (
+          <p class="text-km-text-muted text-center py-20" data-testid="gallery-empty">
+            No artworks to display yet.
+          </p>
+        ) : (
+          <div id="justified-gallery" class="justified-gallery" data-row-height="140" data-testid="gallery-grid">
+            {artworks.map((artwork, index) => (
+              <a
+                href={getArtworkLink(artwork, index)}
+                class="gallery-item"
+                data-testid="gallery-item"
+                data-artwork-slug={artwork.slug}
+                data-width={artwork.processing?.originalDimensions?.[0] || 800}
+                data-height={artwork.processing?.originalDimensions?.[1] || 800}
+              >
+                <img
+                  src={artwork.processing?.processedAt
+                    ? `${imageBaseUrl}/small/${artwork.slug}.webp`
+                    : '/placeholder.svg'
+                  }
+                  alt={artwork.title}
+                  loading="lazy"
+                  data-testid="gallery-item-image"
+                />
+                <div class="caption">{artwork.title}</div>
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )}
+
+  {/* About Home */}
+  {homePage === 'about' && (
+    <article class="about-page">
+      <div class="about-content">
+        <div class="about-text prose max-w-none">
+          {aboutPage?.title && (
+            <h1 class="about-title">{aboutPage.title}</h1>
+          )}
+
+          {aboutParsedContent ? (
+            <div class="markdown-content" set:html={aboutParsedContent} />
+          ) : (
+            <div>
+              <h2>About</h2>
+              <p>Welcome to my art portfolio.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </article>
+  )}
+
+</PageLayout>
+
+<style>
+  /* Gallery Styles */
+  .gallery-page {
+    /* Let theme CSS handle the padding */
+  }
+  
+  .gallery-container {
+    /* Padding set in theme CSS */
+  }
+  
+  .justified-gallery {
+    font-size: 0;
+    line-height: 0;
+    text-align: left;
+  }
+  
+  .gallery-item {
+    display: inline-block;
+    vertical-align: top;
+    overflow: hidden;
+    position: relative;
+    text-decoration: none;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  
+  .gallery-item img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  .gallery-item .caption {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    color: var(--color-text-inverted, #fff);
+    padding: 8px 12px;
+    font-size: 12px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+  }
+  
+  .gallery-item:hover .caption {
+    opacity: 1;
+  }
+  
+  @media (max-width: 720px) {
+    .gallery-item .caption {
+      display: none;
+    }
+  }
+
+  /* About Styles */
+  .about-title {
+    font-family: var(--font-heading, sans-serif);
+    font-size: 2rem;
+    font-weight: 400;
+    color: var(--color-text);
+    margin: 0 0 1.5rem 0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .prose h2 {
+    color: var(--color-accent);
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+  }
+
+  .prose h2:first-child {
+    margin-top: 0;
+  }
+  
+  .prose p {
+    color: var(--color-text);
+    margin-bottom: 1rem;
+    line-height: 1.7;
+  }
+  
+  .prose a {
+    color: var(--color-link);
+    text-decoration: none;
+  }
+  
+  .prose a:hover {
+    color: var(--color-link-hover);
+    text-decoration: underline;
+  }
+  
+  .prose ul {
+    list-style: none;
+    padding: 0;
+  }
+  
+  .prose li {
+    margin-bottom: 0.5rem;
+  }
+
+  .prose strong {
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  .prose img {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--corner-radius, 0);
+    margin: 1rem 0;
+  }
+
+  .prose br {
+    display: block;
+    margin-bottom: 0.25rem;
+  }
+</style>
+
+<script>
+  /**
+   * Justified Gallery Algorithm (Flickr/Google Photos style)
+   */
+  function runJustifiedGallery() {
+    const gallery = document.getElementById('justified-gallery');
+    if (!gallery) return;
+    
+    const items = Array.from(gallery.querySelectorAll('.gallery-item')) as HTMLElement[];
+    if (items.length === 0) return;
+    
+    const galleryStyle = window.getComputedStyle(gallery);
+    const paddingLeft = parseFloat(galleryStyle.paddingLeft) || 0;
+    const paddingRight = parseFloat(galleryStyle.paddingRight) || 0;
+    const containerWidth = gallery.clientWidth - paddingLeft - paddingRight;
+    if (containerWidth <= 0) return;
+    
+    const isMobile = window.innerWidth <= 720;
+    const baseRowHeight = isMobile ? 100 : 180;
+    const gap = isMobile ? 12 : 20;
+    
+    interface ImgData {
+      el: HTMLElement;
+      aspect: number;
+      natW: number;
+    }
+    
+    const images: ImgData[] = items.map(item => {
+      const w = parseFloat(item.dataset.width || '800');
+      const h = parseFloat(item.dataset.height || '800');
+      const aspect = w / h;
+      return { el: item, aspect: aspect, natW: baseRowHeight * aspect };
+    });
+    
+    const rows: ImgData[][] = [];
+    let row: ImgData[] = [];
+    let rowW = 0;
+    
+    for (let i = 0; i < images.length; i++) {
+      const img = images[i];
+      const gapW = row.length > 0 ? gap : 0;
+      const needed = img.natW + gapW;
+      
+      if (rowW + needed > containerWidth && row.length > 0) {
+        rows.push(row);
+        row = [img];
+        rowW = img.natW;
+      } else {
+        row.push(img);
+        rowW += needed;
+      }
+    }
+    if (row.length > 0) rows.push(row);
+    
+    for (let ri = 0; ri < rows.length; ri++) {
+      const currentRow = rows[ri];
+      const isLastRow = ri === rows.length - 1;
+      const sumNatW = currentRow.reduce((s, img) => s + img.natW, 0);
+      const numGaps = currentRow.length - 1;
+      const gapsW = numGaps * gap;
+      const availW = containerWidth - gapsW;
+      
+      let scale: number;
+      if (isLastRow && sumNatW < availW * 0.75) {
+        scale = 1;
+      } else {
+        scale = availW / sumNatW;
+      }
+      
+      const rowHeight = Math.round(baseRowHeight * scale);
+      let usedWidth = 0;
+      
+      for (let ci = 0; ci < currentRow.length; ci++) {
+        const img = currentRow[ci];
+        const isLastInRow = ci === currentRow.length - 1;
+        
+        let imgWidth: number;
+        if (isLastInRow && !isLastRow) {
+          imgWidth = containerWidth - usedWidth - gapsW;
+        } else if (isLastInRow && isLastRow && sumNatW >= availW * 0.75) {
+          imgWidth = containerWidth - usedWidth - gapsW;
+        } else {
+          imgWidth = Math.floor(img.natW * scale);
+        }
+        
+        img.el.style.width = imgWidth + 'px';
+        img.el.style.height = rowHeight + 'px';
+        img.el.style.marginRight = isLastInRow ? '0px' : gap + 'px';
+        img.el.style.marginBottom = gap + 'px';
+        
+        usedWidth += imgWidth;
+      }
+    }
+  }
+  
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      requestAnimationFrame(() => runJustifiedGallery());
+    });
+  } else {
+    requestAnimationFrame(() => runJustifiedGallery());
+  }
+  
+  let resizeTimer: number;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = window.setTimeout(runJustifiedGallery, 100);
+  });
+  
+  document.querySelectorAll('.gallery-item img').forEach(img => {
+    if (!(img as HTMLImageElement).complete) {
+      img.addEventListener('load', runJustifiedGallery);
+    }
+  });
+</script>

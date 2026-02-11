@@ -1,0 +1,229 @@
+version: 1
+root: user-data/<project>
+strict: false
+rules:
+  - path: artworks
+    type: dir
+    required: true
+    children:
+      - path: "*.yaml"
+        type: file
+        required: false
+        namePattern: "^[a-z0-9-]+\\.yaml$"
+        parse: yaml
+
+  - path: assets
+    type: dir
+    required: true
+    children:
+      - path: fonts
+        type: dir
+        required: true
+        children:
+          - path: "*.woff2"
+            type: file
+            required: false
+      - path: logos
+        type: dir
+        required: true
+        children:
+          - path: "*.png"
+            type: file
+            required: false
+          - path: "*.svg"
+            type: file
+            required: false
+      - path: textures
+        type: dir
+        required: true
+        children:
+          - path: "*.jpg"
+            type: file
+            required: false
+          - path: "*.jpeg"
+            type: file
+            required: false
+          - path: "*.png"
+            type: file
+            required: false
+
+  - path: backups
+    type: dir
+    required: false
+    children:
+      - path: "userdata-backup-*.tar.gz"
+        type: file
+        required: false
+
+  - path: collections
+    type: dir
+    required: true
+    children:
+      - path: "*.yaml"
+        type: file
+        required: false
+        namePattern: "^[a-z0-9-]+\\.yaml$"
+        parse: yaml
+
+  - path: configuration
+    type: dir
+    required: true
+    children:
+      - path: image-hosting.yaml
+        type: file
+        required: true
+        parse: yaml
+        seed: |
+          imageStorage: local
+          r2:
+            publicUrl: ""
+            bucketName: ""
+            projectPrefix: ""
+      - path: project-configuration.yaml
+        type: file
+        required: true
+        parse: yaml
+        seed: |
+          auth:
+            type: github
+            allowedUsers: []
+          deploy:
+            method: none
+          git:
+            autoCommit: false
+            remote: origin
+          images:
+            processing:
+              large: 2124
+              medium: 1062
+              small: 531
+              thumbnail: 200
+      - path: secrets.yaml.enc
+        type: file
+        required: false
+        seed: |
+          # Encrypted secrets vault (managed via admin UI)
+
+  - path: pages
+    type: dir
+    required: true
+    children:
+      - path: about.yaml
+        type: file
+        required: true
+        parse: yaml
+        seed: |
+          slug: about
+          title: About
+          template: about
+          sortOrder: 1
+          showInNav: true
+          content: ""
+          featuredArtwork: ""
+      - path: components
+        type: dir
+        required: true
+        children:
+          - path: footer.yaml
+            type: file
+            required: true
+            parse: yaml
+            seed: |
+              sections: []
+      - path: privacy.yaml
+        type: file
+        required: true
+        parse: yaml
+        seed: |
+          slug: privacy
+          title: Privacy
+          template: page
+          sortOrder: 99
+          showInNav: false
+          content: ""
+      - path: terms.yaml
+        type: file
+        required: true
+        parse: yaml
+        seed: |
+          slug: terms
+          title: Terms
+          template: page
+          sortOrder: 100
+          showInNav: false
+          content: ""
+
+  - path: settings
+    type: dir
+    required: true
+    children:
+      - path: identity.yaml
+        type: file
+        required: true
+        parse: yaml
+        seed: |
+          identityKit:
+            backgroundColor: "#ffffff"
+            accentColor: "#efb600"
+            textColor: "#000000"
+            invertedTextColor: "#ffffff"
+            linkColor: "#1a73e8"
+            fonts:
+              heading: ""
+              body: ""
+            logo:
+              file: ""
+              width: 126
+            background:
+              texture: ""
+              textureMode: tile
+      - path: pages.yaml
+        type: file
+        required: true
+        parse: yaml
+        seed: |
+          enabled:
+            home: false
+            gallery: true
+            slider: true
+            art_piece: true
+            about: true
+            collections_list: false
+            article: false
+            schedule: false
+            contact: false
+            search_results: false
+            service: true
+          homePage: gallery
+          linking:
+            galleryClick: slider
+            collectionClick: gallery
+            artPieceBack: slider
+            searchResultClick: art_piece
+      - path: settings.yaml
+        type: file
+        required: true
+        parse: yaml
+        seed: |
+          site:
+            title: "My Portfolio"
+            tagline: "Artist Portfolio"
+            url: "http://localhost:4321"
+            language: en
+          seo:
+            description: "My artist portfolio"
+            keywords: []
+          images:
+            sizes:
+              large: 2124
+              medium: 1062
+              small: 531
+            quality: 85
+          theme:
+            active: minimalist
+      - path: theme.yaml
+        type: file
+        required: true
+        parse: yaml
+        seed: |
+          theme: minimalist

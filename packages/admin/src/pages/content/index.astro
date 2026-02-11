@@ -1,0 +1,686 @@
+---
+// packages/admin/src/pages/content/index.astro
+import AdminLayout from "@layouts/AdminLayout.astro";
+import fs from "fs/promises";
+import path from "path";
+import yaml from "js-yaml";
+import Modal from "../../components/Modal.astro";
+import Button from "../../components/ui/Button.astro";
+import { Toaster } from "../../components/ui/Toast";
+import { getContentPath } from "../../lib/paths";
+import { isCoreContentFile, getCoreContentFileDefault } from "../../lib/pages";
+
+const contentPath = getContentPath();
+
+// Self-heal: ensure core content files exist
+async function ensureCoreContentFiles() {
+  const pagesDir = path.join(contentPath, "pages");
+  await fs.mkdir(pagesDir, { recursive: true });
+
+  const aboutPath = path.join(pagesDir, "about.yaml");
+  try {
+    await fs.access(aboutPath);
+  } catch {
+    // about.yaml is missing, recreate it
+    const defaultContent = getCoreContentFileDefault("about");
+    if (defaultContent) {
+      const yaml = await import("js-yaml");
+      await fs.writeFile(aboutPath, yaml.dump(defaultContent), "utf-8");
+      console.log("[Self-heal] Recreated about.yaml");
+    }
+  }
+}
+
+await ensureCoreContentFiles();
+
+// Load all pages dynamically
+const pages: {
+  slug: string;
+  title: string;
+  template: string;
+  pageType?: string;
+}[] = [];
+try {
+  const pagesPath = path.join(contentPath, "pages");
+  const files = await fs.readdir(pagesPath);
+  for (const file of files) {
+    if (file.endsWith(".yaml")) {
+      const content = await fs.readFile(path.join(pagesPath, file), "utf-8");
+      const page = yaml.load(content) as any;
+      pages.push({
+        slug: page.slug || file.replace(".yaml", ""),
+        title: page.title || "Untitled",
+        template: page.template || "default",
+        pageType: page.pageType,
+      });
+    }
+  }
+  // Sort by title
+  pages.sort((a, b) => a.title.localeCompare(b.title));
+} catch (e) {
+  console.error("Failed to load pages:", e);
+}
+
+// Load footer settings from footer.yaml
+let footerSettings: any = {};
+try {
+  const { getFooterPath, getSettingsFilePath } =
+    await import("../../lib/config-paths");
+  const footerPath = getFooterPath();
+  const content = await fs.readFile(footerPath, "utf-8");
+  footerSettings = yaml.load(content) as any;
+} catch (e) {
+  // If footer.yaml doesn't exist, try fallback to settings.yaml footer section
+  try {
+    const { getSettingsFilePath } = await import("../../lib/config-paths");
+    const content = await fs.readFile(getSettingsFilePath(), "utf-8");
+    const settings = yaml.load(content) as any;
+    if (settings.footer) {
+      footerSettings = settings.footer;
+    }
+  } catch (e2) {}
+}
+// Load root content files (settings, navigation, etc.)
+let rootFiles: string[] = [];
+try {
+  const allFiles = await fs.readdir(contentPath);
+  for (const file of allFiles) {
+    // Skip system files and known directories
+    if (
+      file.startsWith(".") ||
+      ["pages", "artworks", "collections", "files"].includes(file)
+    )
+      continue;
+
+    // Check if it's a file
+    const stats = await fs.stat(path.join(contentPath, file));
+    if (stats.isFile()) {
+      rootFiles.push(file);
+    }
+  }
+} catch (e) {
+  console.error("Failed to load root files:", e);
+}
+---
+
+<AdminLayout title="Content Editor">
+  <div class="space-y-8">
+    <!-- Pages Section -->
+    <div>
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold">📄 Pages</h2>
+        <button id="new-page-btn" class="btn btn-primary text-sm"
+          >+ New Page</button
+        >
+      </div>
+
+      <div
+        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3"
+      >
+        {
+          pages.length === 0 ? (
+            <div class="card text-center py-6 text-admin-muted col-span-full">
+              No pages found. Create your first page to get started.
+            </div>
+          ) : (
+            pages.map((page) => (
+              <a
+                href={`/content/${page.slug}`}
+                class="card flex items-center justify-between hover:ring-2 hover:ring-admin-accent transition-all"
+              >
+                <div>
+                  <div class="font-medium">
+                    {page.title}
+                    {isCoreContentFile(page.slug) && (
+                      <span class="text-[10px] text-admin-accent ml-2 font-semibold">
+                        CORE
+                      </span>
+                    )}
+                  </div>
+                  <div class="text-sm text-admin-muted">
+                    {page.pageType === "service" ? (
+                      <span class="text-admin-accent">
+                        /service/{page.slug}
+                      </span>
+                    ) : (
+                      <span>/{page.slug}</span>
+                    )}
+                    {page.template !== "default" && (
+                      <span class="ml-2">• Template: {page.template}</span>
+                    )}
+                  </div>
+                </div>
+                <span class="text-admin-muted">→</span>
+              </a>
+            ))
+          )
+        }
+      </div>
+    </div>
+
+    <!-- Navigation Section -->
+    <div class="card">
+      <h2 class="text-lg font-semibold mb-6">🧭 Navigation</h2>
+      <p class="text-sm text-admin-muted mb-4">
+        The navigation menu is automatically generated based on your pages. To
+        change the order or add custom links, edit the navigation settings.
+      </p>
+      <a
+        href="/settings/pages"
+        class="text-admin-accent hover:underline text-sm"
+      >
+        Configure navigation in Settings →
+      </a>
+    </div>
+
+    <!-- Footer Section -->
+    <div class="card">
+      <h2 class="text-lg font-semibold mb-6">🦶 Footer Content</h2>
+      <p class="text-sm text-admin-muted mb-6">
+        Edit the content that appears in the footer across all pages.
+      </p>
+
+      <form id="footer-form" class="space-y-6">
+        <!-- Story/Description -->
+        <div>
+          <label class="block text-sm text-admin-muted mb-2"
+            >Story / Description</label
+          >
+          <textarea
+            name="story"
+            rows="4"
+            class="w-full bg-admin-sidebar"
+            placeholder="A brief description about the artist or artwork collection..."
+            >{footerSettings.story || ""}</textarea
+          >
+        </div>
+
+        <!-- Links -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm text-admin-muted mb-2"
+              >Website URL</label
+            >
+            <input
+              type="url"
+              name="websiteUrl"
+              value={footerSettings.websiteUrl || ""}
+              class="w-full"
+              placeholder="https://www.example.com"
+            />
+          </div>
+          <div>
+            <label class="block text-sm text-admin-muted mb-2"
+              >Website Label</label
+            >
+            <input
+              type="text"
+              name="websiteLabel"
+              value={footerSettings.websiteLabel || ""}
+              class="w-full"
+              placeholder="www.example.com"
+            />
+          </div>
+          <div>
+            <label class="block text-sm text-admin-muted mb-2"
+              >Portfolio URL</label
+            >
+            <input
+              type="url"
+              name="portfolioUrl"
+              value={footerSettings.portfolioUrl || ""}
+              class="w-full"
+              placeholder="https://flickr.com/username"
+            />
+          </div>
+          <div>
+            <label class="block text-sm text-admin-muted mb-2"
+              >Portfolio Label</label
+            >
+            <input
+              type="text"
+              name="portfolioLabel"
+              value={footerSettings.portfolioLabel || ""}
+              class="w-full"
+              placeholder="flickr.com/username"
+            />
+          </div>
+        </div>
+
+        <!-- Contact -->
+        <div>
+          <label class="block text-sm text-admin-muted mb-2"
+            >Contact Email</label
+          >
+          <input
+            type="email"
+            name="contactEmail"
+            value={footerSettings.contactEmail || ""}
+            class="w-full"
+            placeholder="artist@example.com"
+          />
+        </div>
+
+        <!-- Copyright -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm text-admin-muted mb-2"
+              >Copyright Start Year</label
+            >
+            <input
+              type="number"
+              name="copyrightStart"
+              value={footerSettings.copyrightStart || new Date().getFullYear()}
+              class="w-full"
+            />
+          </div>
+          <div>
+            <label class="block text-sm text-admin-muted mb-2"
+              >Copyright Name</label
+            >
+            <input
+              type="text"
+              name="copyrightName"
+              value={footerSettings.copyrightName || ""}
+              class="w-full"
+              placeholder="Artist Name Art"
+            />
+          </div>
+        </div>
+
+        <!-- Options -->
+        <div class="flex items-center gap-6">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              name="showCredits"
+              checked={footerSettings.showCredits !== false}
+              class="w-4 h-4"
+            />
+            <span class="text-sm">Show credits</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              name="showLogo"
+              checked={footerSettings.showLogo !== false}
+              class="w-4 h-4"
+            />
+            <span class="text-sm">Show logo in footer</span>
+          </label>
+        </div>
+
+        <div class="flex items-center gap-4">
+          <Button
+            type="submit"
+            id="footer-save-btn"
+            variant="accent"
+            disabled
+            tooltip="No changes to save">💾 Save Footer</Button
+          >
+          <span id="footer-status" class="text-sm text-admin-muted"></span>
+        </div>
+      </form>
+    </div>
+
+    <!-- Configuration Files Section -->
+    <div class="card">
+      <h2 class="text-lg font-semibold mb-4">⚙️ Configuration Files</h2>
+      <div class="space-y-2">
+        {
+          rootFiles.length === 0 ? (
+            <p class="text-sm text-admin-muted">
+              No configuration files found in content root.
+            </p>
+          ) : (
+            <ul class="divide-y divide-admin-border">
+              {rootFiles.map((file) => (
+                <li class="py-2 flex items-center justify-between">
+                  <span class="font-mono text-sm">{file}</span>
+                  <div class="flex items-center gap-3">
+                    <span class="text-xs text-admin-muted">
+                      {file === "settings.yaml"
+                        ? "(Site Settings)"
+                        : file === "footer.yaml"
+                          ? "(Footer Content)"
+                          : file === "navigation.yaml"
+                            ? "(Site Navigation)"
+                            : "File"}
+                    </span>
+                    <button
+                      class="text-admin-muted hover:text-red-400 p-1 delete-root-file-btn"
+                      data-filename={file}
+                      title="Delete File"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )
+        }
+      </div>
+    </div>
+
+    <Modal
+      id="delete-file-modal"
+      title="Delete Configuration File"
+      confirmText="Delete File"
+      variant="danger"
+    >
+      <p class="text-sm text-admin-muted mb-4">
+        Are you sure you want to delete <strong id="delete-filename-display"
+        ></strong>? This action cannot be undone.
+      </p>
+      <div id="delete-status" class="text-sm hidden mb-4"></div>
+    </Modal>
+
+    <Modal
+      id="new-page-modal"
+      title="Create New Page"
+      confirmText="Create Page"
+    >
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm text-admin-muted mb-2">Page Slug</label>
+          <input
+            type="text"
+            id="new-page-slug"
+            class="w-full"
+            placeholder="my-page"
+            pattern="[a-z0-9-]+"
+          />
+          <p class="text-xs text-admin-muted mt-1">
+            URL-friendly name (lowercase, hyphens allowed)
+          </p>
+        </div>
+        <div>
+          <label class="block text-sm text-admin-muted mb-2">Page Title</label>
+          <input
+            type="text"
+            id="new-page-title"
+            class="w-full"
+            placeholder="My New Page"
+          />
+        </div>
+        <div>
+          <label class="block text-sm text-admin-muted mb-2">
+            Add to navigation (optional)
+          </label>
+          <div class="grid grid-cols-2 gap-4">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                id="new-page-show-in-header"
+                class="w-4 h-4"
+              />
+              <span class="text-sm">Header</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                id="new-page-show-in-footer"
+                class="w-4 h-4"
+              />
+              <span class="text-sm">Footer</span>
+            </label>
+          </div>
+          <p class="text-xs text-admin-muted mt-2">
+            You can change this later in the page editor.
+          </p>
+        </div>
+        <div id="new-page-error" class="text-sm text-red-400 hidden"></div>
+      </div>
+    </Modal>
+  </div>
+
+  <Toaster client:load />
+</AdminLayout>
+
+<script>
+  import { createFormChangeDetector } from "../../lib/form-change-detector";
+  import { createFormSaveHandler } from "../../lib/form-save-handler";
+
+  const form = document.getElementById("footer-form") as HTMLFormElement | null;
+  const saveBtn = document.getElementById(
+    "footer-save-btn",
+  ) as HTMLButtonElement | null;
+  const statusEl = document.getElementById("footer-status");
+
+  if (!form || !saveBtn) {
+    console.error("Footer form or save button not found");
+  } else {
+    // Create change detector
+    const changeDetector = createFormChangeDetector({
+      form,
+      saveButton: saveBtn,
+    });
+
+    // Create save handler
+    const saveHandler = createFormSaveHandler({
+      form,
+      saveButton: saveBtn,
+      statusElement: statusEl,
+      successToast: {
+        title: "Footer saved",
+        description: "Footer settings have been updated.",
+        variant: "success",
+      },
+      errorToast: (err: Error) => ({
+        title: "Save failed",
+        description: err.message,
+        variant: "destructive",
+      }),
+      saveFn: async (formData: FormData) => {
+        const footerData: any = {};
+
+        for (const [key, value] of formData.entries()) {
+          if (key === "showCredits" || key === "showLogo") {
+            footerData[key] = true;
+          } else if (key === "copyrightStart") {
+            footerData[key] = Number(value);
+          } else {
+            footerData[key] = value;
+          }
+        }
+
+        // Handle unchecked checkboxes
+        if (!formData.has("showCredits")) footerData.showCredits = false;
+        if (!formData.has("showLogo")) footerData.showLogo = false;
+
+        return fetch("/api/footer", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(footerData),
+        });
+      },
+      onAfterSave: () => {
+        changeDetector.reset();
+      },
+    });
+
+    // Initialize (defer to next tick to ensure DOM is fully ready)
+    setTimeout(() => {
+      changeDetector.initialize();
+      saveHandler.attach();
+    }, 0);
+  }
+
+  // ========== Delete File Handling ==========
+  const deleteModal = document.getElementById("delete-file-modal");
+  const deleteFilenameDisplay = document.getElementById(
+    "delete-filename-display",
+  );
+  const deleteStatus = document.getElementById("delete-status");
+  let fileToDelete: string | null = null;
+
+  // Attach listeners to buttons
+  document.querySelectorAll(".delete-root-file-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const filename = btn.getAttribute("data-filename");
+      if (filename) {
+        fileToDelete = filename;
+        if (deleteFilenameDisplay) deleteFilenameDisplay.textContent = filename;
+        (deleteModal as any)?.open();
+      }
+    });
+  });
+
+  // Handle Confirm Delete
+  deleteModal?.addEventListener("confirm", async () => {
+    if (!fileToDelete) return;
+
+    const confirmBtn = deleteModal.querySelector(
+      ".confirm-modal",
+    ) as HTMLButtonElement | null;
+    if (confirmBtn) {
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = "Deleting...";
+    }
+
+    try {
+      const res = await fetch("/api/content-file", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filename: fileToDelete }),
+      });
+
+      if (res.ok) {
+        if (deleteStatus) {
+          deleteStatus.textContent = "✓ Deleted";
+          deleteStatus.className = "text-sm text-green-400";
+          deleteStatus.classList.remove("hidden");
+        }
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      } else {
+        throw new Error("Delete failed");
+      }
+    } catch (e) {
+      if (deleteStatus) {
+        deleteStatus.textContent = "✗ Delete failed";
+        deleteStatus.className = "text-sm text-red-400";
+        deleteStatus.classList.remove("hidden");
+      }
+      if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = "Delete File";
+      }
+    }
+  });
+
+  // Reset modal on close
+  deleteModal?.addEventListener("close", () => {
+    if (deleteStatus) {
+      deleteStatus.classList.add("hidden");
+      deleteStatus.textContent = "";
+    }
+    fileToDelete = null;
+  });
+
+  // ========== New Page Modal Handling ==========
+  const newPageModal = document.getElementById("new-page-modal");
+  const newPageBtn = document.getElementById("new-page-btn");
+  const newPageSlug = document.getElementById(
+    "new-page-slug",
+  ) as HTMLInputElement;
+  const newPageTitle = document.getElementById(
+    "new-page-title",
+  ) as HTMLInputElement;
+  const newPageShowInHeader = document.getElementById(
+    "new-page-show-in-header",
+  ) as HTMLInputElement;
+  const newPageShowInFooter = document.getElementById(
+    "new-page-show-in-footer",
+  ) as HTMLInputElement;
+  const newPageError = document.getElementById("new-page-error");
+
+  newPageBtn?.addEventListener("click", () => {
+    newPageSlug.value = "";
+    newPageTitle.value = "";
+    newPageShowInHeader.checked = false;
+    newPageShowInFooter.checked = false;
+    newPageError?.classList.add("hidden");
+    (newPageModal as any)?.open();
+  });
+
+  async function syncPageNavVisibility(slug: string, showInNav: boolean) {
+    try {
+      const res = await fetch("/api/pages", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          showInNav: {
+            [slug]: showInNav,
+          },
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Navigation sync failed");
+      }
+    } catch (e) {
+      window.dispatchEvent(
+        new CustomEvent("artsitemaker:toast", {
+          detail: {
+            title: "Navigation not updated",
+            description:
+              "Page created, but navigation visibility could not be updated.",
+            variant: "warning",
+          },
+        }),
+      );
+    }
+  }
+
+  newPageModal?.addEventListener("confirm", async () => {
+    const slug = newPageSlug.value.trim().toLowerCase();
+    const title = newPageTitle.value.trim();
+    const showInNav = newPageShowInHeader.checked;
+    const showInFooter = newPageShowInFooter.checked;
+
+    if (!slug || !title) {
+      newPageError!.textContent = "Both slug and title are required";
+      newPageError?.classList.remove("hidden");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/page", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          slug,
+          title,
+          showInNav,
+          showInFooter,
+          showInCopyright: false,
+        }),
+      });
+
+      if (res.ok) {
+        await syncPageNavVisibility(slug, showInNav);
+        sessionStorage.setItem(
+          "artsitemaker:new-page",
+          JSON.stringify({ slug, title }),
+        );
+        window.location.href = `/content/${slug}`;
+      } else {
+        const data = await res.json();
+        newPageError!.textContent = data.error || "Failed to create page";
+        newPageError?.classList.remove("hidden");
+      }
+    } catch (e) {
+      newPageError!.textContent = "Failed to create page";
+      newPageError?.classList.remove("hidden");
+    }
+  });
+
+  // Reset modal on close
+  newPageModal?.addEventListener("close", () => {
+    newPageError?.classList.add("hidden");
+    newPageError!.textContent = "";
+  });
+</script>
