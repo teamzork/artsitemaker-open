@@ -1,6 +1,9 @@
 ---
+import fs from "fs";
+import path from "path";
 import { getSession } from "../lib/auth";
 import { getAppMeta } from "../lib/app-config";
+import { getRepoPath } from "../lib/paths";
 import Chevron from "./icons/Chevron.astro";
 
 import {
@@ -41,6 +44,17 @@ const {
   displayName: projectDisplayName,
   shortDescription: projectShortDescription,
 } = getAppMeta();
+
+const repoRoot = getRepoPath();
+const hasExportDir = fs.existsSync(path.join(repoRoot, "export"));
+const releaseLabel = hasExportDir ? "Internal" : "Open";
+const releasePrefix = hasExportDir ? "Build" : "Version";
+const releaseBadgeClasses = [
+  "mt-3 px-2 py-1 rounded-md border text-[10px] uppercase tracking-widest flex items-center justify-between",
+  hasExportDir
+    ? "bg-amber-500/10 text-amber-300 border-amber-500/30"
+    : "bg-emerald-500/10 text-emerald-300 border-emerald-500/30",
+];
 
 const navItems: NavItem[] = [
   {
@@ -315,6 +329,10 @@ const getActiveHash = () => {
         </div>
       )
     }
+    <div class:list={releaseBadgeClasses}>
+      <span>{releasePrefix}</span>
+      <span>{releaseLabel}</span>
+    </div>
   </div>
 </aside>
 
