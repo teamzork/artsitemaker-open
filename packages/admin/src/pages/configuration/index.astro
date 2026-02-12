@@ -39,6 +39,7 @@ import LockOpen from "../../components/icons/LockOpen.astro";
 import SecretsVault from "../../components/SecretsVault/SecretsVault.astro";
 import { Toggle } from "../../components/ui/Toggle";
 import { getApexDomain, isApexDomain } from "../../lib/domain-utils";
+import { FolderOpen, Image, FlaskConical, Layers, Activity, ShieldCheck, GitBranch, Globe } from "lucide-react";
 
 // Load current settings
 const contentPath = getContentPath();
@@ -339,7 +340,10 @@ const comboboxOptions = Array.from(detectedProjects)
 
     <!-- 1. User Content -->
     <div id="content-location" class="card bg-admin-sidebar/50 scroll-mt-24">
-      <h2 class="text-lg font-semibold mb-4">📁 User Content</h2>
+      <div class="flex items-center gap-2 mb-4">
+        <FolderOpen className="w-5 h-5 text-admin-accent" />
+        <h2 class="text-lg font-semibold">User Content</h2>
+      </div>
       <div class="space-y-4">
         <div>
           <div class="space-y-2">
@@ -456,7 +460,10 @@ const comboboxOptions = Array.from(detectedProjects)
 
     <!-- 2. Image Hosting -->
     <div id="image-hosting" class="card scroll-mt-24">
-      <h2 class="text-lg font-semibold mb-2">📷 Image Hosting</h2>
+      <div class="flex items-center gap-2 mb-2">
+        <Image className="w-5 h-5 text-admin-accent" />
+        <h2 class="text-lg font-semibold">Image Hosting</h2>
+      </div>
       <p class="text-sm text-admin-muted mb-6">
         Choose where your artwork images are stored and served from.
       </p>
@@ -695,7 +702,10 @@ const comboboxOptions = Array.from(detectedProjects)
     <div id="storage-diagnostics" class="card scroll-mt-24">
       <div class="flex flex-col gap-4 mb-4 lg:flex-row lg:items-start lg:justify-between">
         <div class="flex-1 lg:max-w-[65%]">
-          <h2 class="text-lg font-semibold mb-1">🧪 Storage Diagnostics</h2>
+          <div class="flex items-center gap-2 mb-1">
+            <FlaskConical className="w-5 h-5 text-admin-accent" />
+            <h2 class="text-lg font-semibold">Storage Diagnostics</h2>
+          </div>
           <p class="text-sm text-admin-muted">
             Review resolved storage mode and storage configuration. Use the
             check to validate the active storage connection.
@@ -862,7 +872,10 @@ const comboboxOptions = Array.from(detectedProjects)
 
     <!-- Image Processing -->
     <div id="image-processing" class="card scroll-mt-24">
-      <h2 class="text-lg font-semibold mb-6">🖼️ Image Processing</h2>
+      <div class="flex items-center gap-2 mb-6">
+        <Layers className="w-5 h-5 text-admin-accent" />
+        <h2 class="text-lg font-semibold">Image Processing</h2>
+      </div>
 
       <!-- Stats and Process Button -->
       <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
@@ -988,7 +1001,10 @@ const comboboxOptions = Array.from(detectedProjects)
     >
       <div class="flex items-center justify-between mb-4">
         <div>
-          <h2 class="text-lg font-semibold">🏠 Project State</h2>
+          <div class="flex items-center gap-2">
+            <Activity className="w-5 h-5 text-admin-accent" />
+            <h2 class="text-lg font-semibold">Project State</h2>
+          </div>
           <p class="text-sm text-admin-muted">
             Current status and lifecycle of your portfolio
           </p>
@@ -1131,7 +1147,10 @@ const comboboxOptions = Array.from(detectedProjects)
 
     <!-- 5. Authentication -->
     <div id="authentication" class="card border-admin-accent scroll-mt-24">
-      <h2 class="text-lg font-semibold mb-2">🔐 Authentication</h2>
+      <div class="flex items-center gap-2 mb-2">
+        <ShieldCheck className="w-5 h-5 text-admin-accent" />
+        <h2 class="text-lg font-semibold">Authentication</h2>
+      </div>
       <p class="text-sm text-admin-muted mb-6">
         Configure how administrators log in to this panel.
       </p>
@@ -1425,7 +1444,10 @@ const comboboxOptions = Array.from(detectedProjects)
 
   <!-- 7. Git Integration -->
   <div id="git" class="card max-w-4xl mt-8 scroll-mt-24">
-    <h2 class="text-lg font-semibold mb-6">🐙 Git Integration</h2>
+    <h2 class="text-lg font-semibold mb-6 flex items-center gap-2">
+      <GitBranch className="w-5 h-5 text-admin-accent" />
+      Git Integration
+    </h2>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
         <label class="block text-sm text-admin-muted mb-2">Remote</label>
@@ -1469,7 +1491,10 @@ const comboboxOptions = Array.from(detectedProjects)
 
   <!-- 8. Custom Domain -->
   <div id="custom-domain" class="card max-w-4xl mt-8 scroll-mt-24">
-    <h2 class="text-lg font-semibold mb-2">🌐 Custom Domain</h2>
+    <div class="flex items-center gap-2 mb-2">
+      <Globe className="w-5 h-5 text-admin-accent" />
+      <h2 class="text-lg font-semibold">Custom Domain</h2>
+    </div>
     <p class="text-admin-muted mb-6">
       Point a custom domain at your deployed gallery site.
     </p>

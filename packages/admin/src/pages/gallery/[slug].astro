@@ -9,6 +9,7 @@ import Button from '../../components/ui/Button.astro';
 import { Toaster } from '../../components/ui/Toast';
 import Modal from '../../components/Modal.astro';
 import galleryDetailFormScriptUrl from '../../scripts/gallery-detail-form?url';
+import { RefreshCw, Trash2, Save, UploadCloud, Image as ImageIcon } from 'lucide-react';
 
 const { slug } = Astro.params;
 
@@ -108,7 +109,7 @@ const additionalImages = artwork?.additional || [];
       </div>
       <div class="flex gap-3 justify-center">
         <a href="/gallery" class="btn btn-secondary">← Back to Gallery</a>
-        <button type="button" class="btn btn-secondary" onclick="location.reload()">🔄 Try Again</button>
+        <button type="button" class="btn btn-secondary flex items-center gap-2" onclick="location.reload()"><RefreshCw className="w-4 h-4" /> Try Again</button>
       </div>
     </div>
   ) : (
@@ -141,9 +142,9 @@ const additionalImages = artwork?.additional || [];
         
         <div class="flex flex-wrap items-center gap-4">
           <Toggle client:load name="published" label="Published" labelOff="Unpublished" defaultPressed={artwork.published !== false} />
-          <Button type="button" id="delete-btn" variant="secondary" class="text-red-400 hover:bg-red-900/50">🗑️ Delete</Button>
-          <Button type="button" id="reprocess-btn" variant="secondary">🔄 Reprocess</Button>
-          <Button type="submit" id="save-btn" variant="accent" disabled tooltip="No changes to save">💾 Save</Button>
+          <Button type="button" id="delete-btn" variant="secondary" class="text-red-400 hover:bg-red-900/50 flex items-center gap-2"><Trash2 className="w-4 h-4 text-red-400" /> Delete</Button>
+          <Button type="button" id="reprocess-btn" variant="secondary" class="flex items-center gap-2"><RefreshCw className="w-4 h-4" /> Reprocess</Button>
+          <Button type="submit" id="save-btn" variant="accent" disabled tooltip="No changes to save" class="flex items-center gap-2"><Save className="w-4 h-4" /> Save</Button>
         </div>
       </div>
 
@@ -155,7 +156,7 @@ const additionalImages = artwork?.additional || [];
             <div class="flex items-center justify-between mb-4">
               <h3 class="text-lg font-semibold">Primary Image</h3>
               <div class="flex items-center gap-2">
-                <Button type="button" id="update-image-btn" variant="secondary" size="sm" class="py-1">📤 Update Image</Button>
+                <Button type="button" id="update-image-btn" variant="secondary" size="sm" class="py-1 flex items-center gap-2"><UploadCloud className="w-4 h-4" /> Update Image</Button>
                 <span id="process-status" class={`text-xs px-2 py-1 rounded ${hasBeenProcessed ? 'bg-green-900 text-green-300' : 'bg-orange-900 text-orange-300'}`}>
                   {hasBeenProcessed ? '✓ Processed' : '⏳ Needs processing'}
                 </span>
@@ -228,7 +229,7 @@ const additionalImages = artwork?.additional || [];
             
             {additionalImages.length === 0 ? (
               <div class="text-center py-8 text-admin-muted border-2 border-dashed border-admin-border rounded-lg">
-                <span class="text-3xl block mb-2">🖼️</span>
+                <span class="flex justify-center mb-2"><ImageIcon className="w-8 h-8 text-admin-muted" /></span>
                 <span>No additional images</span>
               </div>
             ) : (

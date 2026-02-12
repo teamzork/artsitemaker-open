@@ -7,6 +7,7 @@ import fs from "fs/promises";
 import path from "path";
 import yaml from "js-yaml";
 import { getSettingsFilePath } from "../../lib/config-paths";
+import { FileText, Compass, Home, ListChecks, Save } from "lucide-react";
 
 // Load nav config on server side to set Toggle initial state
 let showLogoDefault = true;
@@ -33,14 +34,17 @@ try {
       tooltip="No changes to save"
       tooltipSide="bottom"
     >
-      💾 Save Changes
+      <Save className="w-4 h-4" />  Save Changes
     </Button>
   </div>
   <div class="max-w-5xl space-y-8">
     <!-- Header -->
     <div class="card">
       <div class="flex items-start justify-between mb-2">
-        <h2 class="text-lg font-semibold">📄 Page Configuration</h2>
+        <div class="flex items-center gap-2">
+          <FileText className="w-5 h-5 text-admin-accent" />
+          <h2 class="text-lg font-semibold">Page Configuration</h2>
+        </div>
         <a
           href="/style/themes"
           id="theme-link"
@@ -58,7 +62,10 @@ try {
 
     <!-- Navigation -->
     <div id="navigation" class="card">
-      <h3 class="text-lg font-semibold mb-2">🧭 Navigation</h3>
+      <div class="flex items-center gap-2 mb-2">
+        <Compass className="w-5 h-5 text-admin-accent" />
+        <h3 class="text-lg font-semibold">Navigation</h3>
+      </div>
       <p class="text-sm text-admin-muted mb-4">
         Manage the navigation menu that appears in the header and footer.
       </p>
@@ -113,7 +120,10 @@ try {
 
     <!-- Home Page Selection -->
     <div class="card">
-      <h3 class="text-lg font-semibold mb-2">🏠 Home Page</h3>
+      <div class="flex items-center gap-2 mb-2">
+        <Home className="w-5 h-5 text-admin-accent" />
+        <h3 class="text-lg font-semibold">Home Page</h3>
+      </div>
       <p class="text-admin-muted text-sm mb-4">
         Select which page visitors see when they visit your site root.
       </p>
@@ -129,7 +139,10 @@ try {
 
     <!-- Pages Configuration Table -->
     <div class="card">
-      <h3 class="text-lg font-semibold mb-2">📋 Pages Configuration</h3>
+      <div class="flex items-center gap-2 mb-2">
+        <ListChecks className="w-5 h-5 text-admin-accent" />
+        <h3 class="text-lg font-semibold">Pages Configuration</h3>
+      </div>
       <p class="text-admin-muted text-sm mb-4">
         Manage page visibility and behavior. Only pages supported by your
         current theme are shown.

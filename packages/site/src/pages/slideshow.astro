@@ -252,7 +252,6 @@ const artworks: ArtworkData[] = await listArtworks();
     width: var(--carousel-thumb-size, 70px);
     height: var(--carousel-thumb-size, 70px);
     border-radius: var(--carousel-thumb-radius, 0);
-    border: var(--carousel-thumb-border, 1px solid var(--color-border, #ccc));
     overflow: hidden;
     cursor: pointer;
     transition: border-color 0.2s, transform 0.2s;
@@ -264,7 +263,7 @@ const artworks: ArtworkData[] = await listArtworks();
   }
   
   .carousel-thumb.active {
-    border: var(--carousel-thumb-active, 3px solid var(--color-accent));
+    border: 6px solid var(--color-accent));
     transform: scale(1.05);
   }
   

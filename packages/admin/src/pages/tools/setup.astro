@@ -1,14 +1,26 @@
 ---
 import AdminLayout from "@layouts/AdminLayout.astro";
+import {
+    Palette,
+    FolderInput,
+    Wrench,
+    ArrowRight,
+    Wand2,
+    ArrowLeft,
+} from "lucide-react";
 ---
 
 <AdminLayout title="Setup Wizard">
     <div class="space-y-8 max-w-2xl mx-auto">
         <div class="text-center mb-8">
-            <h1 class="text-2xl font-bold mb-2">🧙 Setup Wizard</h1>
+            <h1
+                class="text-2xl font-bold mb-2 flex items-center justify-center gap-2"
+            >
+                <Wand2 className="w-8 h-8" /> Setup Wizard
+            </h1>
             <p class="text-admin-muted">
-                Choose an option below to get started or troubleshoot your ArtSiteMaker
-                installation.
+                Choose an option below to get started or troubleshoot your
+                ArtSiteMaker installation.
             </p>
         </div>
 
@@ -18,8 +30,13 @@ import AdminLayout from "@layouts/AdminLayout.astro";
                 href="/tools/setup/new"
                 class="card hover:border-admin-accent transition-colors group"
             >
+                >
                 <div class="flex items-center gap-4">
-                    <span class="text-4xl">🎨</span>
+                    <div
+                        class="text-4xl text-admin-muted group-hover:text-admin-accent transition-colors"
+                    >
+                        <Palette className="w-10 h-10" />
+                    </div>
                     <div class="flex-1">
                         <h2
                             class="text-lg font-semibold group-hover:text-admin-accent transition-colors"
@@ -43,8 +60,13 @@ import AdminLayout from "@layouts/AdminLayout.astro";
                 href="/tools/setup/existing"
                 class="card hover:border-admin-accent transition-colors group"
             >
+                >
                 <div class="flex items-center gap-4">
-                    <span class="text-4xl">📂</span>
+                    <div
+                        class="text-4xl text-admin-muted group-hover:text-admin-accent transition-colors"
+                    >
+                        <FolderInput className="w-10 h-10" />
+                    </div>
                     <div class="flex-1">
                         <h2
                             class="text-lg font-semibold group-hover:text-admin-accent transition-colors"
@@ -68,8 +90,13 @@ import AdminLayout from "@layouts/AdminLayout.astro";
                 href="/tools/setup/troubleshoot"
                 class="card hover:border-admin-accent transition-colors group"
             >
+                >
                 <div class="flex items-center gap-4">
-                    <span class="text-4xl">🔧</span>
+                    <div
+                        class="text-4xl text-admin-muted group-hover:text-admin-accent transition-colors"
+                    >
+                        <Wrench className="w-10 h-10" />
+                    </div>
                     <div class="flex-1">
                         <h2
                             class="text-lg font-semibold group-hover:text-admin-accent transition-colors"
@@ -92,8 +119,8 @@ import AdminLayout from "@layouts/AdminLayout.astro";
         <div class="text-center">
             <a
                 href="/tools"
-                class="text-sm text-admin-muted hover:text-admin-text"
-                >← Back to Tools</a
+                class="text-sm text-admin-muted hover:text-admin-text inline-flex items-center gap-1"
+                ><ArrowLeft className="w-4 h-4" /> Back to Tools</a
             >
         </div>
     </div>

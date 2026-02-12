@@ -7,6 +7,7 @@ import { getContentPath, getFilesPath, getThumbnailsPath, getImageBaseUrl } from
 import ArtworkGrid from '../../components/ArtworkGrid.astro';
 import Modal from '../../components/Modal.astro';
 import Button from '../../components/ui/Button.astro';
+import { UploadCloud, Zap, Image as ImageIcon } from 'lucide-react';
 
 import { stringToColor } from '../../lib/colors';
 
@@ -62,8 +63,8 @@ const thumbnailsPath = getThumbnailsPath();
     <!-- Toolbar -->
     <div class="flex items-center justify-between flex-wrap gap-4">
       <div class="flex items-center gap-4">
-        <a href="/gallery/upload" class="btn btn-primary">📤 Upload</a>
-        <Button id="process-all-btn" variant="secondary">⚡ Process All</Button>
+        <a href="/gallery/upload" class="btn btn-primary flex items-center gap-2"><UploadCloud className="w-4 h-4" /> Upload</a>
+        <Button id="process-all-btn" variant="secondary" class="flex items-center gap-2"><Zap className="w-4 h-4" /> Process All</Button>
       </div>
       
       <div class="flex items-center gap-4">
@@ -225,7 +226,7 @@ const thumbnailsPath = getThumbnailsPath();
                   class="w-full h-full object-cover group-hover:scale-110 transition-transform"
                   onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"
                 />
-                <span class="text-4xl hidden items-center justify-center w-full h-full">🖼️</span>
+                <span class="text-4xl hidden items-center justify-center w-full h-full"><ImageIcon className="w-8 h-8 text-admin-muted" /></span>
               ) : (
                 <span class="text-4xl group-hover:scale-110 transition-transform">📷</span>
               )}

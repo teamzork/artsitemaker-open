@@ -158,6 +158,11 @@ When creating HTML elements, follow these guidelines:
 
 ## Development Workflow
 
+### Public repo (export)
+- **Always use the export command** when committing or pushing to the public repo. Never commit directly in the public repo.
+- Workflow: commit changes in this (private) repo, then run `./export/export.sh --public-repo /path/to/public-repo --release "description"`, then push from the public repo.
+- See `export/EXPORT.md` for details.
+
 ### Commit Message Guidelines
 - After modifying code, provide a concise commit message for the changes. Do not execute the commit.
 - For follow-up requests, provide two types of commit messages: one including all changes and another for only the changes from the last request.

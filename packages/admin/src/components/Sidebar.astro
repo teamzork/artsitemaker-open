@@ -3,6 +3,17 @@ import { getSession } from "../lib/auth";
 import { getAppMeta } from "../lib/app-config";
 import Chevron from "./icons/Chevron.astro";
 
+import {
+  LayoutDashboard,
+  Settings2,
+  Settings,
+  Image,
+  FileText,
+  Wrench,
+  Rocket,
+  Library,
+} from "lucide-react";
+
 interface Subsection {
   label: string;
   id: string;
@@ -14,7 +25,7 @@ interface Subsection {
 interface NavItem {
   label: string;
   href: string;
-  icon: string;
+  icon: any; // Changed from string to any (component)
   subsections?: Subsection[];
 }
 
@@ -26,19 +37,21 @@ const { currentPath } = Astro.props;
 
 // Get current user session
 const session = getSession(Astro.cookies);
-const { displayName: projectDisplayName, shortDescription: projectShortDescription } =
-  getAppMeta();
+const {
+  displayName: projectDisplayName,
+  shortDescription: projectShortDescription,
+} = getAppMeta();
 
 const navItems: NavItem[] = [
   {
     label: "Dashboard",
     href: "/",
-    icon: "📊",
+    icon: LayoutDashboard,
   },
   {
     label: "Configuration",
     href: "/configuration",
-    icon: "🔧",
+    icon: Settings2,
     subsections: [
       { label: "User Content", id: "content-location" },
       { label: "Image Hosting", id: "image-hosting" },
@@ -55,7 +68,7 @@ const navItems: NavItem[] = [
   {
     label: "Settings",
     href: "/settings",
-    icon: "⚙️",
+    icon: Settings,
     subsections: [
       { label: "Nav & Pages", id: "pages", href: "/settings/pages" },
       { label: "Site Settings", id: "site-settings" },
@@ -67,13 +80,13 @@ const navItems: NavItem[] = [
   {
     label: "Art Pieces",
     href: "/gallery",
-    icon: "🖼️",
+    icon: Image,
   },
-  { label: "Content & Pages", href: "/content", icon: "📝" },
+  { label: "Content & Pages", href: "/content", icon: FileText },
   {
     label: "Tools",
     href: "/tools",
-    icon: "🧰",
+    icon: Wrench,
     subsections: [
       { label: "Backups", id: "backups" },
       {
@@ -85,7 +98,7 @@ const navItems: NavItem[] = [
       },
     ],
   },
-  { label: "Deployment", href: "/deployment", icon: "🚀" },
+  { label: "Deployment", href: "/deployment", icon: Rocket },
 ];
 
 const isActive = (href: string) => {
@@ -200,7 +213,7 @@ const getActiveHash = () => {
                 ]}
                 data-nav-item={item.href}
               >
-                <span class="text-lg">{item.icon}</span>
+                <item.icon className="w-5 h-5" />
                 <span>{item.label}</span>
                 {item.subsections && item.subsections.length > 0 && (
                   <Chevron

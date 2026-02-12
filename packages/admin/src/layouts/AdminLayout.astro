@@ -8,6 +8,7 @@ import SecretsVaultModal from "@components/SecretsVault/SecretsVaultModal.astro"
 import Modal from "@components/Modal.astro";
 import LockClosed from "../components/icons/LockClosed.astro";
 import LockOpen from "../components/icons/LockOpen.astro";
+import { Eye, Rocket, Package } from "lucide-react";
 import {
   getProjectState,
   getStateLabel,
@@ -74,7 +75,7 @@ if (
               class="!bg-admin-card !text-admin-muted hover:!text-admin-text hover:!bg-admin-sidebar whitespace-nowrap"
               onclick="window.open('/preview', '_blank')"
             >
-              <span>👁️</span>
+              <Eye className="w-4 h-4" />
               <span class="hidden sm:inline">Preview</span>
             </Button>
 
@@ -85,7 +86,7 @@ if (
               size="sm"
               class="whitespace-nowrap"
             >
-              <span>🚀</span>
+              <Rocket className="w-4 h-4" />
               <span class="hidden sm:inline">Publish</span>
             </Button>
 
@@ -161,8 +162,10 @@ if (
             />
           </div>
           <div class="flex flex-wrap items-center gap-3">
-            <button id="modal-publish-git-btn" class="btn btn-primary"
-              >🚀 Publish to Git</button
+            <button
+              id="modal-publish-git-btn"
+              class="btn btn-primary flex items-center gap-2"
+              ><Rocket className="w-4 h-4" /> Publish to Git</button
             >
             <span
               id="modal-publish-status"
@@ -187,8 +190,10 @@ if (
           >
         </header>
         <div class="mt-4 flex flex-wrap items-center gap-3">
-          <button id="modal-build-zip-btn" class="btn btn-secondary"
-            >📦 Build & Download</button
+          <button
+            id="modal-build-zip-btn"
+            class="btn btn-secondary flex items-center gap-2"
+            ><Package className="w-4 h-4" /> Build & Download</button
           >
           <span
             id="modal-build-zip-status"
@@ -259,7 +264,8 @@ if (
   variant="danger"
 >
   <p class="text-sm text-admin-muted">
-    You have unsaved changes. If you leave this page now, those changes will be lost.
+    You have unsaved changes. If you leave this page now, those changes will be
+    lost.
   </p>
 </Modal>
 
@@ -268,47 +274,63 @@ if (
 
 <!-- Update lock badge when vault state changes -->
 <script>
-  window.addEventListener('secrets-vault:state-change', (e) => {
+  window.addEventListener("secrets-vault:state-change", (e) => {
     const { state } = (e as CustomEvent).detail;
-    const badges = document.querySelectorAll('[data-vault-badge]');
+    const badges = document.querySelectorAll("[data-vault-badge]");
 
     badges.forEach((badge) => {
-      const indicator = badge.querySelector('[data-vault-indicator]');
+      const indicator = badge.querySelector("[data-vault-indicator]");
       const closedIcon = badge.querySelector('[data-vault-icon="closed"]');
       const openIcon = badge.querySelector('[data-vault-icon="open"]');
 
       if (!closedIcon || !openIcon) return;
 
       // Update badge styling based on state
-      badge.classList.remove('bg-green-500/20', 'bg-orange-500/20', 'bg-gray-500/20');
-      indicator?.classList.remove('bg-green-500/20', 'bg-orange-500/20', 'bg-gray-500/20');
-      closedIcon.classList.remove('text-green-400', 'text-orange-400', 'text-gray-400');
-      openIcon.classList.remove('text-green-400', 'text-orange-400', 'text-gray-400');
+      badge.classList.remove(
+        "bg-green-500/20",
+        "bg-orange-500/20",
+        "bg-gray-500/20",
+      );
+      indicator?.classList.remove(
+        "bg-green-500/20",
+        "bg-orange-500/20",
+        "bg-gray-500/20",
+      );
+      closedIcon.classList.remove(
+        "text-green-400",
+        "text-orange-400",
+        "text-gray-400",
+      );
+      openIcon.classList.remove(
+        "text-green-400",
+        "text-orange-400",
+        "text-gray-400",
+      );
 
       switch (state) {
-        case 'unlocked':
-          badge.classList.add('bg-green-500/20');
-          indicator?.classList.add('bg-green-500/20');
-          closedIcon.classList.add('hidden');
-          openIcon.classList.remove('hidden');
-          openIcon.classList.add('text-green-400');
-          (badge as HTMLElement).title = 'Secrets Vault: Unlocked';
+        case "unlocked":
+          badge.classList.add("bg-green-500/20");
+          indicator?.classList.add("bg-green-500/20");
+          closedIcon.classList.add("hidden");
+          openIcon.classList.remove("hidden");
+          openIcon.classList.add("text-green-400");
+          (badge as HTMLElement).title = "Secrets Vault: Unlocked";
           break;
-        case 'locked':
-          badge.classList.add('bg-gray-500/20');
-          indicator?.classList.add('bg-gray-500/20');
-          openIcon.classList.add('hidden');
-          closedIcon.classList.remove('hidden');
-          closedIcon.classList.add('text-gray-400');
-          (badge as HTMLElement).title = 'Secrets Vault: Locked';
+        case "locked":
+          badge.classList.add("bg-gray-500/20");
+          indicator?.classList.add("bg-gray-500/20");
+          openIcon.classList.add("hidden");
+          closedIcon.classList.remove("hidden");
+          closedIcon.classList.add("text-gray-400");
+          (badge as HTMLElement).title = "Secrets Vault: Locked";
           break;
-        case 'not-initialized':
-          badge.classList.add('bg-orange-500/20');
-          indicator?.classList.add('bg-orange-500/20');
-          openIcon.classList.add('hidden');
-          closedIcon.classList.remove('hidden');
-          closedIcon.classList.add('text-orange-400');
-          (badge as HTMLElement).title = 'Secrets Vault: Not Set Up';
+        case "not-initialized":
+          badge.classList.add("bg-orange-500/20");
+          indicator?.classList.add("bg-orange-500/20");
+          openIcon.classList.add("hidden");
+          closedIcon.classList.remove("hidden");
+          closedIcon.classList.add("text-orange-400");
+          (badge as HTMLElement).title = "Secrets Vault: Not Set Up";
           break;
       }
     });

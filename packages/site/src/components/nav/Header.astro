@@ -2,11 +2,12 @@
 // packages/site/src/components/nav/Header.astro
 // Site header with logo - uses Identity Kit logo from user-assets
 
-import fs from 'fs/promises';
-import yaml from 'js-yaml';
-import { loadTheme, loadIdentityKit } from '@lib/theme';
-import { getSettingsPath, resolveUserAssetUrl } from '@lib/paths';
-import { filterNavigationItems, getPageSettings } from '@lib/pageTypes';
+import fs from "fs/promises";
+import { ExternalLink } from "lucide-react";
+import yaml from "js-yaml";
+import { loadTheme, loadIdentityKit } from "@lib/theme";
+import { getSettingsPath, resolveUserAssetUrl } from "@lib/paths";
+import { filterNavigationItems, getPageSettings } from "@lib/pageTypes";
 
 interface NavItem {
   label: string;
@@ -20,20 +21,20 @@ let showLogo = true; // Default to showing logo
 
 try {
   const settingsPath = getSettingsPath();
-  const settingsContent = await fs.readFile(settingsPath, 'utf-8');
+  const settingsContent = await fs.readFile(settingsPath, "utf-8");
   const settings = yaml.load(settingsContent) as any;
   navItems = settings?.nav?.items || [];
-  showLogo = settings?.nav?.showLogo ?? true;; // Default true if not set
+  showLogo = settings?.nav?.showLogo ?? true; // Default true if not set
 } catch (e) {
-  console.warn('Failed to load navigation from settings', e);
+  console.warn("Failed to load navigation from settings", e);
 }
 
 // Fallback to defaults if no nav items configured
 if (navItems.length === 0) {
   navItems = [
-    { label: 'Gallery', href: '/' },
-    { label: 'Slideshow', href: '/slideshow' },
-    { label: 'About', href: '/about' },
+    { label: "Gallery", href: "/" },
+    { label: "Slideshow", href: "/slideshow" },
+    { label: "About", href: "/about" },
   ];
 }
 
@@ -44,59 +45,59 @@ const currentPath = Astro.url.pathname;
 
 // Load page settings to determine home page
 const pageSettings = await getPageSettings();
-const homePage = pageSettings.homePage || 'gallery';
+const homePage = pageSettings.homePage || "gallery";
 
 // Map home page IDs to their routes
 const homePageRoutes: Record<string, string> = {
-  'home': '/',
-  'gallery': '/',
-  'slider': '/slideshow',
-  'about': '/about',
-  'schedule': '/schedule',
+  home: "/",
+  gallery: "/",
+  slider: "/slideshow",
+  about: "/about",
+  schedule: "/schedule",
 };
 
 // Map page routes to their non-home routes
 const pageStandaloneRoutes: Record<string, string> = {
-  '/': '/gallery',           // If root is home, gallery is at /gallery
-  '/about': '/about',
-  '/slideshow': '/slideshow',
-  '/schedule': '/schedule',
+  "/": "/gallery", // If root is home, gallery is at /gallery
+  "/about": "/about",
+  "/slideshow": "/slideshow",
+  "/schedule": "/schedule",
 };
 
 // Adjust navigation hrefs based on which page is the home page
-// If a nav item points to the home page route but it's NOT the home page, 
+// If a nav item points to the home page route but it's NOT the home page,
 // redirect it to the standalone route
-navItems = navItems.map(item => {
+navItems = navItems.map((item) => {
   if (item.external) return item;
-  
+
   // Find which page this nav item refers to by matching the href
-  const homeRoute = homePageRoutes[homePage] || '/';
-  
+  const homeRoute = homePageRoutes[homePage] || "/";
+
   // If this nav item points to '/' and gallery is NOT the home page,
   // it should point to '/gallery' instead
-  if (item.href === '/' && homePage !== 'gallery') {
-    return { ...item, href: '/gallery' };
+  if (item.href === "/" && homePage !== "gallery") {
+    return { ...item, href: "/gallery" };
   }
-  
+
   // If this nav item points to a page that IS the home page,
   // it should point to '/' instead of its standalone route
-  if (homePage === 'about' && item.href === '/about') {
-    return { ...item, href: '/' };
+  if (homePage === "about" && item.href === "/about") {
+    return { ...item, href: "/" };
   }
-  
-  if (homePage === 'slider' && item.href === '/slideshow') {
-    return { ...item, href: '/' };
+
+  if (homePage === "slider" && item.href === "/slideshow") {
+    return { ...item, href: "/" };
   }
-  
-  if (homePage === 'schedule' && item.href === '/schedule') {
-    return { ...item, href: '/' };
+
+  if (homePage === "schedule" && item.href === "/schedule") {
+    return { ...item, href: "/" };
   }
-  
+
   return item;
 });
 
 // Load active theme configuration
-let activeTheme = 'modern';
+let activeTheme = "modern";
 let themeConfig: any = {};
 let identityKit: any = {};
 
@@ -105,7 +106,7 @@ try {
   const settingsPath = getSettingsPath();
   let settingsContent;
   try {
-    settingsContent = await fs.readFile(settingsPath, 'utf-8');
+    settingsContent = await fs.readFile(settingsPath, "utf-8");
   } catch (e) {}
 
   if (settingsContent) {
@@ -116,7 +117,7 @@ try {
   themeConfig = await loadTheme(activeTheme);
   identityKit = await loadIdentityKit();
 } catch (e) {
-  console.warn('Failed to load theme config for header', e);
+  console.warn("Failed to load theme config for header", e);
 }
 
 // Logo from Identity Kit only (themes no longer provide logos)
@@ -125,63 +126,71 @@ const logoUrl = identityKitLogo ? resolveUserAssetUrl(identityKitLogo) : null;
 
 // Helpful warning if logo is missing but nav.showLogo is true
 if (showLogo && !identityKitLogo) {
-    console.warn(
-        `⚠️  No logo configured for header.\n` +
-        `   Add to user-data/assets/logos/ and configure in identityKit.\n` +
-        `   Run: pnpm migrate:theme-assets for recommended assets.`
-    );
+  console.warn(
+    `⚠️  No logo configured for header.\n` +
+      `   Add to user-data/assets/logos/ and configure in identityKit.\n` +
+      `   Run: pnpm migrate:theme-assets for recommended assets.`,
+  );
 }
 ---
 
-<header class:list={["header-container", { "no-logo": !showLogo || !logoUrl }]} data-testid="header">
+<header
+  class:list={["header-container", { "no-logo": !showLogo || !logoUrl }]}
+  data-testid="header"
+>
   <!-- Logo with underlayer (conditionally rendered) -->
-  {showLogo && logoUrl && (
-    <a href="/" class="logo-link" aria-label="Home" data-testid="logo-link">
-      <img
-        src={logoUrl}
-        alt="Site Logo"
-        class="logo-image"
-        data-testid="logo-image"
-      />
-    </a>
-  )}
+  {
+    showLogo && logoUrl && (
+      <a href="/" class="logo-link" aria-label="Home" data-testid="logo-link">
+        <img
+          src={logoUrl}
+          alt="Site Logo"
+          class="logo-image"
+          data-testid="logo-image"
+        />
+      </a>
+    )
+  }
 
   <!-- Navigation bar - full width -->
   <nav class="nav-bar" data-testid="nav-bar">
     <div class="nav-items">
-      {navItems.map((item) => {
-        // Determine if this nav item is active
-        let isActive = false;
-        
-        if (!item.external) {
-          if (currentPath === '/') {
-            // On the home page (root) - the nav item pointing to '/' is active
-            isActive = item.href === '/';
-          } else if (item.href === '/') {
-            // This nav item points to home but we're not on home page
-            isActive = false;
-          } else {
-            // Regular page - check if current path matches or starts with this href
-            isActive = currentPath === item.href || currentPath.startsWith(item.href + '/');
+      {
+        navItems.map((item) => {
+          // Determine if this nav item is active
+          let isActive = false;
+
+          if (!item.external) {
+            if (currentPath === "/") {
+              // On the home page (root) - the nav item pointing to '/' is active
+              isActive = item.href === "/";
+            } else if (item.href === "/") {
+              // This nav item points to home but we're not on home page
+              isActive = false;
+            } else {
+              // Regular page - check if current path matches or starts with this href
+              isActive =
+                currentPath === item.href ||
+                currentPath.startsWith(item.href + "/");
+            }
           }
-        }
-        
-        return (
-          <a
-            href={item.href}
-            class:list={[
-              'nav-item',
-              isActive && 'active'
-            ]}
-            data-testid={`nav-link-${item.label.toLowerCase()}`}
-            target={item.external ? '_blank' : undefined}
-            rel={item.external ? 'noopener noreferrer' : undefined}
-          >
-            {item.label}
-            {item.external && <span class="external-indicator">↗</span>}
-          </a>
-        );
-      })}
+
+          return (
+            <a
+              href={item.href}
+              class:list={["nav-item", isActive && "active"]}
+              data-testid={`nav-link-${item.label.toLowerCase()}`}
+              target={item.external ? "_blank" : undefined}
+              rel={item.external ? "noopener noreferrer" : undefined}
+            >
+              {item.label}
+              {item.external && (
+                <ExternalLink className="w-3 h-3 ml-1 inline-block opacity-70" />
+              )}
+            </a>
+          );
+        })
+      }
     </div>
   </nav>
 </header>
@@ -192,7 +201,7 @@ if (showLogo && !identityKitLogo) {
 <style is:global>
   /* Default fallback styles - theme CSS overrides via normal cascade */
   /* Using :where() for minimal specificity (0,0,0) */
-  
+
   :where(.header-container) {
     position: fixed;
     top: 0;
@@ -200,7 +209,7 @@ if (showLogo && !identityKitLogo) {
     right: 0;
     z-index: 1000;
   }
-  
+
   :where(.logo-link) {
     position: absolute;
     top: 0;
@@ -208,13 +217,13 @@ if (showLogo && !identityKitLogo) {
     z-index: 1001;
     display: block;
   }
-  
+
   :where(.logo-image) {
     display: block;
     height: auto;
     width: 114px;
   }
-  
+
   :where(.nav-bar) {
     position: relative;
     width: 100%;
@@ -224,12 +233,12 @@ if (showLogo && !identityKitLogo) {
     justify-content: flex-end;
     padding-right: 63px;
   }
-  
+
   :where(.nav-items) {
     display: flex;
     height: 100%;
   }
-  
+
   :where(.nav-item) {
     height: 20px;
     line-height: 20px;
@@ -239,38 +248,38 @@ if (showLogo && !identityKitLogo) {
     display: flex;
     align-items: center;
   }
-  
+
   :where(.external-indicator) {
     margin-left: 4px;
     font-size: 10px;
     opacity: 0.7;
   }
-  
+
   :where(.header-spacer) {
     height: 20px;
   }
-  
+
   @media (max-width: 720px) {
     :where(.logo-link) {
       left: 10px;
     }
-    
+
     :where(.logo-image) {
       width: 44px;
       height: 26px;
     }
-    
+
     :where(.nav-bar) {
       height: 30px;
       line-height: 30px;
       padding-right: 10px;
     }
-    
+
     :where(.nav-item) {
       height: 30px;
       line-height: 30px;
     }
-    
+
     :where(.header-spacer) {
       height: 30px;
     }

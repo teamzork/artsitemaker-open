@@ -18,7 +18,7 @@ export default {
                 'admin-accent': '#e94560',
                 'admin-success': '#4ade80',
                 'admin-warning': '#fbbf24',
-                'admin-border': '#2a2a4a',
+                'admin-border': '#2c3c60',
                 'admin-primary': '#1a73e8',
                 'admin-primary-light': '#4285f4',
                 'admin-primary-bright': '#01edf9',

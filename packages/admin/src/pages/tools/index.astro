@@ -2,6 +2,14 @@
 import AdminLayout from "@layouts/AdminLayout.astro";
 import Modal from "../../components/Modal.astro";
 import Button from "../../components/ui/Button.astro";
+import {
+    Package,
+    Zap,
+    Wand2,
+    ArrowRight,
+    RefreshCw,
+    Download,
+} from "lucide-react";
 ---
 
 <AdminLayout title="Tools">
@@ -10,7 +18,9 @@ import Button from "../../components/ui/Button.astro";
         <div id="backups" class="card">
             <div class="flex items-center justify-between mb-6">
                 <div>
-                    <h2 class="text-lg font-semibold">📦 Content Backups</h2>
+                    <h2 class="text-lg font-semibold flex items-center gap-2">
+                        <Package className="w-5 h-5" /> Content Backups
+                    </h2>
                     <p class="text-sm text-admin-muted">
                         Download or restore archived backups of your content.
                     </p>
@@ -20,7 +30,7 @@ import Button from "../../components/ui/Button.astro";
                     id="create-backup-btn"
                     variant="secondary"
                 >
-                    <span class="mr-2">⚡</span> Create Backup
+                    <Zap className="w-4 h-4 mr-2" /> Create Backup
                 </Button>
             </div>
 
@@ -59,13 +69,17 @@ import Button from "../../components/ui/Button.astro";
         <div id="setup" class="card">
             <div class="flex items-center justify-between">
                 <div>
-                    <h2 class="text-lg font-semibold">🧙 Setup Wizard</h2>
+                    <h2 class="text-lg font-semibold flex items-center gap-2">
+                        <Wand2 className="w-5 h-5" /> Setup Wizard
+                    </h2>
                     <p class="text-sm text-admin-muted">
                         Configure or troubleshoot your installation.
                     </p>
                 </div>
-                <a href="/tools/setup" class="btn btn-secondary"
-                    >Open Wizard →</a
+                <a
+                    href="/tools/setup"
+                    class="btn btn-secondary flex items-center gap-1"
+                    >Open Wizard <ArrowRight className="w-4 h-4" /></a
                 >
             </div>
         </div>
@@ -74,8 +88,10 @@ import Button from "../../components/ui/Button.astro";
         <div id="migrations" class="card bg-admin-sidebar/50">
             <div class="flex items-center justify-between">
                 <div>
-                    <h2 class="text-lg font-semibold text-admin-muted">
-                        🔄 Migrations
+                    <h2
+                        class="text-lg font-semibold text-admin-muted flex items-center gap-2"
+                    >
+                        <RefreshCw className="w-5 h-5" /> Migrations
                     </h2>
                     <p class="text-sm text-admin-muted">
                         Tools for migrating data between storage systems and
@@ -94,7 +110,9 @@ import Button from "../../components/ui/Button.astro";
 <script>
     const backupList = document.getElementById("backup-list");
     const restoreBackupModal = document.getElementById("restore-backup-modal");
-    const restoreBackupStatus = document.getElementById("restore-backup-status");
+    const restoreBackupStatus = document.getElementById(
+        "restore-backup-status",
+    );
     const restoreBackupFilename = document.getElementById(
         "restore-backup-filename",
     ) as HTMLInputElement | null;
@@ -115,7 +133,8 @@ import Button from "../../components/ui/Button.astro";
                 "create-backup-btn",
             ) as HTMLButtonElement;
             btn.disabled = true;
-            btn.textContent = "⏳ Creating...";
+            btn.innerHTML =
+                '<svg class="animate-spin h-4 w-4 inline mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Creating...';
 
             try {
                 const res = await fetch("/api/backup", { method: "POST" });
@@ -150,7 +169,8 @@ import Button from "../../components/ui/Button.astro";
                 );
             } finally {
                 btn.disabled = false;
-                btn.textContent = "⚡ Create Backup";
+                btn.innerHTML =
+                    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 mr-2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg> Create Backup';
             }
         });
 
@@ -245,7 +265,9 @@ import Button from "../../components/ui/Button.astro";
                     (b: any) => `
         <div class="flex items-center justify-between p-3 bg-admin-sidebar rounded-lg">
           <div class="flex items-center gap-3">
-            <div class="text-2xl">📦</div>
+            <div class="text-2xl text-admin-muted">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22v-9"/></svg>
+            </div>
             <div>
               <div class="font-medium text-sm">${new Date(b.createdAt).toLocaleDateString()} ${new Date(b.createdAt).toLocaleTimeString()}</div>
               <div class="text-xs text-admin-muted">${b.filename} • ${formatBytes(b.size)}</div>
@@ -253,7 +275,9 @@ import Button from "../../components/ui/Button.astro";
           </div>
           <div class="flex items-center gap-2">
             <button onclick="restoreBackup('${b.filename}')" class="btn btn-sm btn-secondary" title="Restore" aria-label="Restore backup">Restore</button>
-            <a href="/api/backup/${b.filename}" class="btn btn-sm btn-secondary" download title="Download" aria-label="Download backup">⬇️</a>
+            <a href="/api/backup/${b.filename}" class="btn btn-sm btn-secondary flex items-center justify-center" download title="Download" aria-label="Download backup">
+              <span class="inline-block w-4 h-4"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span>
+            </a>
           </div>
         </div>
       `,

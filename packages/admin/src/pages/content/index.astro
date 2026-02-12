@@ -8,6 +8,7 @@ import Modal from "../../components/Modal.astro";
 import Button from "../../components/ui/Button.astro";
 import { Toaster } from "../../components/ui/Toast";
 import { getContentPath } from "../../lib/paths";
+import { FileText, Compass, PanelBottom, FileCog, Trash2, ChevronRight, Save } from "lucide-react";
 import { isCoreContentFile, getCoreContentFileDefault } from "../../lib/pages";
 
 const contentPath = getContentPath();
@@ -108,7 +109,10 @@ try {
     <!-- Pages Section -->
     <div>
       <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-semibold">📄 Pages</h2>
+        <div class="flex items-center gap-2">
+          <FileText className="w-5 h-5 text-admin-accent" />
+          <h2 class="text-lg font-semibold">Pages</h2>
+        </div>
         <button id="new-page-btn" class="btn btn-primary text-sm"
           >+ New Page</button
         >
@@ -150,7 +154,7 @@ try {
                     )}
                   </div>
                 </div>
-                <span class="text-admin-muted">→</span>
+                <ChevronRight className="w-5 h-5 text-admin-muted" />
               </a>
             ))
           )
@@ -160,7 +164,10 @@ try {
 
     <!-- Navigation Section -->
     <div class="card">
-      <h2 class="text-lg font-semibold mb-6">🧭 Navigation</h2>
+      <div class="flex items-center gap-2 mb-6">
+        <Compass className="w-5 h-5 text-admin-accent" />
+        <h2 class="text-lg font-semibold">Navigation</h2>
+      </div>
       <p class="text-sm text-admin-muted mb-4">
         The navigation menu is automatically generated based on your pages. To
         change the order or add custom links, edit the navigation settings.
@@ -175,7 +182,10 @@ try {
 
     <!-- Footer Section -->
     <div class="card">
-      <h2 class="text-lg font-semibold mb-6">🦶 Footer Content</h2>
+      <div class="flex items-center gap-2 mb-6">
+        <PanelBottom className="w-5 h-5 text-admin-accent" />
+        <h2 class="text-lg font-semibold">Footer Content</h2>
+      </div>
       <p class="text-sm text-admin-muted mb-6">
         Edit the content that appears in the footer across all pages.
       </p>
@@ -316,7 +326,7 @@ try {
             id="footer-save-btn"
             variant="accent"
             disabled
-            tooltip="No changes to save">💾 Save Footer</Button
+            tooltip="No changes to save"><Save className="w-4 h-4" />  Save Footer</Button
           >
           <span id="footer-status" class="text-sm text-admin-muted"></span>
         </div>
@@ -325,7 +335,10 @@ try {
 
     <!-- Configuration Files Section -->
     <div class="card">
-      <h2 class="text-lg font-semibold mb-4">⚙️ Configuration Files</h2>
+      <div class="flex items-center gap-2 mb-4">
+        <FileCog className="w-5 h-5 text-admin-accent" />
+        <h2 class="text-lg font-semibold">Configuration Files</h2>
+      </div>
       <div class="space-y-2">
         {
           rootFiles.length === 0 ? (
@@ -352,7 +365,7 @@ try {
                       data-filename={file}
                       title="Delete File"
                     >
-                      🗑️
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </li>

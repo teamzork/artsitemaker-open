@@ -13,6 +13,7 @@ import Modal from "../../components/Modal.astro";
 import Button from "../../components/ui/Button.astro";
 import Combobox from "../../components/ui/Combobox.astro";
 import { Toggle } from "../../components/ui/Toggle";
+import { Globe, Search, Palette, Paintbrush, FolderOpen, Save, Image } from "lucide-react";
 
 import { loadFontData } from "../../lib/fonts";
 
@@ -116,7 +117,7 @@ try {
     variant="accent"
     disabled
     tooltip="No changes to save"
-    tooltipSide="bottom">💾 Save Settings</Button
+    tooltipSide="bottom">Save Settings</Button
   >
 
   <form id="settings-form" class="space-y-8 max-w-4xl">
@@ -298,7 +299,10 @@ try {
 
     <!-- Site Settings -->
     <div id="site-settings" class="card scroll-mt-24">
-      <h2 class="text-lg font-semibold mb-6">Site Settings</h2>
+      <div class="flex items-center gap-2 mb-6">
+        <Globe className="w-5 h-5 text-admin-accent" />
+        <h2 class="text-lg font-semibold">Site Settings</h2>
+      </div>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <!-- Left column: Fields without links -->
         <div>
@@ -404,7 +408,10 @@ try {
 
     <!-- SEO Settings -->
     <div id="seo" class="card scroll-mt-24">
-      <h2 class="text-lg font-semibold mb-6">SEO</h2>
+      <div class="flex items-center gap-2 mb-6">
+        <Search className="w-5 h-5 text-admin-accent" />
+        <h2 class="text-lg font-semibold">SEO</h2>
+      </div>
       <div class="space-y-4">
         <div>
           <label class="block text-sm text-admin-muted mb-2" for="seo-description"
@@ -452,7 +459,10 @@ try {
 
     <!-- Identity Kit -->
     <div id="identity-kit" class="card border-admin-accent scroll-mt-24">
-      <h2 class="text-lg font-semibold mb-2">🎨 Identity Kit</h2>
+      <div class="flex items-center gap-2 mb-2">
+        <Palette className="w-5 h-5 text-admin-accent" />
+        <h2 class="text-lg font-semibold">Identity Kit</h2>
+      </div>
       <p class="text-sm text-admin-muted mb-6">
         Your brand identity that persists across theme changes.
       </p>
@@ -616,7 +626,7 @@ try {
                       id="logo-preview-placeholder"
                       class="logo-preview-placeholder text-admin-muted"
                     >
-                      <span class="text-2xl mb-1">🖼️</span>
+                      <span class="text-2xl mb-1"><Image className="w-8 h-8 text-admin-muted" /></span>
                       <span class="text-xs">No logo</span>
                     </div>
                   )
@@ -744,7 +754,7 @@ try {
                       id="texture-preview-placeholder"
                       class="texture-preview-placeholder text-admin-muted"
                     >
-                      <span class="text-2xl mb-1">🖼️</span>
+                      <span class="text-2xl mb-1"><Image className="w-8 h-8 text-admin-muted" /></span>
                       <span class="text-xs">No image</span>
                     </div>
                   )
@@ -881,7 +891,10 @@ try {
     <div id="theme" class="card scroll-mt-24">
       <div class="flex items-center justify-between mb-6">
         <div>
-          <h2 class="text-lg font-semibold">🎨 Theme & Style</h2>
+          <div class="flex items-center gap-2">
+            <Paintbrush className="w-5 h-5 text-admin-accent" />
+            <h2 class="text-lg font-semibold">Theme & Style</h2>
+          </div>
           <p class="text-sm text-admin-muted">
             Customize your site's appearance and layout.
           </p>
@@ -925,7 +938,10 @@ try {
 
     <!-- Content Location (informational, outside form) -->
     <div class="card bg-admin-sidebar/50">
-      <h2 class="text-lg font-semibold mb-4">Content Location</h2>
+      <div class="flex items-center gap-2 mb-4">
+        <FolderOpen className="w-5 h-5 text-admin-accent" />
+        <h2 class="text-lg font-semibold">Content Location</h2>
+      </div>
       <div class="space-y-4">
         <div>
           <label class="block text-sm text-admin-muted mb-1">Content Path</label

@@ -19,6 +19,7 @@
         "astro": "^5.0.0",
         "dotenv": "^16.4.5",
         "js-yaml": "^4.1.0",
+        "lucide-react": "^0.563.0",
         "marked": "^15.0.12"
     },
     "devDependencies": {
