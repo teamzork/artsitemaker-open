@@ -1,0 +1,31 @@
+slug: dreammeup
+title: Dream me up
+year: 2009
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 38
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: dreammeup.webp
+additional: []
+processing:
+  originalFile: dreammeup.jpg
+  originalDimensions:
+    - 1062
+    - 700
+  processedAt: "2026-01-13T22:00:49.570Z"
+  warnings:
+    - upscaled
+  aspectRatio: 1.5171428571428571
+  padded: false
+createdAt: "2026-01-02T00:22:42.520Z"
+updatedAt: "2026-01-13T22:29:17.320Z"
+published: true

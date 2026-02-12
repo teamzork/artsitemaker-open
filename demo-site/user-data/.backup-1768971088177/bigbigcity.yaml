@@ -1,0 +1,32 @@
+slug: bigbigcity
+title: Bigbigcity
+year: 2011
+medium: surreal, abstacts
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - abstacts
+featured: false
+sortOrder: 91
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: bigbigcity.webp
+additional:
+  - file: bigbigcity-add-1.webp
+    title: Detail 1
+processing:
+  originalFile: bigbigcity.jpg
+  originalDimensions:
+    - 4248
+    - 4248
+  processedAt: '2026-01-13T22:00:37.364Z'
+  warnings: []
+  aspectRatio: 1
+  padded: false
+createdAt: '2026-01-13T21:01:07.708Z'
+updatedAt: '2026-01-13T22:00:37.364Z'
+published: true

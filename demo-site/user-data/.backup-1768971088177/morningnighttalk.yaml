@@ -1,0 +1,30 @@
+slug: morningnighttalk
+title: Morning night talk
+year: 2010
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 68
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: morningnighttalk.webp
+additional: []
+processing:
+  originalFile: morningnighttalk.jpg
+  originalDimensions:
+    - 4248
+    - 3000
+  processedAt: "2026-01-13T22:37:29.021Z"
+  warnings: []
+  aspectRatio: 1.416
+  padded: false
+createdAt: "2026-01-02T00:22:42.544Z"
+updatedAt: "2026-01-13T22:37:33.686Z"
+published: true

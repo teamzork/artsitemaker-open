@@ -1,0 +1,30 @@
+slug: abstract-10821
+title: Abstract 10821
+year: 2008
+medium: Digital Illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - abstract
+featured: false
+sortOrder: 79
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: abstract-10821.webp
+additional: []
+processing:
+  originalFile: abstract-10821.jpg
+  originalDimensions:
+    - 2124
+    - 1200
+  processedAt: "2026-01-13T22:00:33.020Z"
+  warnings:
+    - upscaled
+  aspectRatio: 1.77
+  padded: false
+createdAt: "2026-01-13T17:53:34.050Z"
+updatedAt: "2026-01-14T11:44:04.937Z"
+published: true

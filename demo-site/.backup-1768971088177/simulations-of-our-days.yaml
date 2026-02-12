@@ -1,0 +1,31 @@
+slug: simulations-of-our-days
+title: Simulations Of Our Days
+year: 2021
+medium: Digital Illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - abstacts
+featured: false
+sortOrder: 86
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: simulations-of-our-days.webp
+additional: []
+processing:
+  originalFile: simulations-of-our-days.png
+  originalDimensions:
+    - 2124
+    - 800
+  processedAt: "2026-01-13T22:01:25.644Z"
+  warnings:
+    - upscaled
+  aspectRatio: 2.655
+  padded: false
+createdAt: "2026-01-13T21:01:07.702Z"
+updatedAt: "2026-01-14T11:46:32.335Z"
+published: true

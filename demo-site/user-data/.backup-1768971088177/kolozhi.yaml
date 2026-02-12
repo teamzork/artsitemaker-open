@@ -1,0 +1,31 @@
+slug: kolozhi
+title: Kolozhi
+year: 2007
+medium: Ink on mylar
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creatures
+featured: false
+sortOrder: 100
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: kolozhi.webp
+additional: []
+processing:
+  originalFile: kolozhi.jpg
+  originalDimensions:
+    - 2124
+    - 1700
+  processedAt: '2026-01-13T22:01:06.548Z'
+  warnings:
+    - upscaled
+  aspectRatio: 1.2494117647058824
+  padded: false
+createdAt: '2026-01-13T21:55:15.965Z'
+updatedAt: '2026-01-13T22:01:06.548Z'
+published: true

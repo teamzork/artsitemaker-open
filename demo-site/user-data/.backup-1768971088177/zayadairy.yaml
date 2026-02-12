@@ -1,0 +1,33 @@
+slug: zayadairy
+title: Zaya dairy
+year: 2010
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: true
+sortOrder: 6
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: zayadairy.webp
+additional:
+  - file: zayadairy-add-1.webp
+    title: Closeup Detail 1
+processing:
+  originalFile: zayadairy.jpg
+  originalDimensions:
+    - 1062
+    - 600
+  processedAt: '2026-01-13T22:01:40.227Z'
+  warnings:
+    - upscaled
+  aspectRatio: 1.77
+  padded: false
+createdAt: '2026-01-02T00:22:42.476Z'
+updatedAt: '2026-01-13T22:01:40.227Z'
+published: true

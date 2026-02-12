@@ -1,0 +1,31 @@
+slug: ppday
+title: PPday
+year: 2018
+medium: Digital Illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creatures
+featured: false
+sortOrder: 88
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: ppday.webp
+additional: []
+processing:
+  originalFile: ppday.jpg
+  originalDimensions:
+    - 1062
+    - 800
+  processedAt: '2026-01-13T22:01:22.918Z'
+  warnings:
+    - upscaled
+  aspectRatio: 1.3275
+  padded: false
+createdAt: '2026-01-13T21:01:07.702Z'
+updatedAt: '2026-01-13T22:01:22.918Z'
+published: true

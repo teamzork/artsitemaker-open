@@ -23,7 +23,8 @@
         "migrate:theme-assets": "node scripts/migrate-theme-assets.mjs",
         "validate:user-data": "node scripts/user-data-validate.mjs",
         "init:user-data": "node scripts/user-data-init.mjs",
-        "sync:themes": "./scripts/sync-themes.sh"
+        "sync:themes": "./scripts/sync-themes.sh",
+        "push:public": "./export/push-public.sh"
     },
     "engines": {
         "node": ">=20.0.0"

@@ -1,0 +1,29 @@
+slug: valero-kanz-treehouse
+title: Treehouse in the Void
+year: 2024
+medium: Mixed Media
+dimensions: Variable
+description: A structure suspended between earth and sky.
+collection: null
+tags:
+  - architecture
+  - nature
+featured: false
+sortOrder: 1
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: valero-kanz-treehouse.webp
+processing:
+  originalFile: valero_kanz-treehouse.jpg
+  originalDimensions:
+    - 2700
+    - 1600
+  processedAt: '2026-01-30T00:00:00.000Z'
+  warnings: []
+  aspectRatio: 1.6875
+  padded: false
+createdAt: '2024-02-15T00:00:00.000Z'
+updatedAt: '2026-01-30T00:00:00.000Z'
+published: true

@@ -1,0 +1,39 @@
+slug: brokentripod
+title: Brokentripod
+year: 2009
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: true
+sortOrder: 10
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: brokentripod.webp
+additional:
+  - file: brokentripod-add-1.webp
+    title: wide version
+  - file: brokentripod-add-2.webp
+    title: Detail 1
+  - file: brokentripod-add-4.webp
+    title: Detail 2
+  - file: brokentripod-add-6.webp
+    title: Detail 3
+processing:
+  originalFile: brokentripod.jpg
+  originalDimensions:
+    - 2124
+    - 3200
+  processedAt: '2026-01-13T22:00:42.350Z'
+  warnings:
+    - upscaled
+  aspectRatio: 0.66375
+  padded: false
+createdAt: '2026-01-02T00:22:42.480Z'
+updatedAt: '2026-01-13T22:00:42.350Z'
+published: true

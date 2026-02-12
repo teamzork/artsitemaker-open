@@ -1,0 +1,31 @@
+slug: dreamthatgone
+title: Dream that gone
+year: 2009
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - abstacts
+featured: false
+sortOrder: 55
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: dreamthatgone.webp
+additional: []
+processing:
+  originalFile: dreamthatgone.jpg
+  originalDimensions:
+    - 1062
+    - 1062
+  processedAt: '2026-01-13T22:00:50.027Z'
+  warnings:
+    - upscaled
+  aspectRatio: 1
+  padded: false
+createdAt: '2026-01-02T00:22:42.533Z'
+updatedAt: '2026-01-13T22:00:50.027Z'
+published: true

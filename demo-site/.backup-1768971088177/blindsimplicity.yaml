@@ -1,0 +1,31 @@
+slug: blindsimplicity
+title: Blind Simplicity
+year: 2006
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 25
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: blindsimplicity.webp
+additional: []
+processing:
+  originalFile: blindsimplicity.png
+  originalDimensions:
+    - 1062
+    - 970
+  processedAt: "2026-01-13T22:00:38.409Z"
+  warnings:
+    - upscaled
+  aspectRatio: 1.0948453608247424
+  padded: false
+createdAt: "2026-01-02T00:22:42.505Z"
+updatedAt: "2026-01-13T22:13:59.485Z"
+published: true

@@ -1,0 +1,31 @@
+slug: keming
+title: Keming
+year: 2010
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 66
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: keming.webp
+additional: []
+processing:
+  originalFile: keming.jpg
+  originalDimensions:
+    - 1062
+    - 1000
+  processedAt: "2026-01-14T11:37:30.316Z"
+  warnings:
+    - upscaled
+  aspectRatio: 1.062
+  padded: false
+createdAt: "2026-01-02T00:22:42.543Z"
+updatedAt: "2026-01-14T11:37:51.182Z"
+published: true

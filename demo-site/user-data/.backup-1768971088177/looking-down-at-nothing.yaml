@@ -1,0 +1,35 @@
+slug: looking-down-at-nothing
+title: Looking Down At Nothing
+year: 2011
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 17
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: looking-down-at-nothing.webp
+additional:
+  - file: looking-down-at-nothing-add-1.webp
+    title: Detail 1
+  - file: looking-down-at-nothing-add-3.webp
+    title: Detail 3
+processing:
+  originalFile: looking-down-at-nothing.jpg
+  originalDimensions:
+    - 2124
+    - 1600
+  processedAt: '2026-01-13T22:01:10.654Z'
+  warnings:
+    - upscaled
+  aspectRatio: 1.3275
+  padded: false
+createdAt: '2026-01-02T00:22:42.553Z'
+updatedAt: '2026-01-13T22:01:10.654Z'
+published: true

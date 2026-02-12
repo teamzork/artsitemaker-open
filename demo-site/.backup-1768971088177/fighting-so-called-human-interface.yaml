@@ -1,0 +1,31 @@
+slug: fighting-so-called-human-interface
+title: Fighting So Called Human Interface
+year: 2007
+medium: Digital Illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creatures
+featured: false
+sortOrder: 101
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: fighting-so-called-human-interface.webp
+additional: []
+processing:
+  originalFile: fighting-so-called-human-interface.jpg
+  originalDimensions:
+    - 766
+    - 526
+  processedAt: '2026-01-13T22:00:53.643Z'
+  warnings:
+    - upscaled
+  aspectRatio: 1.456273764258555
+  padded: false
+createdAt: '2026-01-13T21:55:15.966Z'
+updatedAt: '2026-01-13T22:00:53.643Z'
+published: true

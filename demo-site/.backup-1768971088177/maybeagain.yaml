@@ -1,0 +1,30 @@
+slug: maybeagain
+title: Maybeagain
+year: 2012
+medium: Digital Illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creatures
+featured: false
+sortOrder: 90
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: maybeagain.webp
+additional: []
+processing:
+  originalFile: maybeagain.jpg
+  originalDimensions:
+    - 4248
+    - 3200
+  processedAt: '2026-01-13T22:01:11.854Z'
+  warnings: []
+  aspectRatio: 1.3275
+  padded: false
+createdAt: '2026-01-13T21:01:07.704Z'
+updatedAt: '2026-01-13T22:01:11.854Z'
+published: true

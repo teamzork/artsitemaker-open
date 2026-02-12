@@ -1,0 +1,31 @@
+slug: stupor
+title: Stupor
+year: 2007
+medium: Ink on paper
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 40
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: stupor.webp
+additional: []
+processing:
+  originalFile: stupor.jpg
+  originalDimensions:
+    - 1062
+    - 617
+  processedAt: '2026-01-13T22:01:27.404Z'
+  warnings:
+    - upscaled
+  aspectRatio: 1.7212317666126418
+  padded: false
+createdAt: '2026-01-02T00:22:42.522Z'
+updatedAt: '2026-01-13T22:01:27.404Z'
+published: true

@@ -1,0 +1,31 @@
+slug: mocobrast
+title: Mocobrast
+year: 2007
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 17
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: mocobrast.webp
+additional: []
+processing:
+  originalFile: mocobrast.jpg
+  originalDimensions:
+    - 1920
+    - 1200
+  processedAt: '2026-01-13T22:01:12.627Z'
+  warnings:
+    - upscaled
+  aspectRatio: 1.6
+  padded: false
+createdAt: '2026-01-02T00:22:42.494Z'
+updatedAt: '2026-01-13T22:01:12.627Z'
+published: true

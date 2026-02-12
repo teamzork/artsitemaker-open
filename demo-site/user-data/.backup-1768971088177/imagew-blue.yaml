@@ -1,0 +1,31 @@
+slug: imagew-blue
+title: Imagew Blue
+year: 2011
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 42
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: imagew-blue.webp
+additional: []
+processing:
+  originalFile: imagew-blue.tif
+  originalDimensions:
+    - 531
+    - 720
+  processedAt: "2026-01-14T11:22:57.134Z"
+  warnings:
+    - upscaled
+  aspectRatio: 0.7375
+  padded: false
+createdAt: "2026-01-02T00:22:42.524Z"
+updatedAt: "2026-01-14T11:23:18.019Z"
+published: true

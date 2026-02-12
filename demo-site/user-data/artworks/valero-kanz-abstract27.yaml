@@ -1,0 +1,29 @@
+slug: valero-kanz-abstract27
+title: Abstract Study #27
+year: 2024
+medium: Digital Art
+dimensions: Variable
+description: Exploration of form and color in digital space.
+collection: null
+tags:
+  - abstract
+  - digital
+featured: false
+sortOrder: 2
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: valero-kanz-abstract27.webp
+processing:
+  originalFile: valero_kanz-abstract27.jpg
+  originalDimensions:
+    - 2000
+    - 1100
+  processedAt: '2026-01-30T00:00:00.000Z'
+  warnings: []
+  aspectRatio: 1.8181818181818181
+  padded: false
+createdAt: '2024-03-10T00:00:00.000Z'
+updatedAt: '2026-01-30T00:00:00.000Z'
+published: true

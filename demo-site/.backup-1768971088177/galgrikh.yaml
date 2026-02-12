@@ -1,0 +1,32 @@
+slug: galgrikh
+title: Galgrikh
+year: 2006
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: true
+sortOrder: 1
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: galgrikh.webp
+additional:
+  - file: galgrikh-add-1.webp
+    title: Wide version
+processing:
+  originalFile: galgrikh.jpg
+  originalDimensions:
+    - 5156
+    - 4939
+  processedAt: '2026-01-13T22:00:56.877Z'
+  warnings: []
+  aspectRatio: 1.043936019437133
+  padded: false
+createdAt: '2026-01-02T00:22:42.469Z'
+updatedAt: '2026-01-13T22:00:56.877Z'
+published: true

@@ -1,0 +1,31 @@
+slug: gone
+title: Gone
+year: 2010
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: true
+sortOrder: 78
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: gone.webp
+additional: []
+processing:
+  originalFile: gone.jpg
+  originalDimensions:
+    - 2124
+    - 1500
+  processedAt: "2026-01-13T22:00:58.423Z"
+  warnings:
+    - upscaled
+  aspectRatio: 1.416
+  padded: false
+createdAt: "2026-01-02T00:22:42.551Z"
+updatedAt: "2026-01-14T11:43:35.940Z"
+published: true

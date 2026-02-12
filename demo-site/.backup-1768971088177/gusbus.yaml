@@ -1,0 +1,30 @@
+slug: gusbus
+title: Gusbus
+year: 2015
+medium: Digital Illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creatures
+featured: false
+sortOrder: 83
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: gusbus.webp
+additional: []
+processing:
+  originalFile: gusbus.png
+  originalDimensions:
+    - 4248
+    - 3000
+  processedAt: "2026-01-13T22:01:00.514Z"
+  warnings: []
+  aspectRatio: 1.416
+  padded: false
+createdAt: "2026-01-13T21:01:07.695Z"
+updatedAt: "2026-01-14T11:45:34.577Z"
+published: true

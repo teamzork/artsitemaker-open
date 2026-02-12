@@ -1,0 +1,31 @@
+slug: returne
+title: Returne
+year: 2009
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 41
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: returne.webp
+additional: []
+processing:
+  originalFile: returne.jpg
+  originalDimensions:
+    - 2124
+    - 1080
+  processedAt: '2026-01-13T22:30:04.977Z'
+  warnings:
+    - upscaled
+  aspectRatio: 1.9666666666666666
+  padded: false
+createdAt: '2026-01-02T00:22:42.523Z'
+updatedAt: '2026-01-13T22:30:04.977Z'
+published: true

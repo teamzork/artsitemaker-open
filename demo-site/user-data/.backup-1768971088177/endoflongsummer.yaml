@@ -1,0 +1,31 @@
+slug: endoflongsummer
+title: End of long summer
+year: 2010
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 74
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: endoflongsummer.webp
+additional: []
+processing:
+  originalFile: endoflongsummer.jpg
+  originalDimensions:
+    - 2124
+    - 2124
+  processedAt: "2026-01-14T11:41:00.000Z"
+  warnings:
+    - upscaled
+  aspectRatio: 1
+  padded: false
+createdAt: "2026-01-02T00:22:42.549Z"
+updatedAt: "2026-01-14T11:41:14.622Z"
+published: true

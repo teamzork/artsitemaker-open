@@ -1,0 +1,31 @@
+slug: iskat
+title: Iskat
+year: 2006
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: true
+sortOrder: 3
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: iskat.webp
+additional: []
+processing:
+  originalFile: iskat.jpg
+  originalDimensions:
+    - 2124
+    - 2124
+  processedAt: '2026-01-13T22:01:02.944Z'
+  warnings:
+    - upscaled
+  aspectRatio: 1
+  padded: false
+createdAt: '2026-01-02T00:22:42.473Z'
+updatedAt: '2026-01-13T22:01:02.944Z'
+published: true

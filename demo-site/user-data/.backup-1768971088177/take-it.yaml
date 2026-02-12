@@ -1,0 +1,30 @@
+slug: take-it
+title: Take It
+year: 2009
+medium: Ink on mylar
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creatures
+featured: false
+sortOrder: 96
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: take-it.webp
+additional: []
+processing:
+  originalFile: take-it.jpg
+  originalDimensions:
+    - 4000
+    - 5200
+  processedAt: '2026-01-13T22:01:28.603Z'
+  warnings: []
+  aspectRatio: 0.7692307692307693
+  padded: false
+createdAt: '2026-01-13T21:55:15.952Z'
+updatedAt: '2026-01-13T22:01:28.603Z'
+published: true

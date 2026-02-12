@@ -1,0 +1,31 @@
+slug: detyanipapani
+title: Detyani papani
+year: 2010
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 61
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: detyanipapani.webp
+additional: []
+processing:
+  originalFile: detyanipapani.jpg
+  originalDimensions:
+    - 2124
+    - 2124
+  processedAt: "2026-01-13T22:35:45.473Z"
+  warnings:
+    - upscaled
+  aspectRatio: 1
+  padded: false
+createdAt: "2026-01-02T00:22:42.539Z"
+updatedAt: "2026-01-13T22:36:04.057Z"
+published: true

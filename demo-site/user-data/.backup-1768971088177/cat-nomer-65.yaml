@@ -1,0 +1,30 @@
+slug: cat-nomer-65
+title: Cat Nomer 65
+year: 2004
+medium: Ink on mylar
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 69
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: cat-nomer-65.webp
+additional: []
+processing:
+  originalFile: cat-nomer-65.tif
+  originalDimensions:
+    - 6000
+    - 6000
+  processedAt: '2026-01-13T22:00:44.916Z'
+  warnings: []
+  aspectRatio: 1
+  padded: false
+createdAt: '2026-01-02T00:22:42.545Z'
+updatedAt: '2026-01-13T22:00:44.916Z'
+published: true

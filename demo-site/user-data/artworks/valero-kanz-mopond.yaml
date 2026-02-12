@@ -1,0 +1,30 @@
+slug: valero-kanz-mopond
+title: Reflections on Mopond
+year: 2024
+medium: Photography
+dimensions: Variable
+description: Still waters reflecting the passage of time.
+collection: null
+tags:
+  - nature
+  - photography
+  - water
+featured: false
+sortOrder: 3
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: valero-kanz-mopond.webp
+processing:
+  originalFile: valero_kanz-mopond.jpg
+  originalDimensions:
+    - 2400
+    - 2000
+  processedAt: '2026-01-30T00:00:00.000Z'
+  warnings: []
+  aspectRatio: 1.2
+  padded: false
+createdAt: '2024-04-20T00:00:00.000Z'
+updatedAt: '2026-01-30T00:00:00.000Z'
+published: true

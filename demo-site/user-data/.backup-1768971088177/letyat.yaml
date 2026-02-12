@@ -1,0 +1,30 @@
+slug: letyat
+title: Letyat
+year: 2007
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 11
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: letyat.webp
+additional: []
+processing:
+  originalFile: letyat.jpg
+  originalDimensions:
+    - 4000
+    - 4000
+  processedAt: '2026-01-13T22:01:09.447Z'
+  warnings: []
+  aspectRatio: 1
+  padded: false
+createdAt: '2026-01-02T00:22:42.485Z'
+updatedAt: '2026-01-13T22:01:09.447Z'
+published: true

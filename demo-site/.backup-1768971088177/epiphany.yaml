@@ -1,0 +1,30 @@
+slug: epiphany
+title: Epiphany
+year: 2008
+medium: Ink on mylar
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creatures
+featured: false
+sortOrder: 102
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: epiphany.webp
+additional: []
+processing:
+  originalFile: epiphany.jpg
+  originalDimensions:
+    - 8500
+    - 7500
+  processedAt: "2026-01-13T22:00:52.463Z"
+  warnings: []
+  aspectRatio: 1.1333333333333333
+  padded: false
+createdAt: "2026-01-13T21:55:15.974Z"
+updatedAt: "2026-01-14T11:50:39.331Z"
+published: true

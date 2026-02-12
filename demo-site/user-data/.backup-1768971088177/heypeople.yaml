@@ -1,0 +1,31 @@
+slug: heypeople
+title: Hey people
+year: 2010
+medium: Ink on mylar
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 60
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: heypeople.webp
+additional: []
+processing:
+  originalFile: heypeople.jpg
+  originalDimensions:
+    - 1482
+    - 2048
+  processedAt: "2026-01-13T22:34:57.865Z"
+  warnings:
+    - upscaled
+  aspectRatio: 0.7236328125
+  padded: false
+createdAt: "2026-01-02T00:22:42.538Z"
+updatedAt: "2026-01-13T22:35:15.654Z"
+published: true

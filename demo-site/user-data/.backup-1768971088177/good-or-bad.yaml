@@ -1,0 +1,31 @@
+slug: good-or-bad
+title: Good Or Bad
+year: 2013
+medium: Digital Illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creatures
+featured: false
+sortOrder: 89
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: good-or-bad.webp
+additional: []
+processing:
+  originalFile: good-or-bad.jpg
+  originalDimensions:
+    - 2124
+    - 1400
+  processedAt: '2026-01-13T22:00:58.855Z'
+  warnings:
+    - upscaled
+  aspectRatio: 1.5171428571428571
+  padded: false
+createdAt: '2026-01-13T21:01:07.703Z'
+updatedAt: '2026-01-13T22:00:58.856Z'
+published: true

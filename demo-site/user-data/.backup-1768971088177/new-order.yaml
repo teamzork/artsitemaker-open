@@ -1,0 +1,30 @@
+slug: new-order
+title: New Order
+year: 2009
+medium: Acrylic on Canvas
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 31
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: new-order.webp
+additional: []
+processing:
+  originalFile: new-order.jpg
+  originalDimensions:
+    - 3000
+    - 3000
+  processedAt: '2026-01-13T22:17:50.710Z'
+  warnings: []
+  aspectRatio: 1
+  padded: false
+createdAt: '2026-01-02T00:22:42.510Z'
+updatedAt: '2026-01-13T22:17:50.710Z'
+published: true

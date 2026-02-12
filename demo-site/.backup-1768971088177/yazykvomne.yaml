@@ -1,0 +1,31 @@
+slug: yazykvomne
+title: Yazykvomne
+year: 2007
+medium: Digital Illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creatures
+featured: false
+sortOrder: 94
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: yazykvomne.webp
+additional: []
+processing:
+  originalFile: yazykvomne.jpg
+  originalDimensions:
+    - 1600
+    - 1600
+  processedAt: "2026-01-13T22:01:38.774Z"
+  warnings:
+    - upscaled
+  aspectRatio: 1
+  padded: false
+createdAt: "2026-01-13T21:55:15.947Z"
+updatedAt: "2026-01-14T11:48:03.167Z"
+published: true

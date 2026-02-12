@@ -1,0 +1,34 @@
+slug: dream-swimming-crop
+title: Dream Swimming
+year: 2009
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - abstacts
+featured: false
+sortOrder: 21
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: dream-swimming-crop.webp
+additional:
+  - file: dream-swimming-crop-add-1.webp
+    title: Detail 1
+  - file: dream-swimming-crop-add-2.webp
+    title: Detail 2
+processing:
+  originalFile: dream-swimming-crop.jpg
+  originalDimensions:
+    - 3800
+    - 3300
+  processedAt: '2026-01-13T22:00:49.318Z'
+  warnings: []
+  aspectRatio: 1.1515151515151516
+  padded: false
+createdAt: '2026-01-02T00:22:42.498Z'
+updatedAt: '2026-01-13T22:00:49.318Z'
+published: true

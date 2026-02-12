@@ -1,0 +1,30 @@
+slug: fezikson
+title: Fezikson
+year: 2006
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: true
+sortOrder: 7
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: fezikson.webp
+additional: []
+processing:
+  originalFile: fezikson.jpg
+  originalDimensions:
+    - 3011
+    - 3000
+  processedAt: '2026-01-13T22:00:53.316Z'
+  warnings: []
+  aspectRatio: 1.0036666666666667
+  padded: false
+createdAt: '2026-01-02T00:22:42.477Z'
+updatedAt: '2026-01-13T22:00:53.316Z'
+published: true

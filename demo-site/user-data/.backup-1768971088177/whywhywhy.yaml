@@ -1,0 +1,30 @@
+slug: whywhywhy
+title: Why why why
+year: 2008
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 35
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: whywhywhy.webp
+additional: []
+processing:
+  originalFile: whywhywhy.jpg
+  originalDimensions:
+    - 8000
+    - 4500
+  processedAt: "2026-01-13T22:01:38.279Z"
+  warnings: []
+  aspectRatio: 1.7777777777777777
+  padded: false
+createdAt: "2026-01-02T00:22:42.517Z"
+updatedAt: "2026-01-13T22:01:48.394Z"
+published: true

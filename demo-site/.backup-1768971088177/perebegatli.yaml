@@ -1,0 +1,32 @@
+slug: perebegatli
+title: Perebegatli
+year: 2010
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+  - cats
+featured: false
+sortOrder: 77
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: perebegatli.webp
+additional: []
+processing:
+  originalFile: perebegatli.jpg
+  originalDimensions:
+    - 2124
+    - 1600
+  processedAt: "2026-01-13T22:39:19.490Z"
+  warnings:
+    - upscaled
+  aspectRatio: 1.3275
+  padded: false
+createdAt: "2026-01-02T00:22:42.551Z"
+updatedAt: "2026-01-13T22:39:34.696Z"
+published: true

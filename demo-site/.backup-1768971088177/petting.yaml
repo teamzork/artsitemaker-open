@@ -1,0 +1,31 @@
+slug: petting
+title: Petting
+year: 2008
+medium: Digital Illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creatures
+featured: false
+sortOrder: 98
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: petting.webp
+additional: []
+processing:
+  originalFile: petting.png
+  originalDimensions:
+    - 2124
+    - 1440
+  processedAt: '2026-01-13T22:01:21.198Z'
+  warnings:
+    - upscaled
+  aspectRatio: 1.475
+  padded: false
+createdAt: '2026-01-13T21:55:15.956Z'
+updatedAt: '2026-01-13T22:01:21.198Z'
+published: true

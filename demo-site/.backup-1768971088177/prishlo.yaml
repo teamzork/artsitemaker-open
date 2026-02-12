@@ -1,0 +1,31 @@
+slug: prishlo
+title: Prishlo
+year: 2006
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: true
+sortOrder: 5
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: prishlo.webp
+additional: []
+processing:
+  originalFile: prishlo.jpg
+  originalDimensions:
+    - 2124
+    - 2004
+  processedAt: '2026-01-13T22:01:23.571Z'
+  warnings:
+    - upscaled
+  aspectRatio: 1.0598802395209581
+  padded: false
+createdAt: '2026-01-02T00:22:42.475Z'
+updatedAt: '2026-01-13T22:01:23.571Z'
+published: true

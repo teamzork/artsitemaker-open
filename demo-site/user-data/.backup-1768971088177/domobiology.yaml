@@ -1,0 +1,30 @@
+slug: domobiology
+title: Domobiology
+year: 2008
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 15
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: domobiology.webp
+additional: []
+processing:
+  originalFile: domobiology.jpg
+  originalDimensions:
+    - 5906
+    - 4724
+  processedAt: "2026-01-13T22:09:52.760Z"
+  warnings: []
+  aspectRatio: 1.2502116850127012
+  padded: false
+createdAt: "2026-01-02T00:22:42.492Z"
+updatedAt: "2026-01-13T22:10:00.948Z"
+published: true

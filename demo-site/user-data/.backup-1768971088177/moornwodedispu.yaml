@@ -1,0 +1,30 @@
+slug: moornwodedispu
+title: Moornwodedispu
+year: 2007
+medium: Ink on mylar
+dimensions: null
+description: Moornwodedispu <=> upsidedownrooM
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 13
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: moornwodedispu.webp
+additional: []
+processing:
+  originalFile: moornwodedispu.jpg
+  originalDimensions:
+    - 4248
+    - 4248
+  processedAt: '2026-01-13T22:01:13.355Z'
+  warnings: []
+  aspectRatio: 1
+  padded: false
+createdAt: '2026-01-02T00:22:42.490Z'
+updatedAt: '2026-01-13T22:01:13.355Z'
+published: true

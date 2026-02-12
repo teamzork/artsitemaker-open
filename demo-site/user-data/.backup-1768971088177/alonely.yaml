@@ -1,0 +1,31 @@
+slug: alonely
+title: Alonely
+year: 2008
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 23
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: alonely.webp
+additional: []
+processing:
+  originalFile: alonely.jpg
+  originalDimensions:
+    - 2124
+    - 2124
+  processedAt: "2026-01-14T03:57:21.369Z"
+  warnings:
+    - upscaled
+  aspectRatio: 1
+  padded: false
+createdAt: "2026-01-02T00:22:42.501Z"
+updatedAt: "2026-01-14T03:57:25.470Z"
+published: true

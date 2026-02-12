@@ -1,0 +1,5 @@
+imageStorage: local
+r2:
+  publicUrl: ""
+  bucketName: ""
+  projectPrefix: ""

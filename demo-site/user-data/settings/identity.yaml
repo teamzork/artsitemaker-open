@@ -1,0 +1,18 @@
+# Identity Kit Configuration
+# Brand colors, fonts, and logo settings
+
+identityKit:
+  backgroundColor: '#ffffff'
+  accentColor: '#efb600'
+  textColor: '#000000'
+  invertedTextColor: '#ffffff'
+  linkColor: '#000000'
+  fonts:
+    heading: DimkaSans
+    body: DimkaSans
+  logo:
+    file: logos/logo.png
+    width: 126
+  background:
+    texture: ''
+    textureMode: tile

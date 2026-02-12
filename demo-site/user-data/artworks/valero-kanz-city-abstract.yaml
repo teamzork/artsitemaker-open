@@ -1,0 +1,30 @@
+slug: valero-kanz-city-abstract
+title: City Abstract
+year: 2024
+medium: Digital Art
+dimensions: Variable
+description: Urban landscapes transformed into abstract compositions.
+collection: null
+tags:
+  - abstract
+  - urban
+  - digital
+featured: false
+sortOrder: 4
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: valero-kanz-city-abstract.webp
+processing:
+  originalFile: valero_kanz-city_abstract.jpg
+  originalDimensions:
+    - 2300
+    - 2300
+  processedAt: '2026-01-30T00:00:00.000Z'
+  warnings: []
+  aspectRatio: 1.0
+  padded: false
+createdAt: '2024-05-10T00:00:00.000Z'
+updatedAt: '2026-01-30T00:00:00.000Z'
+published: true

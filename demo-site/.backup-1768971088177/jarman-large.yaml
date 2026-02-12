@@ -1,0 +1,30 @@
+slug: jarman-large
+title: Jarman
+year: 2003
+medium: Ink on mylar
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - humans
+featured: false
+sortOrder: 82
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: jarman-large.webp
+additional: []
+processing:
+  originalFile: jarman-large.jpg
+  originalDimensions:
+    - 3173
+    - 3161
+  processedAt: "2026-01-13T22:01:04.303Z"
+  warnings: []
+  aspectRatio: 1.0037962670041127
+  padded: false
+createdAt: "2026-01-13T20:45:24.639Z"
+updatedAt: "2026-01-14T11:45:24.783Z"
+published: true

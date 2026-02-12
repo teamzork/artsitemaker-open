@@ -1,0 +1,30 @@
+slug: netflees
+title: Netflees
+year: 2008
+medium: Ink on paper
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 50
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: netflees.webp
+additional: []
+processing:
+  originalFile: netflees.jpg
+  originalDimensions:
+    - 4248
+    - 2000
+  processedAt: '2026-01-13T22:01:16.174Z'
+  warnings: []
+  aspectRatio: 2.124
+  padded: false
+createdAt: '2026-01-02T00:22:42.530Z'
+updatedAt: '2026-01-13T22:01:16.174Z'
+published: true

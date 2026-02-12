@@ -1,0 +1,30 @@
+slug: loonari
+title: Loonari
+year: 2008
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 32
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: loonari.webp
+additional: []
+processing:
+  originalFile: loonari.jpg
+  originalDimensions:
+    - 10620
+    - 6000
+  processedAt: "2026-01-14T03:58:41.505Z"
+  warnings: []
+  aspectRatio: 1.77
+  padded: false
+createdAt: "2026-01-02T00:22:42.510Z"
+updatedAt: "2026-01-14T03:58:49.081Z"
+published: true

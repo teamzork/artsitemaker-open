@@ -29,13 +29,6 @@ const stateLabel = getStateLabel(projectState);
 const stateBadgeColor = getStateBadgeColor(projectState);
 const usingDemo = isUsingDemoContent();
 
-// Redirect to onboarding if first run (unless already on onboarding page)
-if (
-  projectState === "FIRST_RUN" &&
-  !Astro.url.pathname.startsWith("/onboarding")
-) {
-  return Astro.redirect("/onboarding");
-}
 ---
 
 <BaseLayout title={title}>

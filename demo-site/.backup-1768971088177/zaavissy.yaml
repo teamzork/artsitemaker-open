@@ -1,0 +1,30 @@
+slug: zaavissy
+title: Zaavissy
+year: 2008
+medium: mixed media
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creatures
+featured: false
+sortOrder: 92
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: zaavissy.webp
+additional: []
+processing:
+  originalFile: zaavissy.jpg
+  originalDimensions:
+    - 4000
+    - 2958
+  processedAt: '2026-01-13T22:01:39.514Z'
+  warnings: []
+  aspectRatio: 1.352265043948614
+  padded: false
+createdAt: '2026-01-13T21:01:07.712Z'
+updatedAt: '2026-01-13T22:01:39.514Z'
+published: true

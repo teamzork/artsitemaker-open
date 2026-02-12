@@ -1,0 +1,31 @@
+slug: badfriends-large
+title: Bad Friends
+year: 2009
+medium: Digital Illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - abstacts
+featured: false
+sortOrder: 85
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: badfriends-large.webp
+additional: []
+processing:
+  originalFile: badfriends-large.jpg
+  originalDimensions:
+    - 900
+    - 1000
+  processedAt: "2026-01-13T22:00:34.931Z"
+  warnings:
+    - upscaled
+  aspectRatio: 0.9
+  padded: false
+createdAt: "2026-01-13T21:01:07.701Z"
+updatedAt: "2026-01-14T11:46:23.267Z"
+published: true

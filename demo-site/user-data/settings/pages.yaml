@@ -1,0 +1,27 @@
+# Page Configuration
+# Controls which pages are enabled and how they link to each other
+
+# Which pages are enabled for this site
+enabled:
+  home: false
+  gallery: true
+  slider: true
+  art_piece: true
+  about: true
+  collections_list: false
+  article: false
+  schedule: false
+  contact: false
+  search_results: false
+  service: true
+
+# Which page serves as the home page (when home is disabled)
+homePage: gallery
+
+# How pages link to each other
+# These settings control navigation behavior throughout the site
+linking:
+  galleryClick: slider
+  collectionClick: gallery
+  artPieceBack: slider
+  searchResultClick: art_piece

@@ -1,0 +1,31 @@
+slug: pointless-end-of-cuke
+title: Pointless End Of Cuke
+year: 2008
+medium: Digital illustration
+dimensions: null
+description: 'Inspired by saying "Pointless like the end of a cucumber", I though that it could be so sad, when cuke dies and there is no point in that. '
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: true
+sortOrder: 4
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: pointless-end-of-cuke.webp
+additional:
+  - pointless-end-of-cuke-add-1.webp
+processing:
+  originalFile: pointless-end-of-cuke.tif
+  originalDimensions:
+    - 3200
+    - 2000
+  processedAt: '2026-01-13T22:01:22.189Z'
+  warnings: []
+  aspectRatio: 1.6
+  padded: false
+createdAt: '2026-01-02T00:22:42.474Z'
+updatedAt: '2026-01-13T22:01:22.189Z'
+published: true

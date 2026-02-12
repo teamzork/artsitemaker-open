@@ -1,0 +1,30 @@
+slug: ulechke
+title: Ulechke
+year: 2008
+medium: Ink on mylar
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - abstacts
+featured: false
+sortOrder: 93
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: ulechke.webp
+additional: []
+processing:
+  originalFile: ulechke.tif
+  originalDimensions:
+    - 3856
+    - 3936
+  processedAt: '2026-01-13T22:01:32.624Z'
+  warnings: []
+  aspectRatio: 0.9796747967479674
+  padded: false
+createdAt: '2026-01-13T21:01:07.736Z'
+updatedAt: '2026-01-13T22:01:32.624Z'
+published: true

@@ -1,0 +1,30 @@
+slug: too-many-thoughts
+title: Too Many Thoughts
+year: 2007
+medium: Ink on mylar
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 14
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: too-many-thoughts.webp
+additional: []
+processing:
+  originalFile: too-many-thoughts.tif
+  originalDimensions:
+    - 4248
+    - 2907
+  processedAt: '2026-01-13T22:01:30.845Z'
+  warnings: []
+  aspectRatio: 1.4613003095975232
+  padded: false
+createdAt: '2026-01-02T00:22:42.491Z'
+updatedAt: '2026-01-13T22:01:30.845Z'
+published: true

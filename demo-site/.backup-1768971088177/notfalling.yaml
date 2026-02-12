@@ -1,0 +1,31 @@
+slug: notfalling
+title: Notfalling
+year: 2008
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 45
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: notfalling.webp
+additional: []
+processing:
+  originalFile: notfalling.jpg
+  originalDimensions:
+    - 1062
+    - 1062
+  processedAt: "2026-01-14T11:25:51.989Z"
+  warnings:
+    - upscaled
+  aspectRatio: 1
+  padded: false
+createdAt: "2026-01-02T00:22:42.527Z"
+updatedAt: "2026-01-14T11:26:00.078Z"
+published: true

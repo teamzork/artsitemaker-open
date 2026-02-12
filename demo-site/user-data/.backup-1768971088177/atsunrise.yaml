@@ -1,0 +1,31 @@
+slug: atsunrise
+title: At sunrise
+year: 2010
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 70
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: atsunrise.webp
+additional: []
+processing:
+  originalFile: atsunrise.jpg
+  originalDimensions:
+    - 2124
+    - 1600
+  processedAt: "2026-01-14T11:39:50.371Z"
+  warnings:
+    - upscaled
+  aspectRatio: 1.3275
+  padded: false
+createdAt: "2026-01-02T00:22:42.546Z"
+updatedAt: "2026-01-14T11:39:55.597Z"
+published: true

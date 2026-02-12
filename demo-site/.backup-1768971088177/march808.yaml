@@ -1,0 +1,31 @@
+slug: march808
+title: March 808
+year: 2008
+medium: Ink on mylar
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+  - cats
+featured: false
+sortOrder: 26
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: march808.webp
+additional: []
+processing:
+  originalFile: march808.jpg
+  originalDimensions:
+    - 6222
+    - 4724
+  processedAt: "2026-01-13T22:15:14.925Z"
+  warnings: []
+  aspectRatio: 1.317104149026249
+  padded: false
+createdAt: "2026-01-02T00:22:42.506Z"
+updatedAt: "2026-01-13T22:15:28.013Z"
+published: true

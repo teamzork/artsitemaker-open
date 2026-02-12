@@ -1,0 +1,30 @@
+slug: thinking-boy
+title: Thinking Boy
+year: 2025
+medium: Digital Illustration
+dimensions: null
+description: null
+collection: null
+tags:
+  - surreal
+  - humans
+featured: false
+sortOrder: 78
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: thinking-boy.webp
+additional: []
+processing:
+  originalFile: thinking-boy.png
+  originalDimensions:
+    - 4248
+    - 4248
+  processedAt: "2026-01-13T22:01:29.887Z"
+  warnings: []
+  aspectRatio: 1
+  padded: false
+createdAt: "2026-01-02T02:37:41.470Z"
+updatedAt: "2026-01-13T22:39:55.810Z"
+published: true

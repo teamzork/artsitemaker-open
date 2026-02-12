@@ -1,0 +1,30 @@
+slug: big-gvolab
+title: Big Gvolab
+year: 2008
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 20
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: big-gvolab.webp
+additional: []
+processing:
+  originalFile: big-gvolab.jpg
+  originalDimensions:
+    - 4000
+    - 4000
+  processedAt: "2026-01-13T22:11:21.831Z"
+  warnings: []
+  aspectRatio: 1
+  padded: false
+createdAt: "2026-01-02T00:22:42.497Z"
+updatedAt: "2026-01-13T22:11:31.799Z"
+published: true

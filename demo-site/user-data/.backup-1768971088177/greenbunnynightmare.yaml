@@ -1,0 +1,30 @@
+slug: greenbunnynightmare
+title: Green Bunny Nightmare
+year: 2009
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 28
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: greenbunnynightmare.webp
+additional: []
+processing:
+  originalFile: greenbunnynightmare.jpg
+  originalDimensions:
+    - 3300
+    - 3300
+  processedAt: "2026-01-13T22:16:22.985Z"
+  warnings: []
+  aspectRatio: 1
+  padded: false
+createdAt: "2026-01-02T00:22:42.507Z"
+updatedAt: "2026-01-13T22:16:25.118Z"
+published: true

@@ -1,0 +1,30 @@
+slug: dimtis
+title: Dimtis
+year: 2005
+medium: Ink on paper
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 16
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: dimtis.webp
+additional: []
+processing:
+  originalFile: dimtis.jpg
+  originalDimensions:
+    - 3522
+    - 3516
+  processedAt: "2026-01-13T22:10:34.358Z"
+  warnings: []
+  aspectRatio: 1.0017064846416381
+  padded: false
+createdAt: "2026-01-02T00:22:42.493Z"
+updatedAt: "2026-01-13T22:10:51.783Z"
+published: true

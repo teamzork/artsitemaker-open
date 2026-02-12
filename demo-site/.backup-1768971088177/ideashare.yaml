@@ -1,0 +1,31 @@
+slug: ideashare
+title: Ideashare
+year: 2009
+medium: Ink on mylar
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 39
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: ideashare.webp
+additional: []
+processing:
+  originalFile: ideashare.jpg
+  originalDimensions:
+    - 1062
+    - 1370
+  processedAt: '2026-01-13T22:01:01.767Z'
+  warnings:
+    - upscaled
+  aspectRatio: 0.7751824817518248
+  padded: false
+createdAt: '2026-01-02T00:22:42.521Z'
+updatedAt: '2026-01-13T22:01:01.767Z'
+published: true

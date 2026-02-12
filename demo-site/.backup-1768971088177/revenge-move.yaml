@@ -1,0 +1,30 @@
+slug: revenge-move
+title: Revenge Move
+year: 2009
+medium: Clay sculpture
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 53
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: revenge-move.webp
+additional: []
+processing:
+  originalFile: revenge-move.jpg
+  originalDimensions:
+    - 4138
+    - 2100
+  processedAt: '2026-01-13T22:01:24.503Z'
+  warnings: []
+  aspectRatio: 1.9704761904761905
+  padded: false
+createdAt: '2026-01-02T00:22:42.532Z'
+updatedAt: '2026-01-13T22:01:24.503Z'
+published: true

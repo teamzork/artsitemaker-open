@@ -1,0 +1,31 @@
+slug: dekrai
+title: Dekrai
+year: 2010
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 76
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: dekrai.webp
+additional: []
+processing:
+  originalFile: dekrai.jpg
+  originalDimensions:
+    - 2124
+    - 1000
+  processedAt: "2026-01-13T22:38:41.014Z"
+  warnings:
+    - upscaled
+  aspectRatio: 2.124
+  padded: false
+createdAt: "2026-01-02T00:22:42.550Z"
+updatedAt: "2026-01-13T22:38:58.460Z"
+published: true

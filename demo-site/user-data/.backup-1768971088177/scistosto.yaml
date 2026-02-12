@@ -1,0 +1,30 @@
+slug: scistosto
+title: Scistosto
+year: 2010
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 67
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: scistosto.webp
+additional: []
+processing:
+  originalFile: scistosto.jpg
+  originalDimensions:
+    - 4248
+    - 3000
+  processedAt: "2026-01-14T11:38:26.923Z"
+  warnings: []
+  aspectRatio: 1.416
+  padded: false
+createdAt: "2026-01-02T00:22:42.544Z"
+updatedAt: "2026-01-14T11:38:41.015Z"
+published: true

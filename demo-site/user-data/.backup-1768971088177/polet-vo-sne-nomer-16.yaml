@@ -1,0 +1,31 @@
+slug: polet-vo-sne-nomer-16
+title: Polet Vo Sne Nomer 16
+year: 2006
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 33
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: polet-vo-sne-nomer-16.webp
+additional: []
+processing:
+  originalFile: polet-vo-sne-nomer-16.jpg
+  originalDimensions:
+    - 2124
+    - 1716
+  processedAt: '2026-01-14T11:21:23.916Z'
+  warnings:
+    - upscaled
+  aspectRatio: 1.2377622377622377
+  padded: false
+createdAt: '2026-01-02T00:22:42.515Z'
+updatedAt: '2026-01-14T11:21:23.916Z'
+published: true

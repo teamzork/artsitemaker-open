@@ -1,0 +1,30 @@
+slug: memememe
+title: Me me me me
+year: 2009
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 63
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: memememe.webp
+additional: []
+processing:
+  originalFile: memememe.jpg
+  originalDimensions:
+    - 2960
+    - 1630
+  processedAt: '2026-01-13T22:01:12.216Z'
+  warnings: []
+  aspectRatio: 1.8159509202453987
+  padded: false
+createdAt: '2026-01-02T00:22:42.541Z'
+updatedAt: '2026-01-13T22:01:12.216Z'
+published: true

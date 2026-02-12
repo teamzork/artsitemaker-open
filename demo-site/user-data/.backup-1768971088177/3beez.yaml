@@ -1,0 +1,33 @@
+slug: 3beez
+title: 3beez
+year: 2007
+medium: Digital illustration
+dimensions: null
+description: |-
+  When I got my first iPhone in 2007, this was the first art piece I created on it.
+  At the time there were very limited capabilities for drawing tools and that narrowed the possibilities
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 56
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: 3beez.webp
+additional: []
+processing:
+  originalFile: 3beez.jpg
+  originalDimensions:
+    - 682
+    - 1024
+  processedAt: '2026-01-13T22:00:32.625Z'
+  warnings:
+    - upscaled
+  aspectRatio: 0.666015625
+  padded: false
+createdAt: '2026-01-02T00:22:42.534Z'
+updatedAt: '2026-01-13T22:00:32.625Z'
+published: true

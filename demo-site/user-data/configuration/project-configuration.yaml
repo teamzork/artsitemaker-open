@@ -1,0 +1,12 @@
+auth:
+  type: github
+  allowedUsers: []
+git:
+  autoCommit: false
+  remote: origin
+images:
+  processing:
+    large: 2124
+    medium: 1062
+    small: 531
+    thumbnail: 200

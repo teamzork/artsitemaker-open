@@ -1,0 +1,31 @@
+slug: ptis
+title: Ptis
+year: 2007
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 48
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: ptis.webp
+additional: []
+processing:
+  originalFile: ptis.jpg
+  originalDimensions:
+    - 531
+    - 400
+  processedAt: '2026-01-13T22:01:23.740Z'
+  warnings:
+    - upscaled
+  aspectRatio: 1.3275
+  padded: false
+createdAt: '2026-01-02T00:22:42.529Z'
+updatedAt: '2026-01-13T22:01:23.740Z'
+published: true

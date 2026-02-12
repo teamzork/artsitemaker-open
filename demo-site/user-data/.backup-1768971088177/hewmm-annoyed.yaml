@@ -1,0 +1,31 @@
+slug: hewmm-annoyed
+title: Hewmm Annoyed
+year: 2022
+medium: Digital Illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creatures
+featured: false
+sortOrder: 87
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: hewmm-annoyed.webp
+additional: []
+processing:
+  originalFile: hewmm-annoyed.png
+  originalDimensions:
+    - 2124
+    - 1588
+  processedAt: '2026-01-13T22:01:00.731Z'
+  warnings:
+    - upscaled
+  aspectRatio: 1.3375314861460956
+  padded: false
+createdAt: '2026-01-13T21:01:07.702Z'
+updatedAt: '2026-01-13T22:01:00.731Z'
+published: true

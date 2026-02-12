@@ -1,0 +1,31 @@
+slug: betweentwo
+title: Between two
+year: 2010
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 59
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: betweentwo.webp
+additional: []
+processing:
+  originalFile: betweentwo.jpg
+  originalDimensions:
+    - 1062
+    - 700
+  processedAt: '2026-01-14T11:36:09.726Z'
+  warnings:
+    - upscaled
+  aspectRatio: 1.5171428571428571
+  padded: false
+createdAt: '2026-01-02T00:22:42.537Z'
+updatedAt: '2026-01-14T11:36:09.726Z'
+published: true

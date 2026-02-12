@@ -1,0 +1,30 @@
+slug: whatsthat
+title: Whatsthat
+year: 2019
+medium: Acrylic on Canvas
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creatures
+featured: false
+sortOrder: 81
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: whatsthat.webp
+additional: []
+processing:
+  originalFile: whatsthat.jpg
+  originalDimensions:
+    - 2628
+    - 3915
+  processedAt: "2026-01-13T22:01:37.175Z"
+  warnings: []
+  aspectRatio: 0.671264367816092
+  padded: false
+createdAt: "2026-01-13T20:31:17.504Z"
+updatedAt: "2026-01-13T22:40:26.717Z"
+published: true

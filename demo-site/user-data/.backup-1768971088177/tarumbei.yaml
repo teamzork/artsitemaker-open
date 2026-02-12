@@ -1,0 +1,32 @@
+slug: tarumbei
+title: Tarumbei
+year: 2009
+medium: Acrylic on Canvas
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 58
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: tarumbei.webp
+additional:
+  - file: tarumbei-add-1.webp
+    title: Detail 1
+processing:
+  originalFile: tarumbei.jpg
+  originalDimensions:
+    - 2410
+    - 3222
+  processedAt: "2026-01-13T22:32:12.267Z"
+  warnings: []
+  aspectRatio: 0.7479826194909994
+  padded: false
+createdAt: "2026-01-02T00:22:42.536Z"
+updatedAt: "2026-01-13T22:32:57.122Z"
+published: true

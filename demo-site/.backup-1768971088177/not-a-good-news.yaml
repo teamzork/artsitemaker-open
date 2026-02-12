@@ -1,0 +1,30 @@
+slug: not-a-good-news
+title: Not A Good News
+year: 2008
+medium: Ink on mylar
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 18
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: not-a-good-news.webp
+additional: []
+processing:
+  originalFile: not-a-good-news.png
+  originalDimensions:
+    - 3000
+    - 1500
+  processedAt: '2026-01-13T22:01:18.133Z'
+  warnings: []
+  aspectRatio: 2
+  padded: false
+createdAt: '2026-01-02T00:22:42.495Z'
+updatedAt: '2026-01-13T22:01:18.133Z'
+published: true

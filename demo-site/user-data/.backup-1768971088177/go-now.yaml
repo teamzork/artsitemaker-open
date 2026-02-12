@@ -1,0 +1,33 @@
+slug: go-now
+title: Go Now
+year: 2025
+medium: Acrylic on Canvas
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+  - cats
+featured: false
+sortOrder: 80
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: go-now.webp
+additional:
+  - file: go-now-add-1.webp
+    title: with the artist
+processing:
+  originalFile: go-now.jpg
+  originalDimensions:
+    - 3753
+    - 3078
+  processedAt: "2026-01-13T22:00:57.983Z"
+  warnings: []
+  aspectRatio: 1.219298245614035
+  padded: false
+createdAt: "2026-01-13T18:29:23.230Z"
+updatedAt: "2026-01-14T11:45:00.660Z"
+published: true

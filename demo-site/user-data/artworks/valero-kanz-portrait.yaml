@@ -1,0 +1,21 @@
+slug: valero-kanz-portrait
+title: Portrait of the Artist
+date: '2024-01-01'
+medium: Digital Photography
+dimensions: Variable
+price: null
+status: Collection of the Artist
+sortOrder: 0
+published: false
+tags:
+  - portrait
+  - artist
+description: Self-portrait in the stateless territory.
+primary: valero-kanz-portrait.webp
+processing:
+  originalFile: valero-kanz-portrait.jpg
+  originalDimensions:
+    - 1024
+    - 558
+  processedAt: '2026-01-22T18:22:48.446Z'
+  aspectRatio: 1.8351254480286738

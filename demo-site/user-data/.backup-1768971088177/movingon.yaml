@@ -1,0 +1,33 @@
+slug: movingon
+title: Movingon
+year: 2008
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 12
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: movingon.webp
+additional:
+  - file: movingon-add-1.webp
+    title: Detail 1
+processing:
+  originalFile: movingon.jpg
+  originalDimensions:
+    - 2124
+    - 1436
+  processedAt: '2026-01-13T22:01:14.757Z'
+  warnings:
+    - upscaled
+  aspectRatio: 1.4791086350974931
+  padded: false
+createdAt: '2026-01-02T00:22:42.487Z'
+updatedAt: '2026-01-13T22:01:14.757Z'
+published: true

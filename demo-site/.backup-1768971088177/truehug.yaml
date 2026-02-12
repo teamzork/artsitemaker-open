@@ -1,0 +1,31 @@
+slug: truehug
+title: True hug
+year: 2011
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 79
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: truehug.webp
+additional: []
+processing:
+  originalFile: truehug.jpg
+  originalDimensions:
+    - 2124
+    - 2124
+  processedAt: "2026-01-14T11:44:31.426Z"
+  warnings:
+    - upscaled
+  aspectRatio: 1
+  padded: false
+createdAt: "2026-01-02T00:22:42.552Z"
+updatedAt: "2026-01-14T11:44:41.950Z"
+published: true

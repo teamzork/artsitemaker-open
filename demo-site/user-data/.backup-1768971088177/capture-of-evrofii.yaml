@@ -1,0 +1,30 @@
+slug: capture-of-evrofii
+title: Capture Of Evrofii
+year: 2009
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 65
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: capture-of-evrofii.webp
+additional: []
+processing:
+  originalFile: capture-of-evrofii.tif
+  originalDimensions:
+    - 4248
+    - 2000
+  processedAt: '2026-01-13T22:00:42.989Z'
+  warnings: []
+  aspectRatio: 2.124
+  padded: false
+createdAt: '2026-01-02T00:22:42.542Z'
+updatedAt: '2026-01-13T22:00:42.989Z'
+published: true

@@ -1,0 +1,31 @@
+slug: auska
+title: Auska
+year: 2008
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 51
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: auska.webp
+additional: []
+processing:
+  originalFile: auska.jpg
+  originalDimensions:
+    - 2124
+    - 1422
+  processedAt: "2026-01-14T11:34:18.307Z"
+  warnings:
+    - upscaled
+  aspectRatio: 1.4936708860759493
+  padded: false
+createdAt: "2026-01-02T00:22:42.531Z"
+updatedAt: "2026-01-14T11:34:32.673Z"
+published: true

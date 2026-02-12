@@ -1,0 +1,30 @@
+slug: something-broke
+title: Something Broke
+year: 2007
+medium: Ink on mylar
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creatures
+featured: false
+sortOrder: 97
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: something-broke.webp
+additional: []
+processing:
+  originalFile: something-broke.jpg
+  originalDimensions:
+    - 8000
+    - 6000
+  processedAt: "2026-01-14T11:49:41.858Z"
+  warnings: []
+  aspectRatio: 1.3333333333333333
+  padded: false
+createdAt: "2026-01-13T21:55:15.954Z"
+updatedAt: "2026-01-14T11:49:46.680Z"
+published: true

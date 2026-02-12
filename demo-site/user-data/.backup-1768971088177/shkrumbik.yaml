@@ -1,0 +1,30 @@
+slug: shkrumbik
+title: Shkrumbik
+year: 2006
+medium: Ink on mylar
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 22
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: shkrumbik.webp
+additional: []
+processing:
+  originalFile: shkrumbik.jpg
+  originalDimensions:
+    - 3000
+    - 3000
+  processedAt: "2026-01-14T03:53:34.787Z"
+  warnings: []
+  aspectRatio: 1
+  padded: false
+createdAt: "2026-01-02T00:22:42.499Z"
+updatedAt: "2026-01-14T03:53:55.608Z"
+published: true

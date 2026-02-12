@@ -1,0 +1,31 @@
+slug: izkieva
+title: Izkieva
+year: 2006
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 47
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: izkieva.webp
+additional: []
+processing:
+  originalFile: izkieva.jpg
+  originalDimensions:
+    - 2124
+    - 2124
+  processedAt: "2026-01-14T11:26:45.484Z"
+  warnings:
+    - upscaled
+  aspectRatio: 1
+  padded: false
+createdAt: "2026-01-02T00:22:42.528Z"
+updatedAt: "2026-01-14T11:26:50.315Z"
+published: true

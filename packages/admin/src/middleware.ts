@@ -3,6 +3,7 @@
 
 import { defineMiddleware } from 'astro:middleware';
 import { isAuthenticated, isOAuthConfigured } from '@lib/auth';
+import { getProjectState } from '@lib/state-manager';
 import { runAutoMigration } from '@lib/migration';
 
 // Routes that don't require authentication
@@ -36,6 +37,13 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return next();
   }
   
+  // Redirect to onboarding on first run (but allow API routes)
+  if (getProjectState() === 'FIRST_RUN' && !pathname.startsWith('/onboarding')) {
+    if (!pathname.startsWith('/api/')) {
+      return context.redirect('/onboarding');
+    }
+  }
+
   // Check if OAuth is configured
   if (!isOAuthConfigured()) {
     // In development without OAuth config, allow access with a warning
@@ -55,4 +63,3 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // User is authenticated, continue
   return next();
 });
-

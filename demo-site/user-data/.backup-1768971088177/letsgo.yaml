@@ -1,0 +1,30 @@
+slug: letsgo
+title: Letsgo
+year: 2009
+medium: Digital Illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creatures
+featured: false
+sortOrder: 99
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: letsgo.webp
+additional: []
+processing:
+  originalFile: letsgo.jpg
+  originalDimensions:
+    - 5310
+    - 5310
+  processedAt: '2026-01-13T22:01:08.404Z'
+  warnings: []
+  aspectRatio: 1
+  padded: false
+createdAt: '2026-01-13T21:55:15.961Z'
+updatedAt: '2026-01-13T22:01:08.404Z'
+published: true

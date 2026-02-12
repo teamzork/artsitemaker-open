@@ -1,0 +1,61 @@
+site:
+  title: Valero Kanz
+  tagline: Stateless territory of light and shadow
+  url: https://valerokanz.artistablinum.com
+  imageBaseUrl: https://images.artsitemaker.com/artsitemaker
+  language: en
+  adminUrl: http://localhost:4322
+seo:
+  description: Valero Kanz is a multidisciplinary artist whose work explores the silence between structures.
+  keywords:
+    - art
+    - Valero Kanz
+    - multidisciplinary
+    - light and shadow
+  ogImage: og-default.jpg
+  disallowAiTraining: false
+images:
+  sizes:
+    large: 2124
+    medium: 1062
+    small: 531
+    thumb: 177
+  quality: 93
+  maxAspectRatio: 3
+  upscaleWarning: true
+git:
+  remote: origin
+  branch: main
+  autoCommit: false
+  commitPrefix: '[Valero]'
+deploy:
+  webhookUrl: ''
+  webhookSecret: ''
+home:
+  type: gallery
+  heroImage: null
+  pageSlug: null
+  galleryClick: slideshow
+nav:
+  items:
+    - label: Gallery
+      href: /gallery
+    - label: Slideshow
+      href: /slideshow
+    - label: About
+      href: /about
+  showLogo: true
+contact:
+  email: studio@valerokanz.artistablinum.com
+  showForm: true
+  formEndpoint: ''
+auth:
+  method: github
+  basic:
+    username: admin
+  github:
+    clientId: ''
+    clientSecret: ''
+    allowedUsers: ''
+gallery:
+  newArtworkOrder: end

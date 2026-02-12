@@ -1,0 +1,31 @@
+slug: lastdayoftheyear
+title: Last Day Of The Year
+year: 2018
+medium: Digital Illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - creatures
+  - cats
+featured: false
+sortOrder: 84
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: lastdayoftheyear.webp
+additional: []
+processing:
+  originalFile: lastdayoftheyear.png
+  originalDimensions:
+    - 2124
+    - 1600
+  processedAt: "2026-01-13T22:01:06.826Z"
+  warnings:
+    - upscaled
+  aspectRatio: 1.3275
+  padded: false
+createdAt: "2026-01-13T21:01:07.696Z"
+updatedAt: "2026-01-14T11:46:14.418Z"
+published: true

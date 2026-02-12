@@ -1,0 +1,32 @@
+slug: what-is-right-ah
+title: What Is Right Ah
+year: 2008
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: true
+sortOrder: 8
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: what-is-right-ah.webp
+additional:
+  - file: what-is-right-ah-add-1.webp
+    title: wide version
+processing:
+  originalFile: what-is-right-ah.jpg
+  originalDimensions:
+    - 5332
+    - 4368
+  processedAt: '2026-01-13T22:01:35.999Z'
+  warnings: []
+  aspectRatio: 1.2206959706959708
+  padded: false
+createdAt: '2026-01-02T00:22:42.478Z'
+updatedAt: '2026-01-13T22:01:35.999Z'
+published: true

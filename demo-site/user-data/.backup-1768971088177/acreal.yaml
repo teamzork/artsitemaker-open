@@ -1,0 +1,31 @@
+slug: acreal
+title: Acreal
+year: 2010
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 75
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: acreal.webp
+additional: []
+processing:
+  originalFile: acreal.jpg
+  originalDimensions:
+    - 2124
+    - 1200
+  processedAt: "2026-01-14T11:41:36.459Z"
+  warnings:
+    - upscaled
+  aspectRatio: 1.77
+  padded: false
+createdAt: "2026-01-02T00:22:42.549Z"
+updatedAt: "2026-01-14T11:41:46.702Z"
+published: true

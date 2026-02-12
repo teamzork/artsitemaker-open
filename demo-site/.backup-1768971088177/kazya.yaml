@@ -1,0 +1,32 @@
+slug: kazya
+title: Kazya
+year: 2009
+medium: Art Installation
+dimensions: null
+description: This was a temporary Art Installation at the Burning Man festival, in Black Rock Desert, Nevada
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 57
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: kazya.webp
+additional:
+  - file: kazya-add-1.webp
+    title: Detail 1
+processing:
+  originalFile: kazya.jpg
+  originalDimensions:
+    - 3000
+    - 3000
+  processedAt: '2026-01-13T22:01:05.524Z'
+  warnings: []
+  aspectRatio: 1
+  padded: false
+createdAt: '2026-01-02T00:22:42.535Z'
+updatedAt: '2026-01-13T22:01:05.524Z'
+published: true

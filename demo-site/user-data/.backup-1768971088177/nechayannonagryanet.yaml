@@ -1,0 +1,31 @@
+slug: nechayannonagryanet
+title: Nechayannonagryanet
+year: 2007
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 30
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: nechayannonagryanet.webp
+additional: []
+processing:
+  originalFile: nechayannonagryanet.jpg
+  originalDimensions:
+    - 1593
+    - 900
+  processedAt: "2026-01-13T22:16:59.772Z"
+  warnings:
+    - upscaled
+  aspectRatio: 1.77
+  padded: false
+createdAt: "2026-01-02T00:22:42.509Z"
+updatedAt: "2026-01-13T22:17:14.479Z"
+published: true

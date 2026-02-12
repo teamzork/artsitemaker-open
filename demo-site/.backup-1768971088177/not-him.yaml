@@ -1,0 +1,30 @@
+slug: not-him
+title: Not Him
+year: 2009
+medium: Clay sculpture
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 54
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: not-him.webp
+additional: []
+processing:
+  originalFile: not-him.jpg
+  originalDimensions:
+    - 3500
+    - 2000
+  processedAt: '2026-01-13T22:01:18.699Z'
+  warnings: []
+  aspectRatio: 1.75
+  padded: false
+createdAt: '2026-01-02T00:22:42.532Z'
+updatedAt: '2026-01-13T22:01:18.699Z'
+published: true

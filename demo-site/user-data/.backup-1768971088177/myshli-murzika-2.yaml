@@ -1,0 +1,30 @@
+slug: myshli-murzika-2
+title: Myshli Murzika
+year: 2020
+medium: Digital Illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - cats
+featured: false
+sortOrder: 77
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: myshli-murzika-2.webp
+additional: []
+processing:
+  originalFile: myshli-murzika-2.png
+  originalDimensions:
+    - 2124
+    - 2124
+  processedAt: "2026-01-13T22:01:15.000Z"
+  warnings:
+    - upscaled
+  aspectRatio: 1
+  padded: false
+createdAt: "2026-01-02T01:05:44.042Z"
+updatedAt: "2026-01-14T11:43:01.513Z"
+published: true

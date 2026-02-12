@@ -1,0 +1,31 @@
+slug: rvutrsya-mysli
+title: Rvutrsya Mysli
+year: 2007
+medium: Digital illustration
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 37
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: rvutrsya-mysli.webp
+additional: []
+processing:
+  originalFile: rvutrsya-mysli.png
+  originalDimensions:
+    - 1062
+    - 882
+  processedAt: "2026-01-13T22:27:45.175Z"
+  warnings:
+    - upscaled
+  aspectRatio: 1.2040816326530612
+  padded: false
+createdAt: "2026-01-02T00:22:42.519Z"
+updatedAt: "2026-01-13T22:28:03.117Z"
+published: true

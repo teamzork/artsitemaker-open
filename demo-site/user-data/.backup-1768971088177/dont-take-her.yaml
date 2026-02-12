@@ -1,0 +1,30 @@
+slug: dont-take-her
+title: Dont Take Her
+year: 2009
+medium: Clay sculpture
+dimensions: null
+description: null
+collection: creatures
+tags:
+  - surreal
+  - creature
+featured: false
+sortOrder: 52
+sold: false
+price: null
+currency: USD
+inquireOnly: false
+primary: dont-take-her.webp
+additional: []
+processing:
+  originalFile: dont-take-her.jpg
+  originalDimensions:
+    - 3600
+    - 2400
+  processedAt: '2026-01-13T22:00:46.941Z'
+  warnings: []
+  aspectRatio: 1.5
+  padded: false
+createdAt: '2026-01-02T00:22:42.531Z'
+updatedAt: '2026-01-13T22:00:46.941Z'
+published: true
