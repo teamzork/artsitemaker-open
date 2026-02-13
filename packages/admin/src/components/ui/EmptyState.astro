@@ -10,7 +10,7 @@ interface Props {
 const { heading, description, actionHref, actionLabel, class: className } = Astro.props;
 ---
 
-<div class:list={["card text-center py-16", className]}>
+<div class:list={["flex flex-col items-center justify-center text-center py-16 min-h-[50vh]", className]}>
   <p class="text-admin-muted text-lg mb-2">{heading}</p>
   {description && <p class="text-admin-muted text-sm mb-4">{description}</p>}
   {actionHref && actionLabel && (

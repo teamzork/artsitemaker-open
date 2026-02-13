@@ -68,7 +68,7 @@ const titleId = `${id}-title`;
 
     {showActions && (
       <div class="flex gap-3 justify-end">
-        <button type="button" class="btn btn-secondary close-modal">{closeText}</button>
+        <button type="button" class="btn btn-secondary close-modal" data-modal-cancel>{closeText}</button>
         <button 
           type="button" 
           class={`btn ${variant === 'danger' ? 'bg-red-500 hover:bg-red-600 text-white' : 'btn-primary'} confirm-modal`}

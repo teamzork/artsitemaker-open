@@ -97,7 +97,7 @@ const thumbnailsPath = getThumbnailsPath();
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-2">
            <!-- Uncategorized / Default Collection -->
             <div
-              class="bg-admin-sidebar rounded-lg p-4 flex items-center justify-between border border-transparent hover:border-admin-accent transition-colors cursor-pointer collection-drop-target"
+              class="bg-admin-sidebar rounded-lg p-4 flex items-center justify-between border border-transparent hover:border-admin-accent transition-all cursor-pointer collection-drop-target"
               data-slug=""
               data-collection-drop-zone
               onclick="selectCollection('')"
@@ -107,6 +107,10 @@ const thumbnailsPath = getThumbnailsPath();
                 <div class="font-medium">Uncategorized</div>
                 <div class="text-xs text-admin-muted">{artworks.filter(a => !a.collection).length} artworks</div>
               </div>
+              <div class="collection-drop-ghost" aria-hidden="true">
+                <img class="collection-drop-ghost-image hidden" alt="" />
+                <span class="collection-drop-ghost-icon"><ImageIcon className="w-4 h-4" /></span>
+              </div>
             </div>
 
           <!-- Existing collections -->
@@ -114,7 +118,7 @@ const thumbnailsPath = getThumbnailsPath();
             const count = artworks.filter(a => a.collection === c.slug).length;
             return (
               <div
-                class="bg-admin-sidebar rounded-lg p-4 flex items-center justify-between border border-transparent hover:border-admin-accent transition-colors cursor-pointer collection-drop-target group"
+                class="bg-admin-sidebar rounded-lg p-4 flex items-center justify-between border border-transparent hover:border-admin-accent transition-all cursor-pointer collection-drop-target group"
                 data-slug={c.slug}
                 data-collection-drop-zone
                 onclick={`selectCollection('${c.slug}')`}
@@ -135,6 +139,10 @@ const thumbnailsPath = getThumbnailsPath();
                     onclick={`event.stopPropagation(); deleteCollection('${c.slug}')`}
                     title="Delete"
                   >🗑️</button>
+                </div>
+                <div class="collection-drop-ghost" aria-hidden="true">
+                  <img class="collection-drop-ghost-image hidden" alt="" />
+                  <span class="collection-drop-ghost-icon"><ImageIcon className="w-4 h-4" /></span>
                 </div>
               </div>
             );
@@ -544,6 +552,37 @@ const thumbnailsPath = getThumbnailsPath();
   // Drag and Drop
   const collectionCards = document.querySelectorAll('.collection-drop-target');
   const artworkCards = document.querySelectorAll('[data-artwork-slug]');
+  let dragPreviewSrc = '';
+  let dragPreviewTitle = '';
+  
+  function updateDropGhost(card: Element) {
+      const ghost = card.querySelector('.collection-drop-ghost');
+      if (!ghost) return;
+      const ghostImage = ghost.querySelector('.collection-drop-ghost-image') as HTMLImageElement | null;
+      const ghostIcon = ghost.querySelector('.collection-drop-ghost-icon') as HTMLElement | null;
+      
+      if (ghostImage) {
+          if (dragPreviewSrc) {
+              ghostImage.src = dragPreviewSrc;
+              ghostImage.alt = dragPreviewTitle ? `Preview of ${dragPreviewTitle}` : 'Artwork preview';
+              ghostImage.classList.remove('hidden');
+              ghostIcon?.classList.add('hidden');
+          } else {
+              ghostImage.removeAttribute('src');
+              ghostImage.classList.add('hidden');
+              ghostIcon?.classList.remove('hidden');
+          }
+      }
+  }
+
+  function setDragOver(card: Element) {
+      (card as HTMLElement).setAttribute('data-drag-over', 'true');
+      updateDropGhost(card);
+  }
+
+  function clearDragOver(card: Element) {
+      (card as HTMLElement).removeAttribute('data-drag-over');
+  }
 
   // Make artwork cards draggable
   artworkCards.forEach(card => {
@@ -552,7 +591,16 @@ const thumbnailsPath = getThumbnailsPath();
           if (slug) {
               e.dataTransfer.setData('text/plain', slug);
               e.dataTransfer.effectAllowed = 'move';
+              dragPreviewTitle = (card as HTMLElement).dataset.title || '';
+              const img = (card as HTMLElement).querySelector('img') as HTMLImageElement | null;
+              dragPreviewSrc = img?.getAttribute('src') || '';
           }
+      });
+
+      card.addEventListener('dragend', () => {
+          dragPreviewSrc = '';
+          dragPreviewTitle = '';
+          collectionCards.forEach(clearDragOver);
       });
   });
 
@@ -561,16 +609,17 @@ const thumbnailsPath = getThumbnailsPath();
       card.addEventListener('dragover', (e: any) => {
           e.preventDefault(); // Necessary to allow dropping
           e.dataTransfer.dropEffect = 'move';
-          card.classList.add('border-admin-accent', 'bg-admin-accent/20');
+          setDragOver(card);
       });
       
-      card.addEventListener('dragleave', () => {
+      card.addEventListener('dragleave', (e: any) => {
+          if (e.relatedTarget && card.contains(e.relatedTarget)) return;
           // Only remove if it's not the active one?
           // For simplicity let's just run updateDisplay to reset classes based on selection
           // But that might be heavy. Just remove generic hover class if we add one.
           // We used 'border-admin-accent' and 'bg-admin-accent/20' for dragover visual.
           // The click selection uses 'bg-admin-accent/10'.
-          card.classList.remove('border-admin-accent', 'bg-admin-accent/20');
+          clearDragOver(card);
           
           // Restore selection state
           updateDisplay(); 
@@ -578,6 +627,7 @@ const thumbnailsPath = getThumbnailsPath();
       
       card.addEventListener('drop', async (e: any) => {
           e.preventDefault();
+          clearDragOver(card);
           const targetSlug = (card as HTMLElement).dataset.slug || ''; // '' = uncategorized
           const artworkSlug = e.dataTransfer.getData('text/plain');
           

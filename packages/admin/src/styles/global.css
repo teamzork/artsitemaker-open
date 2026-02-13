@@ -63,3 +63,30 @@ select {
 .card {
     @apply bg-admin-card border border-admin-primary-light rounded-xl p-6;
 }
+
+@layer components {
+    .collection-drop-target {
+        @apply relative transition-all duration-150;
+    }
+
+    .collection-drop-target[data-drag-over="true"] {
+        @apply border-admin-accent bg-admin-accent/15 shadow-lg;
+        transform: scale(1.03);
+    }
+
+    .collection-drop-ghost {
+        @apply absolute right-3 top-1/2 -translate-y-1/2 h-12 w-12 rounded-lg border border-admin-border bg-admin-card/70 opacity-0 scale-95 transition-all overflow-hidden flex items-center justify-center pointer-events-none;
+    }
+
+    .collection-drop-target[data-drag-over="true"] .collection-drop-ghost {
+        @apply opacity-100 scale-100;
+    }
+
+    .collection-drop-ghost-image {
+        @apply w-full h-full object-cover;
+    }
+
+    .collection-drop-ghost-icon {
+        @apply text-admin-muted;
+    }
+}

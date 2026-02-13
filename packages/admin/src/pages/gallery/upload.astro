@@ -231,6 +231,17 @@ import Modal from '@components/Modal.astro';
   const infoModal = document.getElementById('info-modal') as any;
   const infoModalContent = document.getElementById('info-modal-content') as HTMLDivElement | null;
   const infoModalTitle = document.getElementById('info-modal-title') as HTMLHeadingElement | null;
+
+  function setInfoModalCancelVisible(visible: boolean) {
+    const cancelBtn = infoModal?.querySelector('[data-modal-cancel]') as HTMLButtonElement | null;
+    if (!cancelBtn) return;
+    if (visible) cancelBtn.classList.remove('hidden');
+    else cancelBtn.classList.add('hidden');
+  }
+
+  infoModal?.addEventListener('confirm', () => {
+    infoModal?.close?.();
+  });
   
   let files: File[] = [];
   
@@ -416,6 +427,7 @@ import Modal from '@components/Modal.astro';
           </div>
         `;
         
+        setInfoModalCancelVisible(true);
         const confirmBtn = infoModal.querySelector('.confirm-modal');
         if (confirmBtn) confirmBtn.textContent = 'Go to Gallery';
         
@@ -490,6 +502,9 @@ import Modal from '@components/Modal.astro';
             <p>No new images found in <code class="bg-admin-card px-1 rounded">files/originals/</code></p>
           </div>
         `;
+        setInfoModalCancelVisible(false);
+        const confirmBtn = infoModal.querySelector('.confirm-modal');
+        if (confirmBtn) confirmBtn.textContent = 'OK';
         infoModal.open();
       }
       
