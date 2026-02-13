@@ -9,12 +9,6 @@ import Modal from "@components/Modal.astro";
 import LockClosed from "../components/icons/LockClosed.astro";
 import LockOpen from "../components/icons/LockOpen.astro";
 import { Eye, Rocket, Package } from "lucide-react";
-import {
-  getProjectState,
-  getStateLabel,
-  getStateBadgeColor,
-  isUsingDemoContent,
-} from "../lib/state-manager";
 
 interface Props {
   title: string;
@@ -22,12 +16,6 @@ interface Props {
 }
 
 const { title, currentPath = Astro.url.pathname } = Astro.props;
-
-// Check project state
-const projectState = getProjectState();
-const stateLabel = getStateLabel(projectState);
-const stateBadgeColor = getStateBadgeColor(projectState);
-const usingDemo = isUsingDemoContent();
 
 ---
 
@@ -46,13 +34,6 @@ const usingDemo = isUsingDemoContent();
           <div class="flex items-center gap-3">
             <h1 class="text-xl font-semibold line-clamp-2">{title}</h1>
             <slot name="header-badge" />
-            {
-              usingDemo && (
-                <span class="px-2 py-0.5 text-xs bg-blue-500/20 text-blue-400 rounded-full border border-blue-500/30">
-                  Demo Mode
-                </span>
-              )
-            }
           </div>
           <div class="flex items-center gap-2">
             <!-- Page-specific actions slot -->
