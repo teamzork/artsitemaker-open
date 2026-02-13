@@ -1,0 +1,81 @@
+---
+import AdminLayout from "../../../../layouts/AdminLayout.astro";
+import Button from "../../../../components/ui/Button.astro";
+import { ArrowLeft, Image, Grid2x2 } from "lucide-react";
+import setupNewContentScriptUrl from "../../../../scripts/setup-new-content.ts?url";
+---
+
+<AdminLayout title="New Project">
+    <main class="max-w-2xl mx-auto space-y-6">
+        <header class="space-y-2">
+            <p class="text-xs uppercase tracking-[0.2em] text-admin-muted">
+                Setup Assistant
+            </p>
+            <h1 class="text-2xl font-bold">Starter Content</h1>
+            <p class="text-admin-muted">
+                Step 3 of 3 · Add your first artwork or start with an empty
+                gallery.
+            </p>
+        </header>
+
+        <section class="card space-y-5">
+            <h2 class="text-lg font-semibold">Choose your next step</h2>
+
+            <div class="grid gap-4 sm:grid-cols-2">
+                <button
+                    type="button"
+                    id="add-artwork-btn"
+                    class="artwork-option group relative overflow-hidden rounded-lg border-2 border-admin-border bg-gradient-to-br from-admin-accent/5 via-admin-bg to-admin-bg p-6 text-left transition-all hover:border-admin-accent hover:shadow-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-admin-accent/70"
+                >
+                    <div class="flex flex-col items-start gap-3">
+                        <div class="rounded-md bg-admin-accent/10 p-2.5 transition-colors group-hover:bg-admin-accent/20">
+                            <Image className="w-5 h-5 text-admin-accent" />
+                        </div>
+                        <div class="space-y-1">
+                            <div class="font-semibold text-admin-text">Add first artwork</div>
+                            <p class="text-xs text-admin-muted">
+                                Upload an image and create your first portfolio piece
+                            </p>
+                        </div>
+                    </div>
+                    <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-admin-accent to-transparent opacity-0 transition-opacity group-hover:opacity-100"></div>
+                </button>
+                
+                <button
+                    type="button"
+                    id="start-empty-btn"
+                    class="artwork-option group relative overflow-hidden rounded-lg border-2 border-admin-border bg-gradient-to-br from-admin-muted/5 via-admin-bg to-admin-bg p-6 text-left transition-all hover:border-admin-border/80 hover:shadow-md focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-admin-accent/70"
+                >
+                    <div class="flex flex-col items-start gap-3">
+                        <div class="rounded-md bg-admin-muted/10 p-2.5 transition-colors group-hover:bg-admin-muted/20">
+                            <Grid2x2 className="w-5 h-5 text-admin-muted" />
+                        </div>
+                        <div class="space-y-1">
+                            <div class="font-semibold text-admin-text">Start empty</div>
+                            <p class="text-xs text-admin-muted">
+                                Set up your gallery structure first, add work later
+                            </p>
+                        </div>
+                    </div>
+                </button>
+            </div>
+            <div
+                id="content-status"
+                class="text-sm text-admin-muted"
+                aria-live="polite"
+            ></div>
+            <p class="text-xs text-admin-muted border-t border-admin-border/50 pt-4">
+                You can change your theme or add content anytime from the admin.
+            </p>
+        </section>
+
+        <a
+            href="/tools/setup/new/theme"
+            class="text-sm text-admin-muted hover:text-admin-text inline-flex items-center gap-1 transition-colors"
+        >
+            <ArrowLeft className="w-4 h-4" /> Back to Select theme
+        </a>
+    </main>
+</AdminLayout>
+
+<script type="module" src={setupNewContentScriptUrl}></script>

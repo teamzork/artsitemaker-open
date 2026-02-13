@@ -8,7 +8,7 @@ import ArtworkGrid from '../../components/ArtworkGrid.astro';
 import Modal from '../../components/Modal.astro';
 import Button from '../../components/ui/Button.astro';
 import EmptyState from '../../components/ui/EmptyState.astro';
-import { UploadCloud, Zap, Image as ImageIcon } from 'lucide-react';
+import { UploadCloud, Zap, Image as ImageIcon, FolderOpen, Pencil, Trash2, Lightbulb } from 'lucide-react';
 
 import { stringToColor } from '../../lib/colors';
 
@@ -90,7 +90,10 @@ const thumbnailsPath = getThumbnailsPath();
     <!-- Collections Management -->
     <div class="card">
       <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-semibold">📁 Collections</h2>
+        <h2 class="text-lg font-semibold flex items-center gap-2">
+          <FolderOpen className="w-5 h-5 text-admin-accent" />
+          Collections
+        </h2>
       </div>
       
       <div id="collections-panel">
@@ -133,12 +136,14 @@ const thumbnailsPath = getThumbnailsPath();
                     class="text-admin-muted hover:text-admin-accent text-sm p-1"
                     onclick={`event.stopPropagation(); editCollection('${c.slug}')`}
                     title="Edit"
-                  >✏️</button>
+                    aria-label="Edit"
+                  ><Pencil className="w-4 h-4" /></button>
                   <button 
                     class="text-admin-muted hover:text-red-400 text-sm p-1"
                     onclick={`event.stopPropagation(); deleteCollection('${c.slug}')`}
                     title="Delete"
-                  >🗑️</button>
+                    aria-label="Delete"
+                  ><Trash2 className="w-4 h-4" /></button>
                 </div>
                 <div class="collection-drop-ghost" aria-hidden="true">
                   <img class="collection-drop-ghost-image hidden" alt="" />
@@ -158,8 +163,9 @@ const thumbnailsPath = getThumbnailsPath();
            </button>
         </div>
         
-        <p class="text-xs text-admin-muted mt-4">
-          💡 Drag and drop artworks into collections to organize them. Click a collection to filter the view.
+        <p class="text-xs text-admin-muted mt-4 flex items-start gap-2">
+          <Lightbulb className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>Drag and drop artworks into collections to organize them. Click a collection to filter the view.</span>
         </p>
       </div>
     </div>

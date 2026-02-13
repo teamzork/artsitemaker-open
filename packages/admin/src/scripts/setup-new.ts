@@ -18,6 +18,18 @@ function getDefaultProjectName() {
     );
 }
 
+function hydrateProjectTitle() {
+    if (!nameInput) return;
+    const storedTitle = sessionStorage.getItem("setup:new:projectTitle");
+    if (storedTitle && !nameInput.value) {
+        nameInput.value = storedTitle;
+    }
+}
+
+function storeProjectTitle(value: string) {
+    sessionStorage.setItem("setup:new:projectTitle", value);
+}
+
 function getProjectTitle(useDefault = false) {
     const defaultName = getDefaultProjectName();
     if (useDefault) {
@@ -65,7 +77,16 @@ function saveProjectTitle(useDefault = false) {
 }
 
 nameInput?.addEventListener("input", updateSkipVisibility);
+nameInput?.addEventListener("input", () => {
+    storeProjectTitle(getProjectTitle(false));
+});
+nameInput?.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    saveProjectTitle(false);
+});
 continueBtn?.addEventListener("click", () => saveProjectTitle(false));
 skipBtn?.addEventListener("click", () => saveProjectTitle(true));
 
+hydrateProjectTitle();
 updateSkipVisibility();

@@ -13,7 +13,20 @@ import Modal from "../../components/Modal.astro";
 import Button from "../../components/ui/Button.astro";
 import Combobox from "../../components/ui/Combobox.astro";
 import { Toggle } from "../../components/ui/Toggle";
-import { Globe, Search, Palette, Paintbrush, FolderOpen, Save, Image } from "lucide-react";
+import {
+  Globe,
+  Search,
+  Palette,
+  Paintbrush,
+  FolderOpen,
+  Save,
+  Image,
+  Download,
+  RotateCcw,
+  Package,
+  UploadCloud,
+  Lightbulb,
+} from "lucide-react";
 
 import { loadFontData } from "../../lib/fonts";
 
@@ -634,8 +647,9 @@ try {
               </div>
               {
                 logoPreview.isFromTheme && (
-                  <span class="text-xs text-admin-muted block mt-1">
-                    📦 From theme
+                  <span class="text-xs text-admin-muted block mt-1 flex items-center gap-1">
+                    <Package className="w-3.5 h-3.5" />
+                    From theme
                   </span>
                 )
               }
@@ -667,7 +681,7 @@ try {
                 role="button"
                 tabindex="0"
               >
-                <div class="text-2xl mb-1">📤</div>
+                <div class="mb-1"><UploadCloud className="w-8 h-8 text-admin-muted" /></div>
                 <p class="text-sm font-medium">Click to upload logo</p>
                 <p class="text-xs text-admin-muted">or drag and drop</p>
                 <p class="text-xs text-admin-muted mt-1">
@@ -762,8 +776,9 @@ try {
               </div>
               {
                 texturePreview.isFromTheme && (
-                  <span class="text-xs text-admin-muted block mt-1">
-                    📦 From theme
+                  <span class="text-xs text-admin-muted block mt-1 flex items-center gap-1">
+                    <Package className="w-3.5 h-3.5" />
+                    From theme
                   </span>
                 )
               }
@@ -788,7 +803,7 @@ try {
                 role="button"
                 tabindex="0"
               >
-                <div class="text-2xl mb-1">📤</div>
+                <div class="mb-1"><UploadCloud className="w-8 h-8 text-admin-muted" /></div>
                 <p class="text-sm font-medium">Click to upload background</p>
                 <p class="text-xs text-admin-muted">or drag and drop</p>
                 <p class="text-xs text-admin-muted mt-1">
@@ -880,10 +895,11 @@ try {
         </div>
       </div>
 
-      <p class="text-xs text-admin-muted mt-4">
-        💡 These settings persist when you change themes. Assets are stored in: <code
+      <p class="text-xs text-admin-muted mt-4 flex items-start gap-2">
+        <Lightbulb className="w-4 h-4 shrink-0 mt-0.5" />
+        <span>These settings persist when you change themes. Assets are stored in: <code
           class="bg-admin-sidebar px-1 rounded">/assets/textures/</code
-        >
+        ></span>
       </p>
     </div>
 
@@ -970,16 +986,18 @@ try {
           <button
             type="button"
             id="import-content-btn"
-            class="btn btn-secondary text-sm"
+            class="btn btn-secondary text-sm inline-flex items-center gap-2"
           >
-            📥 Import Content
+            <Download className="w-4 h-4 shrink-0" />
+            Import Content
           </button>
           <button
             type="button"
             id="restore-defaults-btn"
-            class="btn btn-secondary text-sm"
+            class="btn btn-secondary text-sm inline-flex items-center gap-2"
           >
-            🔄 Restore Defaults
+            <RotateCcw className="w-4 h-4 shrink-0" />
+            Restore Defaults
           </button>
         </div>
         <p class="text-xs text-admin-muted">

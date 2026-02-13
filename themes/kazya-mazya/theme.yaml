@@ -57,10 +57,10 @@ galleryItem:
   hoverEffect: lift
 carousel:
   thumbnailShape: circle
-  thumbnailSize: 80
+  thumbnailSize: 100
   thumbnailBorder: '3px solid #666'
   activeBorder: '3px solid #efb600'
-  gap: '12'
+  gap: '17'
   arrowStyle: floating
 nav:
   style: pills

@@ -1,0 +1,37 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { ArrowLeft, Wrench } from "lucide-react";
+---
+
+<AdminLayout title="Troubleshooting">
+    <main class="max-w-2xl mx-auto space-y-6">
+        <header class="space-y-2">
+            <p class="text-xs uppercase tracking-[0.2em] text-admin-muted">
+                Setup Assistant
+            </p>
+            <h1 class="text-2xl font-bold flex items-center gap-2">
+                <Wrench className="w-6 h-6" /> Troubleshooting
+            </h1>
+            <p class="text-admin-muted">
+                A guided troubleshooting checklist is on the way. For now, use
+                the notes below to validate your setup.
+            </p>
+        </header>
+
+        <section class="card space-y-3">
+            <h2 class="text-lg font-semibold">Quick checks</h2>
+            <ul class="list-disc list-inside space-y-1 text-admin-muted">
+                <li>Confirm your `user-data/` folder path is correct.</li>
+                <li>Verify `settings.yaml` exists and is readable.</li>
+                <li>Restart the admin server after path changes.</li>
+            </ul>
+        </section>
+
+        <a
+            href="/tools/setup"
+            class="text-sm text-admin-muted hover:text-admin-text inline-flex items-center gap-1"
+        >
+            <ArrowLeft className="w-4 h-4" /> Back to Setup Assistant
+        </a>
+    </main>
+</AdminLayout>

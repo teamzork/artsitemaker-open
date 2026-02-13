@@ -1,0 +1,38 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { ArrowLeft, FolderInput } from "lucide-react";
+---
+
+<AdminLayout title="Existing Project">
+    <main class="max-w-2xl mx-auto space-y-6">
+        <header class="space-y-2">
+            <p class="text-xs uppercase tracking-[0.2em] text-admin-muted">
+                Setup Assistant
+            </p>
+            <h1 class="text-2xl font-bold flex items-center gap-2">
+                <FolderInput className="w-6 h-6" /> Existing Project
+            </h1>
+            <p class="text-admin-muted">
+                This setup flow is coming next. For now, you can continue with
+                the New Project assistant or point the admin at your existing
+                user-data folder in settings.
+            </p>
+        </header>
+
+        <section class="card space-y-3">
+            <h2 class="text-lg font-semibold">Planned capabilities</h2>
+            <p class="text-admin-muted">
+                We'll guide you through selecting a `user-data/` directory,
+                validate required files, and highlight any missing or outdated
+                content before continuing.
+            </p>
+        </section>
+
+        <a
+            href="/tools/setup"
+            class="text-sm text-admin-muted hover:text-admin-text inline-flex items-center gap-1"
+        >
+            <ArrowLeft className="w-4 h-4" /> Back to Setup Assistant
+        </a>
+    </main>
+</AdminLayout>

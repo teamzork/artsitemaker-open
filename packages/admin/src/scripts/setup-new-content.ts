@@ -4,13 +4,13 @@ const addBtn = document.getElementById(
 const emptyBtn = document.getElementById(
     "start-empty-btn",
 ) as HTMLButtonElement | null;
-const statusEl = document.getElementById("content-status");
+const contentStatusEl = document.getElementById("content-status");
 
-function setStatus(message: string, tone: "muted" | "error" = "muted") {
-    if (!statusEl) return;
-    statusEl.textContent = message;
-    statusEl.classList.remove("text-admin-muted", "text-admin-error");
-    statusEl.classList.add(
+function setContentStatus(message: string, tone: "muted" | "error" = "muted") {
+    if (!contentStatusEl) return;
+    contentStatusEl.textContent = message;
+    contentStatusEl.classList.remove("text-admin-muted", "text-admin-error");
+    contentStatusEl.classList.add(
         tone === "error" ? "text-admin-error" : "text-admin-muted",
     );
 }
@@ -30,12 +30,12 @@ async function finalizeSetup(nextPath: string) {
     const { projectTitle, themeId } = getSetupData();
 
     if (!projectTitle) {
-        setStatus("Missing project name. Go back to Step 1.", "error");
+        setContentStatus("Missing project name. Go back to Step 1.", "error");
         return;
     }
 
     setBusy(true);
-    setStatus("Creating project...");
+    setContentStatus("Creating project...");
 
     try {
         const scaffoldRes = await fetch("/api/system/scaffold", {
@@ -113,7 +113,7 @@ async function finalizeSetup(nextPath: string) {
             error instanceof Error
                 ? error.message
                 : "Something went wrong while creating the project.";
-        setStatus(message, "error");
+        setContentStatus(message, "error");
         window.dispatchEvent(
             new CustomEvent("artsitemaker:toast", {
                 detail: {
@@ -130,7 +130,7 @@ async function finalizeSetup(nextPath: string) {
 function initialize() {
     const { projectTitle } = getSetupData();
     if (!projectTitle) {
-        setStatus("Missing project name. Go back to Step 1.", "error");
+        setContentStatus("Missing project name. Go back to Step 1.", "error");
         setBusy(true);
     }
 }

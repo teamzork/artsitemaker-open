@@ -6,7 +6,7 @@ import path from "path";
 import yaml from "js-yaml";
 import { getThemesPath } from "../../../../lib/paths";
 import { getSettingsFilePath } from "../../../../lib/config-paths";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 
 const themesPath = getThemesPath();
 
@@ -119,8 +119,8 @@ try {
                         <button
                             type="button"
                             class:list={[
-                                "theme-card card p-0 overflow-hidden transition-shadow text-left w-full",
-                                "hover:ring-2 hover:ring-admin-accent/50 focus-visible:ring-2 focus-visible:ring-admin-accent/70 focus-visible:outline-none",
+                                "theme-card card p-0 overflow-hidden transition-shadow transition-colors text-left w-full",
+                                "hover:bg-admin-sidebar/70 focus-visible:ring-4 focus-visible:ring-admin-accent/70 focus-visible:outline-none",
                                 theme.id === currentTheme &&
                                     "ring-2 ring-admin-success",
                             ]}
@@ -176,8 +176,20 @@ try {
                                             ),
                                         )}
                                     </div>
-                                    <span class="theme-hint text-xs text-admin-muted">
-                                        Click to select
+                                    <span class="theme-select text-sm text-admin-muted">
+                                        <span
+                                            class="theme-select-default"
+                                            data-theme-select-label="default"
+                                        >
+                                            Select
+                                        </span>
+                                        <span
+                                            class="theme-select-active hidden text-admin-success inline-flex items-center gap-1"
+                                            data-theme-select-label="active"
+                                        >
+                                            <Check className="w-3.5 h-3.5" />
+                                            Selected
+                                        </span>
                                     </span>
                                 </div>
                             </div>
@@ -218,7 +230,7 @@ try {
 
     let selectedThemeId = "";
 
-    function setStatus(message, tone = "muted") {
+    function setStatus(message: string, tone: string = "muted") {
         if (!statusEl) return;
         statusEl.textContent = message;
         statusEl.classList.remove("text-admin-muted", "text-admin-error");
@@ -227,13 +239,21 @@ try {
         );
     }
 
-    function setSelectedTheme(themeId) {
+    function setSelectedTheme(themeId: string) {
         selectedThemeId = themeId;
         themeCards.forEach((card) => {
             const matches = card.getAttribute("data-theme-select") === themeId;
             card.classList.toggle("ring-2", matches);
             card.classList.toggle("ring-admin-success", matches);
             card.setAttribute("aria-pressed", matches ? "true" : "false");
+            const defaultLabel = card.querySelector(
+                '[data-theme-select-label="default"]',
+            );
+            const activeLabel = card.querySelector(
+                '[data-theme-select-label="active"]',
+            );
+            defaultLabel?.classList.toggle("hidden", matches);
+            activeLabel?.classList.toggle("hidden", !matches);
         });
 
         const selectedCard = themeCards.find(
@@ -241,7 +261,7 @@ try {
         );
         const themeName = selectedCard?.getAttribute("data-theme-name") || themeId;
         setStatus(`Selected theme: ${themeName}`);
-        if (continueBtn) continueBtn.disabled = false;
+        if (continueBtn) (continueBtn as HTMLButtonElement).disabled = false;
     }
 
     function saveThemeAndContinue() {
@@ -251,7 +271,7 @@ try {
         }
 
         sessionStorage.setItem("setup:new:themeId", selectedThemeId);
-        window.location.href = "/tools/setup/new/content";
+        window.location.href = "/tools/setup/new/artworks";
     }
 
     const storedThemeId = sessionStorage.getItem("setup:new:themeId");
@@ -262,12 +282,44 @@ try {
         setSelectedTheme(currentTheme);
     }
 
+    const preferredThemeCard = themeCards.find(
+        (card) => card.getAttribute("data-theme-select") === selectedThemeId,
+    );
+    const firstThemeCard = themeCards[0];
+    const initialFocusCard = preferredThemeCard || firstThemeCard;
+    initialFocusCard?.focus();
+
     themeCards.forEach((card) => {
         card.addEventListener("click", () => {
             const themeId = card.getAttribute("data-theme-select");
             if (!themeId) return;
             setSelectedTheme(themeId);
             sessionStorage.setItem("setup:new:themeId", themeId);
+        });
+
+        card.addEventListener("keydown", (event) => {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                const themeId = card.getAttribute("data-theme-select");
+                if (!themeId) return;
+                setSelectedTheme(themeId);
+                sessionStorage.setItem("setup:new:themeId", themeId);
+                saveThemeAndContinue();
+                return;
+            }
+
+            if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") {
+                return;
+            }
+
+            event.preventDefault();
+            const currentIndex = themeCards.indexOf(card);
+            if (currentIndex === -1) return;
+            const nextIndex =
+                event.key === "ArrowRight"
+                    ? Math.min(currentIndex + 1, themeCards.length - 1)
+                    : Math.max(currentIndex - 1, 0);
+            themeCards[nextIndex]?.focus();
         });
     });
 

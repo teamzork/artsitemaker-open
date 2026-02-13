@@ -39,7 +39,34 @@ import LockOpen from "../../components/icons/LockOpen.astro";
 import SecretsVault from "../../components/SecretsVault/SecretsVault.astro";
 import { Toggle } from "../../components/ui/Toggle";
 import { getApexDomain, isApexDomain } from "../../lib/domain-utils";
-import { FolderOpen, Image, FlaskConical, Layers, Activity, ShieldCheck, GitBranch, Globe } from "lucide-react";
+import {
+  FolderOpen,
+  Image,
+  FlaskConical,
+  Layers,
+  Activity,
+  ShieldCheck,
+  GitBranch,
+  Globe,
+  HardDrive,
+  Cloud,
+  CloudUpload,
+  Link,
+  Download,
+  RotateCcw,
+  Palette,
+  Building2,
+  Package,
+  LockOpen,
+  Key,
+  Github,
+  Lock,
+  BookOpen,
+  Search,
+  Info,
+  AlertTriangle,
+  Zap,
+} from "lucide-react";
 
 // Load current settings
 const contentPath = getContentPath();
@@ -387,7 +414,7 @@ const comboboxOptions = Array.from(detectedProjects)
         <!-- Exclusion Info -->
         <div class="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
           <div class="flex items-start gap-2">
-            <span class="text-blue-400">ℹ️</span>
+            <Info className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
             <div class="text-xs text-admin-muted">
               <p class="mb-1">
                 <strong>Content is excluded from the ArtSiteMaker repo.</strong> Your artworks,
@@ -409,16 +436,18 @@ const comboboxOptions = Array.from(detectedProjects)
           <button
             type="button"
             id="import-content-btn"
-            class="btn btn-secondary text-sm"
+            class="btn btn-secondary text-sm inline-flex items-center gap-2"
           >
-            📥 Import Content
+            <Download className="w-4 h-4 shrink-0" />
+            <span data-btn-text>Import Content</span>
           </button>
           <button
             type="button"
             id="restore-defaults-btn"
-            class="btn btn-secondary text-sm"
+            class="btn btn-secondary text-sm inline-flex items-center gap-2"
           >
-            🔄 Restore Defaults
+            <RotateCcw className="w-4 h-4 shrink-0" />
+            <span data-btn-text>Restore Defaults</span>
           </button>
         </div>
         <p class="text-xs text-admin-muted">
@@ -482,7 +511,7 @@ const comboboxOptions = Array.from(detectedProjects)
             class={`p-4 bg-admin-sidebar rounded-lg border-2 cursor-pointer hover:border-admin-border transition-colors relative storage-card ${imageStorage === "local" ? "border-admin-accent" : "border-transparent"}`}
             data-storage="local"
           >
-            <div class="text-2xl mb-2">💾</div>
+            <div class="mb-2"><HardDrive className="w-6 h-6 text-admin-accent" /></div>
             <div class="font-semibold">Local Storage</div>
             <p class="text-xs text-admin-muted mt-1">
               Images stored in /files folder
@@ -507,7 +536,7 @@ const comboboxOptions = Array.from(detectedProjects)
             class={`p-4 bg-admin-sidebar rounded-lg border-2 cursor-pointer hover:border-admin-border transition-colors relative storage-card ${imageStorage === "external" ? "border-admin-accent" : "border-transparent"}`}
             data-storage="external"
           >
-            <div class="text-2xl mb-2">🌐</div>
+            <div class="mb-2"><Globe className="w-6 h-6 text-admin-accent" /></div>
             <div class="font-semibold">External Server</div>
             <p class="text-xs text-admin-muted mt-1">Custom image server URL</p>
             <span
@@ -530,7 +559,7 @@ const comboboxOptions = Array.from(detectedProjects)
             class={`p-4 bg-admin-sidebar rounded-lg border-2 cursor-pointer hover:border-admin-border transition-colors relative storage-card ${imageStorage === "r2" ? "border-admin-accent" : "border-transparent"}`}
             data-storage="r2"
           >
-            <div class="text-2xl mb-2">☁️</div>
+            <div class="mb-2"><Cloud className="w-6 h-6 text-admin-accent" /></div>
             <div class="font-semibold">Cloudflare R2</div>
             <p class="text-xs text-admin-muted mt-1">
               Fast CDN-backed cloud storage
@@ -554,16 +583,20 @@ const comboboxOptions = Array.from(detectedProjects)
             <button
               type="button"
               id="sync-r2-btn"
-              class="btn btn-primary text-sm"
+              class="btn btn-primary text-sm inline-flex items-center gap-2"
               disabled={imageStorage !== "r2"}
             >
-              ☁️ Sync Images
+              <CloudUpload className="w-4 h-4 shrink-0" />
+              <span data-btn-text>Sync Images</span>
             </button>
             <button
               type="button"
               id="test-r2-btn"
-              class="btn btn-secondary text-sm">🔗 Test Connection</button
+              class="btn btn-secondary text-sm inline-flex items-center gap-2"
             >
+              <Link className="w-4 h-4 shrink-0" />
+              <span data-btn-text>Test Connection</span>
+            </button>
           </div>
         </div>
 
@@ -614,7 +647,7 @@ const comboboxOptions = Array.from(detectedProjects)
         </div>
 
         <div class="flex items-center gap-2 text-sm text-admin-muted">
-          <span>⚠️</span>
+          <AlertTriangle className="w-4 h-4 shrink-0 text-yellow-500" />
           <span
             >Configure Account ID, Access Key ID, and Secret Access Key in the <a
               href="#secrets-vault"
@@ -726,9 +759,10 @@ const comboboxOptions = Array.from(detectedProjects)
             id="storage-diagnostics-check"
             variant="primary"
             size="sm"
-            class="whitespace-nowrap"
+            class="whitespace-nowrap inline-flex items-center gap-2"
           >
-            🔎 Run R2 Check
+            <Search className="w-4 h-4 shrink-0" />
+            <span data-btn-text>Run R2 Check</span>
           </Button>
         </div>
       </div>
@@ -896,9 +930,14 @@ const comboboxOptions = Array.from(detectedProjects)
       </div>
 
       <div class="mb-6">
-        <button type="button" id="process-all-btn" class="btn btn-secondary"
-          >⚡ Process All Images</button
+        <button
+          type="button"
+          id="process-all-btn"
+          class="btn btn-secondary inline-flex items-center gap-2"
         >
+          <Zap className="w-4 h-4 shrink-0" />
+          <span data-btn-text>Process All Images</span>
+        </button>
       </div>
 
       <!-- Size Settings -->
@@ -1030,7 +1069,7 @@ const comboboxOptions = Array.from(detectedProjects)
         usingDemoContent && (
           <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-4">
             <div class="flex items-center gap-3">
-              <span class="text-2xl">🎨</span>
+              <Palette className="w-6 h-6 text-blue-400 shrink-0" />
               <div class="flex-1">
                 <h4 class="font-medium text-blue-400">Demo Content Active</h4>
                 <p class="text-sm text-admin-muted">
@@ -1112,14 +1151,16 @@ const comboboxOptions = Array.from(detectedProjects)
       {
         stateDetails.themeInfo && (
           <div class="bg-admin-bg rounded-lg p-3 flex items-center gap-3">
-            <span class="text-lg">
-              {stateDetails.themeInfo.source === "builtin"
-                ? "🏛️"
-                : stateDetails.themeInfo.source === "custom"
-                  ? "🎨"
-                  : stateDetails.themeInfo.source === "repo"
-                    ? "📦"
-                    : "❓"}
+            <span class="text-admin-accent shrink-0">
+              {stateDetails.themeInfo.source === "builtin" ? (
+                <Building2 className="w-5 h-5" />
+              ) : stateDetails.themeInfo.source === "custom" ? (
+                <Palette className="w-5 h-5" />
+              ) : stateDetails.themeInfo.source === "repo" ? (
+                <Package className="w-5 h-5" />
+              ) : (
+                <span class="text-lg">?</span>
+              )}
             </span>
             <div class="flex-1">
               <div class="font-medium text-sm">
@@ -1174,7 +1215,7 @@ const comboboxOptions = Array.from(detectedProjects)
             <div
               class="p-4 bg-admin-sidebar rounded-lg border-2 border-transparent cursor-pointer hover:border-admin-border transition-colors"
             >
-              <div class="text-2xl mb-2">🔓</div>
+              <div class="mb-2"><LockOpen className="w-6 h-6 text-admin-accent" /></div>
               <div class="font-semibold">No Authentication</div>
               <p class="text-xs text-admin-muted mt-1">
                 Open access (not recommended for production)
@@ -1194,7 +1235,7 @@ const comboboxOptions = Array.from(detectedProjects)
             <div
               class="p-4 bg-admin-sidebar rounded-lg border-2 border-transparent cursor-pointer hover:border-admin-border transition-colors"
             >
-              <div class="text-2xl mb-2">🔑</div>
+              <div class="mb-2"><Key className="w-6 h-6 text-admin-accent" /></div>
               <div class="font-semibold">Basic Auth</div>
               <p class="text-xs text-admin-muted mt-1">
                 Username & password login
@@ -1214,7 +1255,7 @@ const comboboxOptions = Array.from(detectedProjects)
             <div
               class="p-4 bg-admin-sidebar rounded-lg border-2 border-transparent cursor-pointer hover:border-admin-border transition-colors"
             >
-              <div class="text-2xl mb-2">🐙</div>
+              <div class="mb-2"><Github className="w-6 h-6 text-admin-accent" /></div>
               <div class="font-semibold">GitHub OAuth</div>
               <p class="text-xs text-admin-muted mt-1">
                 Sign in with GitHub account
@@ -1310,10 +1351,11 @@ const comboboxOptions = Array.from(detectedProjects)
             <button
               type="button"
               id="save-account-btn"
-              class="btn btn-primary"
+              class="btn btn-primary inline-flex items-center gap-2"
               disabled
             >
-              🔒 Update Credentials
+              <Lock className="w-4 h-4 shrink-0" />
+              <span data-btn-text>Update Credentials</span>
             </button>
             <span id="account-status" class="text-sm text-admin-muted"></span>
           </div>
@@ -1393,7 +1435,10 @@ const comboboxOptions = Array.from(detectedProjects)
           </div>
 
           <div class="bg-admin-card rounded-lg p-4 mt-4">
-            <h4 class="font-medium mb-2">📖 Setup Guide</h4>
+            <h4 class="font-medium mb-2 flex items-center gap-2">
+              <BookOpen className="w-4 h-4" />
+              Setup Guide
+            </h4>
             <ol class="text-sm text-admin-muted space-y-2">
               <li>
                 1. Go to <a
@@ -2154,7 +2199,7 @@ const comboboxOptions = Array.from(detectedProjects)
         );
       } finally {
         btn.disabled = false;
-        btn.textContent = "⚡ Process All";
+        setBtnLabel(btn, "Process All Images");
       }
     });
 
@@ -2299,7 +2344,9 @@ const comboboxOptions = Array.from(detectedProjects)
       const statusEl = document.getElementById("r2-status");
 
       btn.disabled = true;
-      btn.textContent = "⏳ Testing...";
+      const btnText = btn.querySelector("[data-btn-text]");
+      if (btnText) btnText.textContent = "Testing...";
+      else btn.textContent = "Testing...";
       if (statusEl)
         statusEl.innerHTML =
           '<span class="text-admin-muted">Checking connection...</span>';
@@ -2363,7 +2410,9 @@ const comboboxOptions = Array.from(detectedProjects)
             '<span class="text-red-400">✗ Test failed</span>';
       } finally {
         btn.disabled = false;
-        btn.textContent = "🔗 Test Connection";
+        const btnText = btn.querySelector("[data-btn-text]");
+        if (btnText) btnText.textContent = "Test Connection";
+        else btn.textContent = "Test Connection";
       }
     });
 
@@ -2375,7 +2424,7 @@ const comboboxOptions = Array.from(detectedProjects)
       const statusEl = document.getElementById("cf-test-status");
 
       btn.disabled = true;
-      btn.textContent = "⏳ Testing...";
+      setBtnLabel(btn, "Testing...");
       if (statusEl)
         statusEl.innerHTML =
           '<span class="text-admin-muted">Checking credentials...</span>';
@@ -2427,7 +2476,7 @@ const comboboxOptions = Array.from(detectedProjects)
             '<span class="text-red-400">✗ Test failed</span>';
       } finally {
         btn.disabled = false;
-        btn.textContent = "🔗 Test Connection";
+        setBtnLabel(btn, "Test Connection");
       }
     });
 
@@ -2552,9 +2601,16 @@ const comboboxOptions = Array.from(detectedProjects)
   }
 
   function getCheckLabel(storageMode: string) {
-    if (storageMode === "r2") return "🔎 Run R2 Check";
-    if (storageMode === "local") return "🔎 Run Local Check";
-    return "🔎 Check Unavailable";
+    if (storageMode === "r2") return "Run R2 Check";
+    if (storageMode === "local") return "Run Local Check";
+    return "Check Unavailable";
+  }
+
+  function setBtnLabel(btn: HTMLElement | null, text: string) {
+    if (!btn) return;
+    const span = btn.querySelector("[data-btn-text]");
+    if (span) span.textContent = text;
+    else btn.textContent = text;
   }
 
   function updateDiagnosticsView(diagnostics: any) {
@@ -2581,7 +2637,7 @@ const comboboxOptions = Array.from(detectedProjects)
     });
 
     if (diagnosticsCheckBtn) {
-      diagnosticsCheckBtn.textContent = getCheckLabel(storageMode);
+      setBtnLabel(diagnosticsCheckBtn, getCheckLabel(storageMode));
       const disabled = storageMode !== "r2" && storageMode !== "local";
       diagnosticsCheckBtn.disabled = disabled;
       diagnosticsCheckBtn.setAttribute(
@@ -2890,9 +2946,9 @@ const comboboxOptions = Array.from(detectedProjects)
       if (activeBtn) {
         activeBtn.disabled = false;
         if (activeBtn === diagnosticsCheckBtn) {
-          activeBtn.textContent = getCheckLabel(diagnosticsStorageMode);
+          setBtnLabel(activeBtn, getCheckLabel(diagnosticsStorageMode));
         } else {
-          activeBtn.textContent = originalLabel;
+          setBtnLabel(activeBtn, originalLabel);
         }
       }
     }
@@ -2929,7 +2985,7 @@ const comboboxOptions = Array.from(detectedProjects)
     syncEventSource?.close();
     syncEventSource = null;
     btn.disabled = false;
-    btn.textContent = "☁️ Sync Images";
+    setBtnLabel(btn, "Sync Images");
   }
 
   // Helper: Check if error is a configuration error
@@ -2960,7 +3016,7 @@ const comboboxOptions = Array.from(detectedProjects)
 
       // Disable button during sync
       btn.disabled = true;
-      btn.textContent = "⏳ Syncing...";
+      setBtnLabel(btn, "Syncing...");
 
       // Show initial toast with progress
       window.dispatchEvent(
@@ -3904,7 +3960,7 @@ const comboboxOptions = Array.from(detectedProjects)
       }
     } finally {
       saveAccountBtn.disabled = false;
-      saveAccountBtn.textContent = "🔒 Update Credentials";
+      setBtnLabel(saveAccountBtn, "Update Credentials");
     }
   });
 
