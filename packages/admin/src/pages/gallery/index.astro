@@ -7,6 +7,7 @@ import { getContentPath, getFilesPath, getThumbnailsPath, getImageBaseUrl } from
 import ArtworkGrid from '../../components/ArtworkGrid.astro';
 import Modal from '../../components/Modal.astro';
 import Button from '../../components/ui/Button.astro';
+import EmptyState from '../../components/ui/EmptyState.astro';
 import { UploadCloud, Zap, Image as ImageIcon } from 'lucide-react';
 
 import { stringToColor } from '../../lib/colors';
@@ -197,10 +198,12 @@ const thumbnailsPath = getThumbnailsPath();
 
     <!-- Gallery Grid -->
     {artworks.length === 0 ? (
-      <div class="card text-center py-16">
-        <p class="text-admin-muted text-lg mb-4">No artworks yet</p>
-        <a href="/gallery/upload" class="btn btn-primary">Upload your first artwork</a>
-      </div>
+      <EmptyState
+        heading="No artworks yet"
+        description="Upload images to start building your gallery."
+        actionHref="/gallery/upload"
+        actionLabel="Upload your first artwork"
+      />
     ) : (
       <div id="artwork-grid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
         {artworks.map((artwork) => (
@@ -234,7 +237,7 @@ const thumbnailsPath = getThumbnailsPath();
               {/* Status badges */}
               <div class="absolute top-2 right-2 flex gap-1">
                 {artwork.published === false && (
-                  <span class="bg-admin-warning text-xs px-1.5 py-0.5 rounded text-black" title="Draft">Draft</span>
+                  <span class="bg-admin-warning text-xs px-1.5 py-0.5 rounded text-black" title="Unlisted">Unlisted</span>
                 )}
                 {!artwork.processing?.processedAt && (
                   <span class="bg-orange-600 text-xs px-1.5 py-0.5 rounded" title="Needs processing">⏳</span>

@@ -24,7 +24,7 @@ test.describe('Dashboard', () => {
     await expect(page.getByTestId('stat-total-artworks')).toBeVisible();
     await expect(page.getByTestId('stat-collections')).toBeVisible();
     await expect(page.getByTestId('stat-published')).toBeVisible();
-    await expect(page.getByTestId('stat-drafts')).toBeVisible();
+    await expect(page.getByTestId('stat-unlisted')).toBeVisible();
     await expect(page.getByTestId('stat-unprocessed')).toBeVisible();
   });
 

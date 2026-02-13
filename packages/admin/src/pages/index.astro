@@ -6,6 +6,7 @@ import yaml from 'js-yaml';
 import { getContentPath, getFilesPath, getThumbnailsPath, getImageBaseUrl } from '../lib/paths';
 import ProcessingModal from '../components/ProcessingModal.astro';
 import ServicesModal from '../components/ServicesModal.astro';
+import EmptyState from '../components/ui/EmptyState.astro';
 import { 
   Image, 
   Library, 
@@ -63,7 +64,7 @@ const stats = {
   totalArtworks: artworks.length,
   collections: 1, // TODO: Load from collections folder
   published: artworks.filter(a => a.published !== false).length,
-  drafts: artworks.filter(a => a.published === false).length,
+  unlisted: artworks.filter(a => a.published === false).length,
   unprocessed: artworks.filter(a => !a.processing?.processedAt).length,
 };
 ---
@@ -99,11 +100,11 @@ const stats = {
           <CheckCircle className="w-8 h-8 opacity-60 text-admin-success" />
         </div>
       </div>
-      <div class="card relative" data-testid="stat-drafts">
+      <div class="card relative" data-testid="stat-unlisted">
         <div class="flex items-start justify-between">
           <div class="flex-1">
-            <div class="text-3xl font-bold">{stats.drafts}</div>
-            <div class="text-admin-muted text-sm mt-1">Drafts</div>
+            <div class="text-3xl font-bold">{stats.unlisted}</div>
+            <div class="text-admin-muted text-sm mt-1">Unlisted</div>
           </div>
           <FileText className="w-8 h-8 opacity-60" />
         </div>
@@ -155,7 +156,13 @@ const stats = {
       </div>
       
       {artworks.length === 0 ? (
-        <p class="text-admin-muted">No artworks found. Upload some images to get started.</p>
+        <EmptyState
+          heading="No artworks yet"
+          description="Upload images to start building your gallery."
+          actionHref="/gallery/upload"
+          actionLabel="Upload your first artwork"
+          class="py-6"
+        />
       ) : (
         <div class="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
           {artworks.slice(0, 16).map((artwork) => (
@@ -184,47 +191,50 @@ const stats = {
       )}
     </div>
 
-    <!-- Image Processing -->
-    <div class="card">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-semibold">Image Processing</h2>
-        <button id="open-processing-details" class="text-admin-accent text-sm hover:underline">
-          View queue details →
-        </button>
-      </div>
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="p-4 bg-admin-sidebar rounded-lg text-center">
-          <div class="text-2xl font-bold">{originalsCount}</div>
-          <div class="text-sm text-admin-muted">Originals</div>
+    {
+      (originalsCount > 0 || processedCount > 0 || stats.unprocessed > 0 || thumbnailsCount > 0) && (
+        <div class="card">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold">Image Processing</h2>
+            <button id="open-processing-details" class="text-admin-accent text-sm hover:underline">
+              View queue details →
+            </button>
+          </div>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="p-4 bg-admin-sidebar rounded-lg text-center">
+              <div class="text-2xl font-bold">{originalsCount}</div>
+              <div class="text-sm text-admin-muted">Originals</div>
+            </div>
+            <div class="p-4 bg-admin-sidebar rounded-lg text-center">
+              <div class="text-2xl font-bold text-admin-success">{processedCount}</div>
+              <div class="text-sm text-admin-muted">Processed</div>
+            </div>
+            <div class="p-4 bg-admin-sidebar rounded-lg text-center">
+              <div class={`text-2xl font-bold ${stats.unprocessed > 0 ? 'text-admin-warning' : 'text-admin-success'}`}>{stats.unprocessed}</div>
+              <div class="text-sm text-admin-muted">Pending</div>
+            </div>
+            <div class="p-4 bg-admin-sidebar rounded-lg text-center">
+              <div class="text-2xl font-bold">{thumbnailsCount}</div>
+              <div class="text-sm text-admin-muted">Thumbnails</div>
+            </div>
+          </div>
+          <div class="mt-4 flex items-center justify-between">
+            <div class="text-sm">
+              {stats.unprocessed > 0 ? (
+                <span class="text-admin-warning">Processing {stats.unprocessed} image{stats.unprocessed > 1 ? 's' : ''}...</span>
+              ) : stats.totalArtworks > 0 ? (
+                <span class="text-admin-success">All images ready ✓</span>
+              ) : (
+                <span class="text-admin-muted">Upload artwork images to get started</span>
+              )}
+            </div>
+            {stats.unprocessed > 0 && (
+              <button id="quick-process-btn" class="btn btn-secondary btn-sm flex items-center gap-2"><Zap className="w-4 h-4" /> Process Now</button>
+            )}
+          </div>
         </div>
-        <div class="p-4 bg-admin-sidebar rounded-lg text-center">
-          <div class="text-2xl font-bold text-admin-success">{processedCount}</div>
-          <div class="text-sm text-admin-muted">Processed</div>
-        </div>
-        <div class="p-4 bg-admin-sidebar rounded-lg text-center">
-          <div class={`text-2xl font-bold ${stats.unprocessed > 0 ? 'text-admin-warning' : 'text-admin-success'}`}>{stats.unprocessed}</div>
-          <div class="text-sm text-admin-muted">Pending</div>
-        </div>
-        <div class="p-4 bg-admin-sidebar rounded-lg text-center">
-          <div class="text-2xl font-bold">{thumbnailsCount}</div>
-          <div class="text-sm text-admin-muted">Thumbnails</div>
-        </div>
-      </div>
-      <div class="mt-4 flex items-center justify-between">
-        <div class="text-sm">
-          {stats.unprocessed > 0 ? (
-            <span class="text-admin-warning">Processing {stats.unprocessed} image{stats.unprocessed > 1 ? 's' : ''}...</span>
-          ) : stats.totalArtworks > 0 ? (
-            <span class="text-admin-success">All images ready ✓</span>
-          ) : (
-            <span class="text-admin-muted">Upload artwork images to get started</span>
-          )}
-        </div>
-        {stats.unprocessed > 0 && (
-          <button id="quick-process-btn" class="btn btn-secondary btn-sm flex items-center gap-2"><Zap className="w-4 h-4" /> Process Now</button>
-        )}
-      </div>
-    </div>
+      )
+    }
 
     <!-- Processing Modal -->
     <ProcessingModal />
