@@ -22,12 +22,13 @@ export const GET: APIRoute = async () => {
         // Try to read artis.config.yaml
         try {
             const content = await fs.readFile(bootstrapPath, 'utf-8');
-            const config = yaml.load(content) as { userDataPath?: string; contentPath?: string; path?: string };
+            const config = yaml.load(content) as { userDataPath?: string; contentPath?: string; path?: string; projectName?: string };
             const resolvedPath = config?.userDataPath || config?.contentPath || config?.path || '';
 
             return new Response(JSON.stringify({
                 configured: true,
                 path: resolvedPath,
+                projectName: config?.projectName || '',
                 bootstrapFile: bootstrapPath
             }), {
                 status: 200,
@@ -56,7 +57,7 @@ export const GET: APIRoute = async () => {
 
 export const PUT: APIRoute = async ({ request }) => {
     try {
-        const { path: userDataPath } = await request.json();
+        const { path: userDataPath, projectName } = await request.json();
 
         if (!userDataPath || typeof userDataPath !== 'string') {
             return new Response(JSON.stringify({ error: 'Path is required' }), {
@@ -67,12 +68,19 @@ export const PUT: APIRoute = async ({ request }) => {
 
         const bootstrapPath = getBootstrapPath();
 
-        // Create the YAML content
+        const configLines = [
+            `userDataPath: ${userDataPath}`
+        ];
+
+        if (projectName && typeof projectName === 'string') {
+            configLines.push(`projectName: ${projectName}`);
+        }
+
         const yamlContent = `# ArtSiteMaker Site Configuration
 # ========================
 # This file defines where artis finds all site-specific data.
 
-userDataPath: ${userDataPath}
+${configLines.join('\n')}
 `;
 
         await fs.writeFile(bootstrapPath, yamlContent, 'utf-8');
@@ -83,6 +91,7 @@ userDataPath: ${userDataPath}
         return new Response(JSON.stringify({
             success: true,
             path: userDataPath,
+            projectName: projectName || '',
             message: 'User data path updated. Please restart the dev server for changes to take effect.'
         }), {
             status: 200,

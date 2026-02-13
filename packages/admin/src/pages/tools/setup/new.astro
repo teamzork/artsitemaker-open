@@ -1,0 +1,81 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import Button from "../../../components/ui/Button.astro";
+import { ArrowLeft, ArrowRight } from "lucide-react";
+import setupNewScriptUrl from "../../../scripts/setup-new.ts?url";
+
+const DEFAULT_PROJECT_NAME = "My Portfolio";
+---
+
+<AdminLayout title="New Project">
+    <main class="max-w-2xl mx-auto space-y-6">
+        <header class="space-y-2">
+            <p class="text-xs uppercase tracking-[0.2em] text-admin-muted">
+                Setup Assistant
+            </p>
+            <h1 class="text-2xl font-bold">New Project</h1>
+            <p class="text-admin-muted">
+                Start a clean portfolio. We'll create your user-data structure
+                first, then help you pick a theme and add artwork.
+            </p>
+        </header>
+
+        <section class="card space-y-4">
+            <div class="flex items-center justify-between gap-4">
+                <h2 class="text-lg font-semibold">
+                    Step 1 of 3 · Project name
+                </h2>
+            </div>
+
+            <div class="space-y-2">
+                <label class="block text-sm text-admin-muted" for="project-name">
+                    Project name
+                </label>
+                <input
+                    id="project-name"
+                    name="project-name"
+                    type="text"
+                    placeholder={DEFAULT_PROJECT_NAME}
+                    autocomplete="off"
+                    data-1p-ignore="true"
+                    data-lpignore="true"
+                    data-form-type="other"
+                    data-default-name={DEFAULT_PROJECT_NAME}
+                    autofocus
+                />
+            </div>
+
+            <div
+                id="project-status"
+                class="text-sm text-admin-muted"
+                aria-live="polite"
+            ></div>
+
+            <div class="flex flex-wrap items-center justify-end gap-3">
+                <div
+                    id="project-skip-wrap"
+                    class="transition-all duration-200 ease-out max-h-12"
+                >
+                    <Button
+                        type="button"
+                        id="project-skip-btn"
+                        variant="secondary"
+                    >
+                        Use default name
+                    </Button>
+                </div>
+                <Button type="button" id="project-continue-btn">
+                    Continue <ArrowRight className="w-4 h-4" />
+                </Button>
+            </div>
+        </section>
+
+        <a
+            href="/tools/setup"
+            class="text-sm text-admin-muted hover:text-admin-text inline-flex items-center gap-1"
+        >
+            <ArrowLeft className="w-4 h-4" /> Back to Setup Assistant
+        </a>
+    </main>
+</AdminLayout>
+<script type="module" src={setupNewScriptUrl}></script>

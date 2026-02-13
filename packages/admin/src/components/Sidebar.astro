@@ -393,6 +393,16 @@ const getActiveHash = () => {
     left: 0;
   }
 
+  @media (prefers-reduced-motion: reduce) {
+    .admin-logo::before {
+      transition: none;
+    }
+
+    .admin-logo:hover::before {
+      left: -100%;
+    }
+  }
+
   /* Ensure content sits above the background sweep */
   .logo-icon,
   .logo-text-wrapper {

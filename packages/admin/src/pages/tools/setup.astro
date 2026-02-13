@@ -1,22 +1,20 @@
 ---
 import AdminLayout from "@layouts/AdminLayout.astro";
 import {
-    Palette,
     FolderInput,
     Wrench,
     ArrowRight,
     Wand2,
     ArrowLeft,
+    Plus,
 } from "lucide-react";
 ---
 
-<AdminLayout title="Setup Wizard">
+<AdminLayout title="Setup Assistant">
     <div class="space-y-8 max-w-2xl mx-auto">
         <div class="text-center mb-8">
-            <h1
-                class="text-2xl font-bold mb-2 flex items-center justify-center gap-2"
-            >
-                <Wand2 className="w-8 h-8" /> Setup Wizard
+            <h1 class="text-2xl font-bold mb-2 flex items-center justify-center gap-2">
+                <Wand2 className="w-8 h-8" /> Setup Assistant
             </h1>
             <p class="text-admin-muted">
                 Choose an option below to get started or troubleshoot your
@@ -28,28 +26,27 @@ import {
             <!-- New Project -->
             <a
                 href="/tools/setup/new"
-                class="card hover:border-admin-accent transition-colors group"
+                class="card border-admin-accent/50 hover:border-admin-accent transition-colors group"
             >
-                >
-                <div class="flex items-center gap-4">
+                <div class="flex items-center gap-5">
                     <div
-                        class="text-4xl text-admin-muted group-hover:text-admin-accent transition-colors"
+                        class="text-4xl text-admin-success/80 group-hover:text-admin-accent transition-colors"
                     >
-                        <Palette className="w-10 h-10" />
+                        <Plus className="w-12 h-12" />
                     </div>
                     <div class="flex-1">
                         <h2
-                            class="text-lg font-semibold group-hover:text-admin-accent transition-colors"
+                            class="text-xl font-semibold group-hover:text-admin-accent transition-colors"
                         >
                             New Project
                         </h2>
-                        <p class="text-sm text-admin-muted">
+                        <p class="text-base text-admin-muted">
                             Start fresh with a new portfolio. Set up your
                             content folder, theme, and basic settings.
                         </p>
                     </div>
                     <span
-                        class="text-admin-muted group-hover:text-admin-accent transition-colors"
+                        class="text-lg text-admin-muted group-hover:text-admin-accent transition-colors"
                         >→</span
                     >
                 </div>
@@ -58,22 +55,21 @@ import {
             <!-- Existing Project -->
             <a
                 href="/tools/setup/existing"
-                class="card hover:border-admin-accent transition-colors group"
+                class="card border-admin-muted/30 hover:border-admin-accent transition-colors group opacity-80 hover:opacity-100"
             >
-                >
                 <div class="flex items-center gap-4">
                     <div
-                        class="text-4xl text-admin-muted group-hover:text-admin-accent transition-colors"
+                        class="text-4xl text-admin-muted/70 group-hover:text-admin-accent transition-colors"
                     >
-                        <FolderInput className="w-10 h-10" />
+                        <FolderInput className="w-8 h-8" />
                     </div>
                     <div class="flex-1">
                         <h2
-                            class="text-lg font-semibold group-hover:text-admin-accent transition-colors"
+                            class="text-sm font-medium group-hover:text-admin-accent transition-colors"
                         >
                             Existing Project
                         </h2>
-                        <p class="text-sm text-admin-muted">
+                        <p class="text-xs text-admin-muted/80">
                             Connect to an existing content folder from a
                             previous installation or backup.
                         </p>
@@ -88,22 +84,21 @@ import {
             <!-- Troubleshooting -->
             <a
                 href="/tools/setup/troubleshoot"
-                class="card hover:border-admin-accent transition-colors group"
+                class="card border-admin-muted/30 hover:border-admin-accent transition-colors group opacity-80 hover:opacity-100"
             >
-                >
                 <div class="flex items-center gap-4">
                     <div
-                        class="text-4xl text-admin-muted group-hover:text-admin-accent transition-colors"
+                        class="text-4xl text-admin-muted/70 group-hover:text-admin-accent transition-colors"
                     >
-                        <Wrench className="w-10 h-10" />
+                        <Wrench className="w-8 h-8" />
                     </div>
                     <div class="flex-1">
                         <h2
-                            class="text-lg font-semibold group-hover:text-admin-accent transition-colors"
+                            class="text-sm font-medium group-hover:text-admin-accent transition-colors"
                         >
                             Troubleshooting
                         </h2>
-                        <p class="text-sm text-admin-muted">
+                        <p class="text-xs text-admin-muted/80">
                             Diagnose and fix common issues with your
                             configuration, paths, or settings.
                         </p>

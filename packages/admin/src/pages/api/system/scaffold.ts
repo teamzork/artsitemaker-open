@@ -4,6 +4,7 @@ import path from 'path';
 import yaml from 'js-yaml';
 import { loadUserDataStructureSchema, scaffoldUserDataProject } from '../../../lib/user-data-structure';
 import { getRepoPath } from '../../../lib/paths';
+import { slugify } from '../../../lib/image-pipeline';
 
 function resolveConfiguredUserDataRoot(repoRoot: string): { root: string; reason: 'config' | 'default' } {
   const bootstrapPath = path.join(repoRoot, 'artis.config.yaml');
@@ -46,27 +47,30 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
     
-    // Sanitize project name to prevent directory traversal
-    const safeProjectName = projectName.replace(/[^a-zA-Z0-9-_]/g, '');
-    if (safeProjectName !== projectName || !safeProjectName) {
-       return new Response(JSON.stringify({ error: 'Invalid project name' }), { 
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
     const repoRoot = getRepoPath();
     const schemaPath = path.join(repoRoot, 'schemas/user-data.structure.yaml');
-    const { root: userDataRoot } = resolveConfiguredUserDataRoot(repoRoot);
+    let { root: userDataRoot } = resolveConfiguredUserDataRoot(repoRoot);
 
     if (isProjectRoot(userDataRoot)) {
-      return new Response(JSON.stringify({ error: 'Configured userDataPath points to a project folder. Set userDataPath to the root (e.g., /user-data) before scaffolding new projects.' }), {
+      userDataRoot = path.dirname(userDataRoot);
+    }
+
+    const baseProjectName = slugify(projectName);
+    if (!baseProjectName) {
+      return new Response(JSON.stringify({ error: 'Invalid project name' }), { 
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    const projectRoot = path.join(userDataRoot, safeProjectName);
+    let finalProjectName = baseProjectName;
+    let projectRoot = path.join(userDataRoot, finalProjectName);
+    let suffix = 1;
+    while (fs.existsSync(projectRoot)) {
+      finalProjectName = `${baseProjectName}-${suffix}`;
+      projectRoot = path.join(userDataRoot, finalProjectName);
+      suffix += 1;
+    }
     
     const schema = loadUserDataStructureSchema(schemaPath);
     const result = scaffoldUserDataProject(projectRoot, schema);
@@ -74,6 +78,8 @@ export const POST: APIRoute = async ({ request }) => {
     return new Response(JSON.stringify({ 
       success: true,
       path: projectRoot,
+      root: userDataRoot,
+      projectName: finalProjectName,
       ...result 
     }), { 
       status: 200, 

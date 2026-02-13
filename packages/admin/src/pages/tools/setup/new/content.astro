@@ -1,0 +1,50 @@
+---
+import AdminLayout from "../../../../layouts/AdminLayout.astro";
+import Button from "../../../../components/ui/Button.astro";
+import { ArrowLeft } from "lucide-react";
+import setupNewContentScriptUrl from "../../../../scripts/setup-new-content.ts?url";
+---
+
+<AdminLayout title="New Project">
+    <main class="max-w-2xl mx-auto space-y-6">
+        <header class="space-y-2">
+            <p class="text-xs uppercase tracking-[0.2em] text-admin-muted">
+                Setup Assistant
+            </p>
+            <h1 class="text-2xl font-bold">Starter Content</h1>
+            <p class="text-admin-muted">
+                Step 3 of 3 · Add your first artwork or start with an empty
+                gallery.
+            </p>
+        </header>
+
+        <section class="card space-y-4">
+            <h2 class="text-lg font-semibold">Choose your next step</h2>
+            <div class="grid gap-3 sm:grid-cols-2">
+                <Button type="button" id="add-artwork-btn">
+                    Add first artwork
+                </Button>
+                <Button type="button" id="start-empty-btn" variant="secondary">
+                    Start empty
+                </Button>
+            </div>
+            <div
+                id="content-status"
+                class="text-sm text-admin-muted"
+                aria-live="polite"
+            ></div>
+            <p class="text-xs text-admin-muted">
+                You can change your theme or add content anytime from the admin.
+            </p>
+        </section>
+
+        <a
+            href="/tools/setup/new/theme"
+            class="text-sm text-admin-muted hover:text-admin-text inline-flex items-center gap-1"
+        >
+            <ArrowLeft className="w-4 h-4" /> Back to Select theme
+        </a>
+    </main>
+</AdminLayout>
+
+<script type="module" src={setupNewContentScriptUrl}></script>

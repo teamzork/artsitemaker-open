@@ -1,0 +1,275 @@
+---
+import AdminLayout from "../../../../layouts/AdminLayout.astro";
+import Button from "../../../../components/ui/Button.astro";
+import fs from "fs/promises";
+import path from "path";
+import yaml from "js-yaml";
+import { getThemesPath } from "../../../../lib/paths";
+import { getSettingsFilePath } from "../../../../lib/config-paths";
+import { ArrowLeft, ArrowRight } from "lucide-react";
+
+const themesPath = getThemesPath();
+
+let settings: any = {};
+try {
+    const content = await fs.readFile(getSettingsFilePath(), "utf-8");
+    settings = yaml.load(content) as any;
+} catch {}
+
+const currentTheme =
+    (typeof settings?.theme === "string" && settings.theme) ||
+    settings?.theme?.active ||
+    "minimalist";
+
+interface ThemeInfo {
+    id: string;
+    name: string;
+    description?: string;
+    colors?: {
+        background?: string;
+        accent?: string;
+        backgroundAlt?: string;
+    };
+    preview?: string;
+}
+
+const fallbackColors = {
+    background: "#cbcbc6",
+    backgroundAlt: "#323232",
+    accent: "#efb600",
+};
+
+function resolveThemeColors(theme: ThemeInfo) {
+    return {
+        background: theme.colors?.background || fallbackColors.background,
+        backgroundAlt: theme.colors?.backgroundAlt || fallbackColors.backgroundAlt,
+        accent: theme.colors?.accent || fallbackColors.accent,
+    };
+}
+
+let themes: ThemeInfo[] = [];
+try {
+    const dirs = await fs.readdir(themesPath, { withFileTypes: true });
+
+    for (const d of dirs) {
+        if (!d.isDirectory()) continue;
+        if (d.name === "recommended-assets") continue;
+
+        const themeInfo: ThemeInfo = {
+            id: d.name,
+            name: d.name
+                .split("-")
+                .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(" "),
+        };
+
+        try {
+            const themeYamlPath = path.join(themesPath, d.name, "theme.yaml");
+            const themeContent = await fs.readFile(themeYamlPath, "utf-8");
+            const themeData = yaml.load(themeContent) as any;
+
+            themeInfo.name = themeData.name || themeInfo.name;
+            themeInfo.description = themeData.description;
+            themeInfo.colors = themeData.colors;
+
+            const previewPath = path.join(
+                themesPath,
+                d.name,
+                "assets",
+                "preview.png",
+            );
+            try {
+                await fs.access(previewPath);
+                themeInfo.preview = `/api/theme-preview/${d.name}`;
+            } catch {}
+        } catch {}
+
+        themes.push(themeInfo);
+    }
+} catch {}
+---
+
+<AdminLayout title="New Project">
+    <main
+        class="setup-theme max-w-4xl mx-auto space-y-6"
+        data-current-theme={currentTheme}
+    >
+        <header class="setup-theme-header space-y-2">
+            <p class="text-xs uppercase tracking-[0.2em] text-admin-muted">
+                Setup Assistant
+            </p>
+            <h1 class="text-2xl font-bold">Select Theme</h1>
+            <p class="text-admin-muted">
+                Step 2 of 3 · Pick a theme for your new portfolio.
+            </p>
+        </header>
+
+        <section class="theme-panel card space-y-4">
+            <div class="theme-panel-header flex items-center justify-between gap-4">
+                <h2 class="text-lg font-semibold">Available themes</h2>
+                <span class="text-xs text-admin-muted">
+                    Current: <span class="font-medium">{currentTheme}</span>
+                </span>
+            </div>
+
+            <div class="theme-grid grid grid-cols-1 md:grid-cols-2 gap-4">
+                {themes.map((theme) => {
+                    const colors = resolveThemeColors(theme);
+                    return (
+                        <button
+                            type="button"
+                            class:list={[
+                                "theme-card card p-0 overflow-hidden transition-shadow text-left w-full",
+                                "hover:ring-2 hover:ring-admin-accent/50 focus-visible:ring-2 focus-visible:ring-admin-accent/70 focus-visible:outline-none",
+                                theme.id === currentTheme &&
+                                    "ring-2 ring-admin-success",
+                            ]}
+                            data-theme-select={theme.id}
+                            data-theme-name={theme.name}
+                            aria-pressed={theme.id === currentTheme}
+                        >
+                            <div class="theme-preview aspect-video relative overflow-hidden">
+                                {theme.preview ? (
+                                    <img
+                                        src={theme.preview}
+                                        alt={`${theme.name} preview`}
+                                        class="theme-preview-image w-full h-full object-cover"
+                                    />
+                                ) : (
+                                    <div
+                                        class="theme-preview-fallback w-full h-full flex items-center justify-center"
+                                        style={`background: linear-gradient(135deg, ${colors.background} 0%, ${colors.backgroundAlt} 100%);`}
+                                    >
+                                        <div class="theme-preview-grid grid grid-cols-3 gap-1 p-4 w-full max-w-[200px]">
+                                            {[1, 2, 3, 4, 5, 6].map(() => (
+                                                <div
+                                                    class="theme-preview-tile aspect-square rounded"
+                                                    style={`background: ${colors.backgroundAlt}; border: 1px solid ${colors.accent};`}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                <div
+                                    class="theme-preview-accent absolute bottom-0 left-0 right-0 h-1"
+                                    style={`background: ${colors.accent};`}
+                                />
+                            </div>
+
+                            <div class="theme-meta p-4 space-y-3">
+                                <div class="theme-title font-semibold">
+                                    {theme.name}
+                                </div>
+                                {theme.description && (
+                                    <p class="theme-description text-sm text-admin-muted">
+                                        {theme.description}
+                                    </p>
+                                )}
+                                <div class="theme-meta-row flex items-center justify-between">
+                                    <div class="theme-swatches flex gap-1">
+                                        {[colors.background, colors.backgroundAlt, colors.accent].map(
+                                            (swatch) => (
+                                                <div
+                                                    class="theme-swatch w-5 h-5 rounded-full border border-admin-border"
+                                                    style={`background: ${swatch};`}
+                                                />
+                                            ),
+                                        )}
+                                    </div>
+                                    <span class="theme-hint text-xs text-admin-muted">
+                                        Click to select
+                                    </span>
+                                </div>
+                            </div>
+                        </button>
+                    );
+                })}
+            </div>
+
+            <div
+                id="theme-status"
+                class="theme-status text-sm text-admin-muted"
+                aria-live="polite"
+            ></div>
+
+            <div class="theme-actions flex flex-wrap items-center justify-end gap-3">
+                <Button type="button" id="theme-continue-btn">
+                    Continue <ArrowRight className="w-4 h-4" />
+                </Button>
+            </div>
+        </section>
+
+        <a
+            href="/tools/setup/new"
+            class="theme-back-link text-sm text-admin-muted hover:text-admin-text inline-flex items-center gap-1"
+        >
+            <ArrowLeft className="w-4 h-4" /> Back to Project name
+        </a>
+    </main>
+</AdminLayout>
+
+<script>
+    const pageRoot = document.querySelector("main[data-current-theme]");
+    const themeCards = Array.from(
+        document.querySelectorAll("[data-theme-select]"),
+    );
+    const statusEl = document.getElementById("theme-status");
+    const continueBtn = document.getElementById("theme-continue-btn");
+
+    let selectedThemeId = "";
+
+    function setStatus(message, tone = "muted") {
+        if (!statusEl) return;
+        statusEl.textContent = message;
+        statusEl.classList.remove("text-admin-muted", "text-admin-error");
+        statusEl.classList.add(
+            tone === "error" ? "text-admin-error" : "text-admin-muted",
+        );
+    }
+
+    function setSelectedTheme(themeId) {
+        selectedThemeId = themeId;
+        themeCards.forEach((card) => {
+            const matches = card.getAttribute("data-theme-select") === themeId;
+            card.classList.toggle("ring-2", matches);
+            card.classList.toggle("ring-admin-success", matches);
+            card.setAttribute("aria-pressed", matches ? "true" : "false");
+        });
+
+        const selectedCard = themeCards.find(
+            (card) => card.getAttribute("data-theme-select") === themeId,
+        );
+        const themeName = selectedCard?.getAttribute("data-theme-name") || themeId;
+        setStatus(`Selected theme: ${themeName}`);
+        if (continueBtn) continueBtn.disabled = false;
+    }
+
+    function saveThemeAndContinue() {
+        if (!selectedThemeId) {
+            setStatus("Select a theme to continue.", "error");
+            return;
+        }
+
+        sessionStorage.setItem("setup:new:themeId", selectedThemeId);
+        window.location.href = "/tools/setup/new/content";
+    }
+
+    const storedThemeId = sessionStorage.getItem("setup:new:themeId");
+    const currentTheme = pageRoot?.getAttribute("data-current-theme");
+    if (storedThemeId) {
+        setSelectedTheme(storedThemeId);
+    } else if (currentTheme) {
+        setSelectedTheme(currentTheme);
+    }
+
+    themeCards.forEach((card) => {
+        card.addEventListener("click", () => {
+            const themeId = card.getAttribute("data-theme-select");
+            if (!themeId) return;
+            setSelectedTheme(themeId);
+            sessionStorage.setItem("setup:new:themeId", themeId);
+        });
+    });
+
+    continueBtn?.addEventListener("click", saveThemeAndContinue);
+</script>
