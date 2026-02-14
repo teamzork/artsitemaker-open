@@ -9,6 +9,7 @@ import {
     type ProcessingResult
 } from '../../lib/image-pipeline';
 import { checkImageServer } from '../../lib/image-server-check';
+import { getSettingsFilePath } from '../../lib/config-paths';
 
 const paths = getDefaultPaths();
 
@@ -30,6 +31,18 @@ export const POST: APIRoute = async ({ request }) => {
                 });
             }
         }
+
+        // Load settings to get publishOnImport preference
+        let settings: any = {};
+        try {
+            const settingsPath = getSettingsFilePath();
+            const settingsContent = await fs.readFile(settingsPath, 'utf-8');
+            settings = yaml.load(settingsContent) as any;
+        } catch (e) {
+            // Use defaults if settings not found
+        }
+
+        const publishOnImport = settings.gallery?.publishOnImport === true;
 
         const body = await request.json().catch(() => ({}));
         const slugsToProcess: string[] = body.slugs || []; // Empty means process all
@@ -119,7 +132,7 @@ export const POST: APIRoute = async ({ request }) => {
                             currency: 'USD',
                             inquireOnly: false,
                             createdAt: new Date().toISOString(),
-                            published: false
+                            published: publishOnImport
                         };
                     }
                 }

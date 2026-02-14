@@ -1,6 +1,7 @@
 ---
 import AdminLayout from '@layouts/AdminLayout.astro';
 import Modal from '@components/Modal.astro';
+import { Toggle } from '@components/ui/Toggle';
 ---
 
 <AdminLayout title="Upload Images">
@@ -8,77 +9,125 @@ import Modal from '@components/Modal.astro';
     <!-- Back link -->
     <a href="/gallery" class="text-admin-muted hover:text-admin-text" data-testid="back-to-gallery">← Back to Gallery</a>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-      <!-- Upload area -->
-      <div
-        id="drop-zone"
-        class="card border-2 border-dashed border-admin-border hover:border-admin-accent transition-colors cursor-pointer h-full flex flex-col justify-center"
-        data-testid="drop-zone"
-      >
-        <div class="text-center py-16">
-          <div class="text-6xl mb-4">📤</div>
-          <h2 class="text-xl font-semibold mb-2">Drop images here</h2>
-          <p class="text-admin-muted mb-4">or click to select files</p>
-          <p class="text-sm text-admin-muted">
-            Supports: JPG, PNG, TIFF, HEIC, WebP (max 50MB each)
-          </p>
-          <input
-            type="file"
-            id="file-input"
-            multiple
-            accept=".jpg,.jpeg,.png,.tiff,.tif,.heic,.heif,.webp"
-            class="hidden"
-            data-testid="file-input"
-          />
-        </div>
+    <!-- Collapsible: Image Upload Section -->
+    <div id="upload-section" class="collapsible-section">
+      <!-- Minimal collapsed form -->
+      <div class="collapsible-header card border-2 border-dashed border-admin-border hover:border-admin-accent cursor-pointer flex items-center gap-4 p-4" data-collapse="upload">
+        <span class="text-2xl">📤</span>
+        <span class="text-lg font-semibold flex-1">Drop images here</span>
+        <button type="button" class="collapse-toggle p-1 hover:bg-admin-bg rounded transition-colors">
+          <svg class="w-5 h-5 text-admin-muted collapse-chevron transition-transform flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
       </div>
       
-      <!-- FTP/SFTP Upload Instructions -->
-      <div class="card bg-admin-sidebar h-full">
-        <div class="flex items-start gap-4">
-          <div class="text-3xl">💡</div>
-          <div>
-            <h3 class="font-semibold mb-2">Bulk Upload via FTP/SFTP</h3>
-            <p class="text-sm text-admin-muted mb-3">
-              For uploading many large files, you can use FTP or SFTP to transfer images directly to the server. 
-              This is faster and more reliable for large batches.
+      <!-- Expanded content -->
+      <div class="collapsible-content mt-0">
+        <div
+          id="drop-zone"
+          class="card border-2 border-dashed border-admin-border hover:border-admin-accent transition-colors cursor-pointer h-full flex flex-col justify-center relative"
+          data-testid="drop-zone"
+        >
+          <button type="button" class="collapse-toggle absolute top-4 right-4 z-10 p-2 hover:bg-admin-bg rounded transition-colors" title="Collapse">
+            <svg class="w-5 h-5 text-admin-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+            </svg>
+          </button>
+          <div class="text-center py-16">
+            <div class="text-6xl mb-4">📤</div>
+            <h2 class="text-xl font-semibold mb-2">Drop images here</h2>
+            <p class="text-admin-muted mb-4">or click to select files</p>
+            <p class="text-sm text-admin-muted">
+              Supports: JPG, PNG, TIFF, HEIC, WebP (max 50MB each)
             </p>
-            
-            <div class="bg-admin-bg rounded-lg p-4 mb-3">
-              <h4 class="text-sm font-medium mb-2">Upload Steps:</h4>
-              <ol class="text-sm text-admin-muted space-y-2 list-decimal list-inside">
-                <li>Connect to your server via FTP/SFTP client (FileZilla, Cyberduck, etc.)</li>
-                <li>Navigate to: <code class="bg-admin-card px-1.5 py-0.5 rounded">files/originals/</code></li>
-                <li>Upload your image files (name them as the artwork slug, e.g., <code class="bg-admin-card px-1.5 py-0.5 rounded">my-artwork.jpg</code>)</li>
-                <li>Return here and click <strong>"Scan for New Images"</strong> below</li>
-                <li>Process the images to generate web-optimized versions</li>
-              </ol>
-            </div>
-            
-            <div class="flex gap-4">
-              <button id="scan-images-btn" class="btn btn-secondary text-sm">
-                🔍 Scan for New Images
-              </button>
-              <button id="show-ftp-details" class="text-sm text-admin-muted hover:text-admin-text">
-                Show connection details
-              </button>
-            </div>
-            
-            <div id="ftp-details" class="hidden mt-4 bg-admin-bg rounded-lg p-4">
-              <h4 class="text-sm font-medium mb-2">Connection Details:</h4>
-              <div class="grid grid-cols-2 gap-2 text-sm">
-                <div class="text-admin-muted">Protocol:</div>
-                <div>SFTP (recommended)</div>
-                <div class="text-admin-muted">Host:</div>
-                <div><code class="bg-admin-card px-1.5 py-0.5 rounded">your-server.com</code></div>
-                <div class="text-admin-muted">Port:</div>
-                <div>22 (SFTP) or 21 (FTP)</div>
-                <div class="text-admin-muted">Path:</div>
-                <div><code class="bg-admin-card px-1.5 py-0.5 rounded">/path/to/artis/files/originals/</code></div>
-              </div>
-              <p class="text-xs text-admin-muted mt-3">
-                Use your server SSH credentials. Contact your hosting provider if you need help setting up SFTP access.
+            <input
+              type="file"
+              id="file-input"
+              multiple
+              accept=".jpg,.jpeg,.png,.tiff,.tif,.heic,.heif,.webp"
+              class="hidden"
+              data-testid="file-input"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Collapsible: FTP/SFTP Upload Section -->
+    <div id="ftp-section" class="collapsible-section">
+      <!-- Minimal collapsed form -->
+      <div class="collapsible-header card bg-admin-sidebar flex items-center gap-4 p-4" data-collapse="ftp">
+        <span class="text-2xl">💡</span>
+        <span class="text-lg font-semibold flex-1">Bulk Upload via FTP/SFTP</span>
+        <div class="flex items-center gap-2">
+          <button id="scan-images-btn-collapsed" class="btn btn-secondary text-sm py-1.5">
+            🔍 Scan for New Images
+          </button>
+          <button id="show-ftp-details-collapsed" class="text-sm text-admin-muted hover:text-admin-text py-1.5">
+            Show details
+          </button>
+        </div>
+        <button type="button" class="collapse-toggle p-1 hover:bg-admin-bg rounded transition-colors">
+          <svg class="w-5 h-5 text-admin-muted collapse-chevron transition-transform flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+      </div>
+      
+      <!-- Expanded content -->
+      <div class="collapsible-content mt-0">
+        <div class="card bg-admin-sidebar h-full relative">
+          <button type="button" class="collapse-toggle absolute top-4 right-4 z-10 p-2 hover:bg-admin-bg rounded transition-colors" title="Collapse">
+            <svg class="w-5 h-5 text-admin-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+            </svg>
+          </button>
+          <div class="flex items-start gap-4">
+            <div class="text-3xl">💡</div>
+            <div>
+              <h3 class="font-semibold mb-2">Bulk Upload via FTP/SFTP</h3>
+              <p class="text-sm text-admin-muted mb-3">
+                For uploading many large files, you can use FTP or SFTP to transfer images directly to the server. 
+                This is faster and more reliable for large batches.
               </p>
+              
+              <div class="bg-admin-bg rounded-lg p-4 mb-3">
+                <h4 class="text-sm font-medium mb-2">Upload Steps:</h4>
+                <ol class="text-sm text-admin-muted space-y-2 list-decimal list-inside">
+                  <li>Connect to your server via FTP/SFTP client (FileZilla, Cyberduck, etc.)</li>
+                  <li>Navigate to: <code class="bg-admin-card px-1.5 py-0.5 rounded">files/originals/</code></li>
+                  <li>Upload your image files (name them as the artwork slug, e.g., <code class="bg-admin-card px-1.5 py-0.5 rounded">my-artwork.jpg</code>)</li>
+                  <li>Return here and click <strong>"Scan for New Images"</strong> below</li>
+                  <li>Process the images to generate web-optimized versions</li>
+                </ol>
+              </div>
+              
+              <div class="flex gap-4">
+                <button id="scan-images-btn" class="btn btn-secondary text-sm">
+                  🔍 Scan for New Images
+                </button>
+                <button id="show-ftp-details" class="text-sm text-admin-muted hover:text-admin-text">
+                  Show connection details
+                </button>
+              </div>
+              
+              <div id="ftp-details" class="hidden mt-4 bg-admin-bg rounded-lg p-4">
+                <h4 class="text-sm font-medium mb-2">Connection Details:</h4>
+                <div class="grid grid-cols-2 gap-2 text-sm">
+                  <div class="text-admin-muted">Protocol:</div>
+                  <div>SFTP (recommended)</div>
+                  <div class="text-admin-muted">Host:</div>
+                  <div><code class="bg-admin-card px-1.5 py-0.5 rounded">your-server.com</code></div>
+                  <div class="text-admin-muted">Port:</div>
+                  <div>22 (SFTP) or 21 (FTP)</div>
+                  <div class="text-admin-muted">Path:</div>
+                  <div><code class="bg-admin-card px-1.5 py-0.5 rounded">/path/to/artis/files/originals/</code></div>
+                </div>
+                <p class="text-xs text-admin-muted mt-3">
+                  Use your server SSH credentials. Contact your hosting provider if you need help setting up SFTP access.
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -89,13 +138,18 @@ import Modal from '@components/Modal.astro';
     <div id="queue-section" class="hidden">
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-lg font-semibold">Upload Queue</h3>
-        <div class="flex gap-4">
-          <button id="upload-all-btn" class="btn btn-primary">
-            📤 Upload All
-          </button>
-          <button id="clear-queue-btn" class="btn btn-secondary">
-            Clear Queue
-          </button>
+        <div class="flex items-center gap-4">
+          <div id="publish-toggle-container">
+            <Toggle client:load name="publishOnImport" label="Publish on import" labelOff="Keep unpublished" defaultPressed={false} />
+          </div>
+          <div class="flex gap-4">
+            <button id="upload-all-btn" class="btn btn-primary">
+              📤 Upload All
+            </button>
+            <button id="clear-queue-btn" class="btn btn-secondary">
+              Clear Queue
+            </button>
+          </div>
         </div>
       </div>
       
@@ -129,7 +183,10 @@ import Modal from '@components/Modal.astro';
           <h3 class="text-lg font-semibold">Found in Files</h3>
           <span id="scan-count" class="bg-admin-accent text-white text-xs px-2 py-1 rounded-full">0</span>
         </div>
-        <div class="flex gap-4">
+        <div class="flex items-center gap-4">
+          <div id="scan-publish-toggle-container">
+            <Toggle client:load name="scanPublishOnImport" label="Publish on import" labelOff="Keep unpublished" defaultPressed={false} />
+          </div>
           <button id="process-scanned-btn" class="btn btn-primary">
             ⚡ Process & Catalog These
           </button>
@@ -148,7 +205,79 @@ import Modal from '@components/Modal.astro';
   </Modal>
 </AdminLayout>
 
-<style>
+<style is:global>
+  .collapsible-section {
+    position: relative;
+  }
+  
+  .collapsible-header {
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+  
+  .collapsible-header:hover {
+    transform: none;
+  }
+  
+  .collapsible-section:not(.collapsed) .collapsible-header {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+  
+  .collapsible-section:not(.collapsed) .collapsible-header {
+    border-bottom: 1px solid var(--admin-border, #2a2a2a);
+  }
+  
+  /* Show full content when expanded, show minimal header when collapsed */
+  .collapsible-section.collapsed .collapsible-header {
+    display: flex;
+  }
+  
+  .collapsible-section:not(.collapsed) .collapsible-header {
+    display: none;
+  }
+  
+  .collapsible-content {
+    overflow: hidden;
+    transition: max-height 0.3s ease, opacity 0.2s ease;
+    max-height: 2000px;
+    opacity: 1;
+  }
+  
+  .collapsible-section.collapsed .collapsible-content {
+    max-height: 0;
+    opacity: 0;
+    margin-top: 0;
+  }
+  
+  .collapsible-section.collapsed .collapse-chevron {
+    transform: rotate(-90deg);
+  }
+
+  
+  .collapsible-section.collapsed .collapse-chevron {
+    transform: rotate(-90deg);
+  }
+  
+  /* Collapsed header states */
+  .collapsible-header .collapse-indicator {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  
+  .collapsible-section.collapsed .collapse-indicator-collapsed {
+    opacity: 1;
+  }
+  
+  .collapsible-section:not(.collapsed) .collapse-indicator-expanded {
+    opacity: 1;
+  }
+
+  /* Smooth hover effects */
+  .collapsible-header:hover .collapse-indicator {
+    opacity: 1;
+  }
+  
   #drop-zone.dragover {
     border-color: var(--color-accent, #e94560);
     background: rgba(233, 69, 96, 0.1);
@@ -168,16 +297,24 @@ import Modal from '@components/Modal.astro';
     justify-content: space-between;
     align-items: flex-start;
     gap: 12px;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
+  }
+  
+  .queue-item-preview-wrapper {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
   }
   
   .queue-item-preview {
     width: 100%;
-    height: 140px;
+    max-height: 140px;
+    height: auto;
+    aspect-ratio: 4/3;
     object-fit: cover;
-    border-radius: 8px;
+    display: block;
   }
-  
+   
   .queue-item-info {
     flex: 1;
     min-width: 0;
@@ -188,6 +325,10 @@ import Modal from '@components/Modal.astro';
     word-break: break-all;
     font-size: 14px;
     margin-bottom: 2px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
   
   .queue-item-size {
@@ -196,9 +337,12 @@ import Modal from '@components/Modal.astro';
   }
   
   .queue-item-remove {
-    background: var(--admin-bg);
-    border: 1px solid var(--admin-border);
-    color: var(--admin-muted);
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(0, 0, 0, 0.6);
+    border: none;
+    color: white;
     cursor: pointer;
     font-size: 18px;
     width: 32px;
@@ -209,12 +353,11 @@ import Modal from '@components/Modal.astro';
     border-radius: 6px;
     transition: all 0.2s;
     flex-shrink: 0;
+    z-index: 10;
   }
   
   .queue-item-remove:hover {
-    color: #ff6b6b;
-    border-color: #ff6b6b;
-    background: rgba(255, 107, 107, 0.1);
+    background: rgba(255, 107, 107, 0.9);
   }
 </style>
 
@@ -231,6 +374,244 @@ import Modal from '@components/Modal.astro';
   const infoModal = document.getElementById('info-modal') as any;
   const infoModalContent = document.getElementById('info-modal-content') as HTMLDivElement | null;
   const infoModalTitle = document.getElementById('info-modal-title') as HTMLHeadingElement | null;
+  const publishToggleContainer = document.getElementById('publish-toggle-container');
+  const scanPublishToggleContainer = document.getElementById('scan-publish-toggle-container');
+
+  let publishOnImport = false;
+
+  // Handle collapse toggle buttons (chevrons)
+  document.querySelectorAll('.collapse-toggle').forEach(toggle => {
+    toggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const section = (e.currentTarget as HTMLElement).closest('.collapsible-section');
+      section?.classList.toggle('collapsed');
+    });
+  });
+  
+  // Click on upload header expands and opens file input (but not on chevron)
+  const uploadHeader = document.querySelector('[data-collapse="upload"]');
+  if (uploadHeader) {
+    uploadHeader.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      // Don't trigger if clicking a button inside the header or the collapse toggle
+      if (target.closest('button') || target.closest('.collapse-toggle')) return;
+      
+      const section = uploadHeader.closest('.collapsible-section');
+      if (section?.classList.contains('collapsed')) {
+        section.classList.remove('collapsed');
+      }
+      // Trigger file input click
+      fileInput?.click();
+    });
+    
+    uploadHeader.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      (uploadHeader as HTMLElement).style.borderColor = 'var(--color-accent, #e94560)';
+      (uploadHeader as HTMLElement).style.background = 'rgba(233, 69, 96, 0.1)';
+    });
+    uploadHeader.addEventListener('dragleave', () => {
+      (uploadHeader as HTMLElement).style.borderColor = '';
+      (uploadHeader as HTMLElement).style.background = '';
+    });
+    uploadHeader.addEventListener('drop', (e) => {
+      e.preventDefault();
+      (uploadHeader as HTMLElement).style.borderColor = '';
+      (uploadHeader as HTMLElement).style.background = '';
+      const files = (e as DragEvent).dataTransfer?.files;
+      if (files && files.length > 0) {
+        // Keep section collapsed, just add files to queue
+        addFiles(Array.from(files));
+      }
+    });
+  }
+
+  // Click on FTP header expands it (but doesn't trigger any action, just shows content)
+  const ftpHeader = document.querySelector('[data-collapse="ftp"]');
+  if (ftpHeader) {
+    ftpHeader.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      // Don't trigger if clicking a button inside the header or the collapse toggle
+      if (target.closest('button') || target.closest('.collapse-toggle')) return;
+      
+      const section = ftpHeader.closest('.collapsible-section');
+      if (section?.classList.contains('collapsed')) {
+        section.classList.remove('collapsed');
+      }
+    });
+  }
+
+  // Load publishOnImport setting on page init
+  async function loadSettings() {
+    try {
+      const res = await fetch('/api/settings');
+      const settings = await res.json();
+      publishOnImport = settings.gallery?.publishOnImport === true;
+      
+      // Update queue section toggle state if container exists
+      if (publishToggleContainer) {
+        updateToggleUI(publishToggleContainer, publishOnImport);
+      }
+      
+      // Update scan results toggle state if container exists
+      if (scanPublishToggleContainer) {
+        updateToggleUI(scanPublishToggleContainer, publishOnImport);
+      }
+    } catch (e) {
+      console.error('Failed to load settings:', e);
+    }
+  }
+
+  // Initialize settings on load
+  loadSettings();
+
+  // Wire up collapsed FTP section buttons
+  document.getElementById('scan-images-btn-collapsed')?.addEventListener('click', () => {
+    const ftpSection = document.getElementById('ftp-section');
+    ftpSection?.classList.remove('collapsed');
+    document.getElementById('scan-images-btn')?.click();
+  });
+
+  document.getElementById('show-ftp-details-collapsed')?.addEventListener('click', () => {
+    const ftpSection = document.getElementById('ftp-section');
+    ftpSection?.classList.remove('collapsed');
+    document.getElementById('show-ftp-details')?.click();
+  });
+
+  function updateToggleUI(container: HTMLElement, isPressed: boolean) {
+    const toggleRoot = container.querySelector('.toggle-root') as HTMLElement;
+    const toggleThumb = container.querySelector('.toggle-thumb') as HTMLElement;
+    const labelSpan = container.querySelector('span') as HTMLSpanElement;
+    
+    if (isPressed) {
+      toggleRoot?.classList.add('!bg-admin-bg');
+      toggleRoot?.classList.remove('bg-admin-sidebar');
+      toggleThumb?.classList.add('left-[26px]', 'bg-admin-success');
+      toggleThumb?.classList.remove('left-[4px]', 'bg-white');
+      if (labelSpan) labelSpan.textContent = 'Publish on import';
+    } else {
+      toggleRoot?.classList.remove('!bg-admin-bg');
+      toggleRoot?.classList.add('bg-admin-sidebar');
+      toggleThumb?.classList.remove('left-[26px]', 'bg-admin-success');
+      toggleThumb?.classList.add('left-[4px]', 'bg-white');
+      if (labelSpan) labelSpan.textContent = 'Keep unpublished';
+    }
+    
+    // Store pressed state on the container for external access
+    (container as any).pressed = isPressed;
+  }
+
+  // Initialize settings on load
+  loadSettings();
+
+  // Handle publish toggle changes
+  publishToggleContainer?.addEventListener('click', async (e) => {
+    const target = e.target as HTMLElement;
+    // Don't handle if clicking the toggle itself (it has its own handler)
+    if (target.closest('.toggle-root')) return;
+    
+    // Toggle the state
+    publishOnImport = !publishOnImport;
+    
+    // Update toggle UI
+    const toggleRoot = publishToggleContainer.querySelector('.toggle-root') as HTMLElement;
+    const toggleThumb = publishToggleContainer.querySelector('.toggle-thumb') as HTMLElement;
+    const labelSpan = publishToggleContainer.querySelector('span') as HTMLSpanElement;
+    
+    if (publishOnImport) {
+      toggleRoot?.classList.add('!bg-admin-bg');
+      toggleRoot?.classList.remove('bg-admin-sidebar');
+      toggleThumb?.classList.add('left-[26px]', 'bg-admin-success');
+      toggleThumb?.classList.remove('left-[4px]', 'bg-white');
+      if (labelSpan) labelSpan.textContent = 'Publish on import';
+    } else {
+      toggleRoot?.classList.remove('!bg-admin-bg');
+      toggleRoot?.classList.add('bg-admin-sidebar');
+      toggleThumb?.classList.remove('left-[26px]', 'bg-admin-success');
+      toggleThumb?.classList.add('left-[4px]', 'bg-white');
+      if (labelSpan) labelSpan.textContent = 'Keep unpublished';
+    }
+    
+    (publishToggleContainer as any).pressed = publishOnImport;
+    
+    // Persist to settings
+    try {
+      await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 'gallery.publishOnImport': publishOnImport })
+      });
+    } catch (e) {
+      console.error('Failed to save publishOnImport setting:', e);
+    }
+  });
+
+  // Also handle clicks on the toggle root itself
+  document.querySelectorAll('#publish-toggle-container .toggle-root').forEach(toggle => {
+    toggle.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      // Toggle state
+      publishOnImport = !publishOnImport;
+      
+      // Update both toggles UI
+      if (publishToggleContainer) updateToggleUI(publishToggleContainer, publishOnImport);
+      if (scanPublishToggleContainer) updateToggleUI(scanPublishToggleContainer, publishOnImport);
+      
+      // Persist to settings
+      try {
+        await fetch('/api/settings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 'gallery.publishOnImport': publishOnImport })
+        });
+      } catch (e) {
+        console.error('Failed to save publishOnImport setting:', e);
+      }
+    });
+  });
+
+  // Handle scan results publish toggle changes
+  scanPublishToggleContainer?.addEventListener('click', async (e) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('.toggle-root')) return;
+    
+    publishOnImport = !publishOnImport;
+    
+    // Update both toggles UI
+    if (publishToggleContainer) updateToggleUI(publishToggleContainer, publishOnImport);
+    if (scanPublishToggleContainer) updateToggleUI(scanPublishToggleContainer, publishOnImport);
+    
+    try {
+      await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 'gallery.publishOnImport': publishOnImport })
+      });
+    } catch (e) {
+      console.error('Failed to save publishOnImport setting:', e);
+    }
+  });
+
+  // Handle clicks on scan toggle root
+  document.querySelectorAll('#scan-publish-toggle-container .toggle-root').forEach(toggle => {
+    toggle.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      publishOnImport = !publishOnImport;
+      
+      // Update both toggles UI
+      if (publishToggleContainer) updateToggleUI(publishToggleContainer, publishOnImport);
+      if (scanPublishToggleContainer) updateToggleUI(scanPublishToggleContainer, publishOnImport);
+      
+      try {
+        await fetch('/api/settings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 'gallery.publishOnImport': publishOnImport })
+        });
+      } catch (e) {
+        console.error('Failed to save publishOnImport setting:', e);
+      }
+    });
+  });
 
   function setInfoModalCancelVisible(visible: boolean) {
     const cancelBtn = infoModal?.querySelector('[data-modal-cancel]') as HTMLButtonElement | null;
@@ -280,7 +661,13 @@ import Modal from '@components/Modal.astro';
       /\.(jpg|jpeg|png|tiff|tif|heic|heif|webp)$/i.test(f.name)
     );
     
-    files.push(...imageFiles);
+    if (imageFiles.length > 0) {
+      // Collapse both upload and FTP sections when images are added
+      document.getElementById('ftp-section')?.classList.add('collapsed');
+      document.getElementById('upload-section')?.classList.add('collapsed');
+    }
+    
+    files.unshift(...imageFiles);
     renderQueue();
   }
   
@@ -289,6 +676,17 @@ import Modal from '@components/Modal.astro';
     
     uploadQueue.innerHTML = '';
     
+    // Set dynamic grid columns based on file count
+    let gridColsClass = 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3';
+    if (files.length === 4) {
+      gridColsClass = 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4';
+    } else if (files.length >= 5) {
+      gridColsClass = 'grid-cols-1 md:grid-cols-3 lg:grid-cols-5';
+    }
+    
+    // Remove old grid classes and add new one
+    uploadQueue.className = `grid ${gridColsClass} gap-4`;
+    
     files.forEach((file, index) => {
       const item = document.createElement('div');
       item.className = 'queue-item';
@@ -296,12 +694,14 @@ import Modal from '@components/Modal.astro';
       item.innerHTML = `
         <div class="queue-item-header">
           <div class="queue-item-info">
-            <div class="queue-item-name">${file.name}</div>
+            <div class="queue-item-name clamp-2">${file.name}</div>
             <div class="queue-item-size">${(file.size / 1024 / 1024).toFixed(2)} MB</div>
           </div>
+        </div>
+        <div class="queue-item-preview-wrapper">
+          <img class="queue-item-preview" src="${URL.createObjectURL(file)}" alt="" />
           <button class="queue-item-remove" data-index="${index}" title="Remove">×</button>
         </div>
-        <img class="queue-item-preview" src="${URL.createObjectURL(file)}" alt="" />
       `;
       
       uploadQueue.appendChild(item);
@@ -337,6 +737,7 @@ import Modal from '@components/Modal.astro';
     
     const formData = new FormData();
     files.forEach(file => formData.append('images', file));
+    formData.append('publishOnImport', publishOnImport.toString());
     
     try {
       const res = await fetch('/api/upload', {

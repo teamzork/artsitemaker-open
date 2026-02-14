@@ -10,6 +10,7 @@ export const POST: APIRoute = async ({ request }) => {
     try {
         const formData = await request.formData();
         const files = formData.getAll('images');
+        const publishOnImport = formData.get('publishOnImport') === 'true';
 
         const results = {
             uploaded: [] as { filename: string; slug: string; size: number }[],
@@ -157,7 +158,7 @@ export const POST: APIRoute = async ({ request }) => {
                     },
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString(),
-                    published: false
+                    published: publishOnImport
                 };
 
                 await fs.writeFile(artworkPath, yaml.dump(artwork, { lineWidth: -1 }), 'utf-8');
