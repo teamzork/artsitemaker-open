@@ -342,6 +342,7 @@ export default defineConfig({
   integrations: [tailwind()],
 
   vite: {
+    clearScreen: false,
     define: {
       "import.meta.env.IMAGE_BASE_URL": JSON.stringify(
         process.env.IMAGE_BASE_URL ||

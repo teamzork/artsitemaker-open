@@ -622,8 +622,9 @@ const stats = {
     }
   }
 
+  const servicesPollIntervalMs = 15000;
   loadServicesStatus();
-  let pollInterval = setInterval(loadServicesStatus, 5000);
+  let pollInterval = setInterval(loadServicesStatus, servicesPollIntervalMs);
 
   // Stop polling when page is inactive to save resources
   document.addEventListener('visibilitychange', () => {
@@ -632,7 +633,7 @@ const stats = {
     } else {
       loadServicesStatus(); // Update immediately when visible
       clearInterval(pollInterval);
-      pollInterval = setInterval(loadServicesStatus, 5000);
+      pollInterval = setInterval(loadServicesStatus, servicesPollIntervalMs);
     }
   });
 

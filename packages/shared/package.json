@@ -17,7 +17,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "dev": "tsc --watch"
+    "dev": "tsc --watch --preserveWatchOutput"
   },
   "dependencies": {
     "js-yaml": "^4.1.0"

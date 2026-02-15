@@ -272,6 +272,7 @@ export default defineConfig({
     },
 
     vite: {
+        clearScreen: false,
         optimizeDeps: {
             include: ['@radix-ui/react-toast']
         },

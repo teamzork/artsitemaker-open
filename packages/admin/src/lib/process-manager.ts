@@ -35,6 +35,9 @@ class ProcessManager extends EventEmitter {
   private configs = new Map<string, ServiceConfig>();
   private logBuffers = new Map<string, string[]>();
   private readonly MAX_LOG_LINES = 100;
+  private readonly EXTERNAL_PROBE_INTERVAL_MS = 15000;
+  private lastExternalProbeAt = 0;
+  private externalProbePromise: Promise<void> | null = null;
 
   constructor() {
     super();
@@ -230,42 +233,58 @@ class ProcessManager extends EventEmitter {
    * (e.g., when site is started via pnpm dev in root)
    */
   async probeExternalServices(): Promise<void> {
-    for (const [id, config] of this.configs) {
-      // Skip if we already have a running process
-      if (this.processes.has(id)) continue;
+    const now = Date.now();
+    if (this.externalProbePromise) {
+      await this.externalProbePromise;
+      return;
+    }
+    if (now - this.lastExternalProbeAt < this.EXTERNAL_PROBE_INTERVAL_MS) {
+      return;
+    }
 
-      // If there's a health check URL, try to probe it
-      if (config.healthCheckUrl) {
-        try {
-          const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), 1500);
+    this.lastExternalProbeAt = now;
+    this.externalProbePromise = (async () => {
+      for (const [id, config] of this.configs) {
+        // Skip if we already have a running process
+        if (this.processes.has(id)) continue;
 
-          const response = await fetch(config.healthCheckUrl, {
-            method: 'HEAD',
-            signal: controller.signal,
-          });
+        // If there's a health check URL, try to probe it
+        if (config.healthCheckUrl) {
+          try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 1500);
 
-          clearTimeout(timeout);
-
-          if (response.ok) {
-            // Service is running externally
-            this.updateStatus(id, {
-              status: 'running',
-              healthStatus: 'healthy',
+            const response = await fetch(config.healthCheckUrl, {
+              method: 'HEAD',
+              signal: controller.signal,
             });
-          }
-        } catch {
-          // Service not reachable - leave as stopped
-          const current = this.statuses.get(id);
-          if (current && current.status !== 'running') {
-            this.updateStatus(id, {
-              status: 'stopped',
-              healthStatus: 'unknown',
-            });
+
+            clearTimeout(timeout);
+
+            if (response.ok) {
+              // Service is running externally
+              this.updateStatus(id, {
+                status: 'running',
+                healthStatus: 'healthy',
+              });
+            }
+          } catch {
+            // Service not reachable - leave as stopped
+            const current = this.statuses.get(id);
+            if (current && current.status !== 'running') {
+              this.updateStatus(id, {
+                status: 'stopped',
+                healthStatus: 'unknown',
+              });
+            }
           }
         }
       }
-    }
+    })().finally(() => {
+      this.externalProbePromise = null;
+    });
+
+    await this.externalProbePromise;
   }
 
   getLogs(serviceId: string, lines: number = 50): string[] {
