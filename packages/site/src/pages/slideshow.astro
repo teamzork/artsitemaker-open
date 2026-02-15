@@ -204,7 +204,7 @@ const artworks: ArtworkData[] = await listArtworks();
     color: var(--color-text);
     padding: 30px 18px;
     cursor: pointer;
-    transition: background-color 0.4s ease-in-out;
+    transition: background-color 0.4s ease-in-out, opacity 0.2s ease;
     z-index: 10;
     border-radius: 8px;
   }
@@ -346,16 +346,12 @@ const artworks: ArtworkData[] = await listArtworks();
     object-fit: cover;
   }
 
-  .slideshow-container.controls-hidden .nav-btn,
-  .slideshow-container.controls-hidden .title-area {
+  .slideshow-container.controls-hidden .nav-btn {
     opacity: 0;
     pointer-events: none;
   }
 
-  .slideshow-container .nav-btn,
-  .slideshow-container .title-area {
-    transition: opacity 0.2s ease;
-  }
+
 
   @media (prefers-reduced-motion: reduce) {
     .slide-panel {

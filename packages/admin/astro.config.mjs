@@ -273,6 +273,9 @@ export default defineConfig({
 
     vite: {
         clearScreen: false,
+        resolve: {
+            dedupe: ['react', 'react-dom']
+        },
         optimizeDeps: {
             include: ['@radix-ui/react-toast']
         },
