@@ -142,28 +142,34 @@ const stats = {
           </div>
           <div>
             <span class="text-admin-muted">Theme:</span>
-            <span class="ml-2" id="current-theme-name">Loading...</span>
+            <a
+              class="ml-2 text-admin-accent hover:underline"
+              href="/style/themes"
+              id="current-theme-name"
+            >
+              Loading...
+            </a>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Recent Artworks Preview -->
-    <div class="card" data-testid="recent-artworks">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-semibold">Recent Artworks</h2>
-        <a href="/gallery" class="text-admin-accent text-sm hover:underline">View All →</a>
-      </div>
-      
-      {artworks.length === 0 ? (
-        <EmptyState
-          heading="No artworks yet"
-          description="Upload images to start building your gallery."
-          actionHref="/gallery/upload"
-          actionLabel="Upload your first artwork"
-          class="py-6"
-        />
-      ) : (
+    {artworks.length === 0 ? (
+      <EmptyState
+        heading="No artworks yet"
+        description="Upload images to start building your gallery."
+        actionHref="/gallery/upload"
+        actionLabel="Upload your first artwork"
+        data-testid="recent-artworks"
+      />
+    ) : (
+      <div class="card" data-testid="recent-artworks">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-semibold">Recent Artworks</h2>
+          <a href="/gallery" class="text-admin-accent text-sm hover:underline">View All →</a>
+        </div>
+        
         <div class="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
           {artworks.slice(0, 16).map((artwork) => (
             <a 
@@ -188,8 +194,8 @@ const stats = {
             </a>
           ))}
         </div>
-      )}
-    </div>
+      </div>
+    )}
 
     {
       (originalsCount > 0 || processedCount > 0 || stats.unprocessed > 0 || thumbnailsCount > 0) && (

@@ -1,27 +1,73 @@
 ---
-import AdminLayout from '@layouts/AdminLayout.astro';
-import Modal from '@components/Modal.astro';
-import { Toggle } from '@components/ui/Toggle';
+import AdminLayout from "@layouts/AdminLayout.astro";
+import Modal from "@components/Modal.astro";
+import { Toggle } from "@components/ui/Toggle";
 ---
 
 <AdminLayout title="Upload Images">
   <div class="space-y-6" data-testid="upload-page">
     <!-- Back link -->
-    <a href="/gallery" class="text-admin-muted hover:text-admin-text" data-testid="back-to-gallery">← Back to Gallery</a>
+    <a
+      href="/gallery"
+      class="text-admin-muted hover:text-admin-text"
+      data-testid="back-to-gallery">← Back to Gallery</a
+    >
+
+    <!-- Top toolbar (shown when files are queued or results are available) -->
+    <div
+      id="upload-toolbar"
+      class="flex items-center justify-between flex-wrap gap-4 hidden"
+    >
+      <div class="flex items-center gap-3">
+        <span id="toolbar-file-count" class="text-admin-muted text-sm"></span>
+      </div>
+      <div class="flex items-center gap-4">
+        <div id="toolbar-publish-toggle-container">
+          <Toggle
+            client:load
+            name="toolbarPublishOnImport"
+            label="Publish on import"
+            labelOff="Keep unpublished"
+            defaultPressed={false}
+          />
+        </div>
+        <button id="toolbar-upload-btn" class="btn btn-primary hidden"
+          >📤 Upload All</button
+        >
+        <button id="toolbar-process-btn" class="btn btn-primary hidden"
+          >⚡ Process All & Create</button
+        >
+      </div>
+    </div>
 
     <!-- Collapsible: Image Upload Section -->
     <div id="upload-section" class="collapsible-section">
       <!-- Minimal collapsed form -->
-      <div class="collapsible-header card border-2 border-dashed border-admin-border hover:border-admin-accent cursor-pointer flex items-center gap-4 p-4" data-collapse="upload">
+      <div
+        class="collapsible-header card border-2 border-dashed border-admin-border hover:border-admin-accent cursor-pointer flex items-center gap-4 p-4"
+        data-collapse="upload"
+      >
         <span class="text-2xl">📤</span>
         <span class="text-lg font-semibold flex-1">Drop images here</span>
-        <button type="button" class="collapse-toggle p-1 hover:bg-admin-bg rounded transition-colors">
-          <svg class="w-5 h-5 text-admin-muted collapse-chevron transition-transform flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+        <button
+          type="button"
+          class="collapse-toggle p-1 hover:bg-admin-bg rounded transition-colors"
+        >
+          <svg
+            class="w-5 h-5 text-admin-muted collapse-chevron transition-transform flex-shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19 9l-7 7-7-7"></path>
           </svg>
         </button>
       </div>
-      
+
       <!-- Expanded content -->
       <div class="collapsible-content mt-0">
         <div
@@ -29,9 +75,22 @@ import { Toggle } from '@components/ui/Toggle';
           class="card border-2 border-dashed border-admin-border hover:border-admin-accent transition-colors cursor-pointer h-full flex flex-col justify-center relative"
           data-testid="drop-zone"
         >
-          <button type="button" class="collapse-toggle absolute top-4 right-4 z-10 p-2 hover:bg-admin-bg rounded transition-colors" title="Collapse">
-            <svg class="w-5 h-5 text-admin-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+          <button
+            type="button"
+            class="collapse-toggle absolute top-4 right-4 z-10 p-2 hover:bg-admin-bg rounded transition-colors"
+            title="Collapse"
+          >
+            <svg
+              class="w-5 h-5 text-admin-muted"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M5 15l7-7 7 7"></path>
             </svg>
           </button>
           <div class="text-center py-16">
@@ -57,30 +116,66 @@ import { Toggle } from '@components/ui/Toggle';
     <!-- Collapsible: FTP/SFTP Upload Section -->
     <div id="ftp-section" class="collapsible-section">
       <!-- Minimal collapsed form -->
-      <div class="collapsible-header card bg-admin-sidebar flex items-center gap-4 p-4" data-collapse="ftp">
+      <div
+        class="collapsible-header card bg-admin-sidebar flex items-center gap-4 p-4"
+        data-collapse="ftp"
+      >
         <span class="text-2xl">💡</span>
-        <span class="text-lg font-semibold flex-1">Bulk Upload via FTP/SFTP</span>
+        <span class="text-lg font-semibold flex-1"
+          >Bulk Upload via FTP/SFTP</span
+        >
         <div class="flex items-center gap-2">
-          <button id="scan-images-btn-collapsed" class="btn btn-secondary text-sm py-1.5">
+          <button
+            id="scan-images-btn-collapsed"
+            class="btn btn-secondary text-sm py-1.5"
+          >
             🔍 Scan for New Images
           </button>
-          <button id="show-ftp-details-collapsed" class="text-sm text-admin-muted hover:text-admin-text py-1.5">
+          <button
+            id="show-ftp-details-collapsed"
+            class="text-sm text-admin-muted hover:text-admin-text py-1.5"
+          >
             Show details
           </button>
         </div>
-        <button type="button" class="collapse-toggle p-1 hover:bg-admin-bg rounded transition-colors">
-          <svg class="w-5 h-5 text-admin-muted collapse-chevron transition-transform flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+        <button
+          type="button"
+          class="collapse-toggle p-1 hover:bg-admin-bg rounded transition-colors"
+        >
+          <svg
+            class="w-5 h-5 text-admin-muted collapse-chevron transition-transform flex-shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19 9l-7 7-7-7"></path>
           </svg>
         </button>
       </div>
-      
+
       <!-- Expanded content -->
       <div class="collapsible-content mt-0">
         <div class="card bg-admin-sidebar h-full relative">
-          <button type="button" class="collapse-toggle absolute top-4 right-4 z-10 p-2 hover:bg-admin-bg rounded transition-colors" title="Collapse">
-            <svg class="w-5 h-5 text-admin-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+          <button
+            type="button"
+            class="collapse-toggle absolute top-4 right-4 z-10 p-2 hover:bg-admin-bg rounded transition-colors"
+            title="Collapse"
+          >
+            <svg
+              class="w-5 h-5 text-admin-muted"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M5 15l7-7 7 7"></path>
             </svg>
           </button>
           <div class="flex items-start gap-4">
@@ -88,44 +183,77 @@ import { Toggle } from '@components/ui/Toggle';
             <div>
               <h3 class="font-semibold mb-2">Bulk Upload via FTP/SFTP</h3>
               <p class="text-sm text-admin-muted mb-3">
-                For uploading many large files, you can use FTP or SFTP to transfer images directly to the server. 
-                This is faster and more reliable for large batches.
+                For uploading many large files, you can use FTP or SFTP to
+                transfer images directly to the server. This is faster and more
+                reliable for large batches.
               </p>
-              
+
               <div class="bg-admin-bg rounded-lg p-4 mb-3">
                 <h4 class="text-sm font-medium mb-2">Upload Steps:</h4>
-                <ol class="text-sm text-admin-muted space-y-2 list-decimal list-inside">
-                  <li>Connect to your server via FTP/SFTP client (FileZilla, Cyberduck, etc.)</li>
-                  <li>Navigate to: <code class="bg-admin-card px-1.5 py-0.5 rounded">files/originals/</code></li>
-                  <li>Upload your image files (name them as the artwork slug, e.g., <code class="bg-admin-card px-1.5 py-0.5 rounded">my-artwork.jpg</code>)</li>
-                  <li>Return here and click <strong>"Scan for New Images"</strong> below</li>
+                <ol
+                  class="text-sm text-admin-muted space-y-2 list-decimal list-inside"
+                >
+                  <li>
+                    Connect to your server via FTP/SFTP client (FileZilla,
+                    Cyberduck, etc.)
+                  </li>
+                  <li>
+                    Navigate to: <code
+                      class="bg-admin-card px-1.5 py-0.5 rounded"
+                      >files/originals/</code
+                    >
+                  </li>
+                  <li>
+                    Upload your image files (name them as the artwork slug,
+                    e.g., <code class="bg-admin-card px-1.5 py-0.5 rounded"
+                      >my-artwork.jpg</code
+                    >)
+                  </li>
+                  <li>
+                    Return here and click <strong>"Scan for New Images"</strong> below
+                  </li>
                   <li>Process the images to generate web-optimized versions</li>
                 </ol>
               </div>
-              
+
               <div class="flex gap-4">
                 <button id="scan-images-btn" class="btn btn-secondary text-sm">
                   🔍 Scan for New Images
                 </button>
-                <button id="show-ftp-details" class="text-sm text-admin-muted hover:text-admin-text">
+                <button
+                  id="show-ftp-details"
+                  class="text-sm text-admin-muted hover:text-admin-text"
+                >
                   Show connection details
                 </button>
               </div>
-              
-              <div id="ftp-details" class="hidden mt-4 bg-admin-bg rounded-lg p-4">
+
+              <div
+                id="ftp-details"
+                class="hidden mt-4 bg-admin-bg rounded-lg p-4"
+              >
                 <h4 class="text-sm font-medium mb-2">Connection Details:</h4>
                 <div class="grid grid-cols-2 gap-2 text-sm">
                   <div class="text-admin-muted">Protocol:</div>
                   <div>SFTP (recommended)</div>
                   <div class="text-admin-muted">Host:</div>
-                  <div><code class="bg-admin-card px-1.5 py-0.5 rounded">your-server.com</code></div>
+                  <div>
+                    <code class="bg-admin-card px-1.5 py-0.5 rounded"
+                      >your-server.com</code
+                    >
+                  </div>
                   <div class="text-admin-muted">Port:</div>
                   <div>22 (SFTP) or 21 (FTP)</div>
                   <div class="text-admin-muted">Path:</div>
-                  <div><code class="bg-admin-card px-1.5 py-0.5 rounded">/path/to/artis/files/originals/</code></div>
+                  <div>
+                    <code class="bg-admin-card px-1.5 py-0.5 rounded"
+                      >/path/to/artis/files/originals/</code
+                    >
+                  </div>
                 </div>
                 <p class="text-xs text-admin-muted mt-3">
-                  Use your server SSH credentials. Contact your hosting provider if you need help setting up SFTP access.
+                  Use your server SSH credentials. Contact your hosting provider
+                  if you need help setting up SFTP access.
                 </p>
               </div>
             </div>
@@ -140,7 +268,13 @@ import { Toggle } from '@components/ui/Toggle';
         <h3 class="text-lg font-semibold">Upload Queue</h3>
         <div class="flex items-center gap-4">
           <div id="publish-toggle-container">
-            <Toggle client:load name="publishOnImport" label="Publish on import" labelOff="Keep unpublished" defaultPressed={false} />
+            <Toggle
+              client:load
+              name="publishOnImport"
+              label="Publish on import"
+              labelOff="Keep unpublished"
+              defaultPressed={false}
+            />
           </div>
           <div class="flex gap-4">
             <button id="upload-all-btn" class="btn btn-primary">
@@ -152,8 +286,12 @@ import { Toggle } from '@components/ui/Toggle';
           </div>
         </div>
       </div>
-      
-      <div id="upload-queue" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+
+      <div
+        id="upload-queue"
+        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+      >
+      </div>
     </div>
 
     <!-- Upload Results -->
@@ -161,7 +299,10 @@ import { Toggle } from '@components/ui/Toggle';
       <div class="flex items-center justify-between mb-4">
         <div class="flex items-center gap-3">
           <h3 class="text-lg font-semibold">Ready to Process</h3>
-          <span class="bg-blue-500/10 text-blue-400 text-xs px-2 py-1 rounded-full border border-blue-500/20">Uploaded to Server</span>
+          <span
+            class="bg-blue-500/10 text-blue-400 text-xs px-2 py-1 rounded-full border border-blue-500/20"
+            >Uploaded to Server</span
+          >
         </div>
         <div class="flex gap-4">
           <button id="process-all-btn" class="btn btn-primary">
@@ -172,20 +313,33 @@ import { Toggle } from '@components/ui/Toggle';
           </button>
         </div>
       </div>
-      
+
       <div id="results" class="space-y-2"></div>
     </div>
 
     <!-- Scan Results (For FTP/SFTP) -->
-    <div id="scan-results-section" class="hidden card bg-admin-accent/5 border-admin-accent/20">
+    <div
+      id="scan-results-section"
+      class="hidden card bg-admin-accent/5 border-admin-accent/20"
+    >
       <div class="flex items-center justify-between mb-4">
         <div class="flex items-center gap-3">
           <h3 class="text-lg font-semibold">Found in Files</h3>
-          <span id="scan-count" class="bg-admin-accent text-white text-xs px-2 py-1 rounded-full">0</span>
+          <span
+            id="scan-count"
+            class="bg-admin-accent text-white text-xs px-2 py-1 rounded-full"
+            >0</span
+          >
         </div>
         <div class="flex items-center gap-4">
           <div id="scan-publish-toggle-container">
-            <Toggle client:load name="scanPublishOnImport" label="Publish on import" labelOff="Keep unpublished" defaultPressed={false} />
+            <Toggle
+              client:load
+              name="scanPublishOnImport"
+              label="Publish on import"
+              labelOff="Keep unpublished"
+              defaultPressed={false}
+            />
           </div>
           <button id="process-scanned-btn" class="btn btn-primary">
             ⚡ Process & Catalog These
@@ -193,9 +347,14 @@ import { Toggle } from '@components/ui/Toggle';
         </div>
       </div>
       <p class="text-sm text-admin-muted mb-4">
-        These images were found in the <code class="bg-admin-card px-1 rounded">files/originals/</code> folder but aren't in your gallery yet.
+        These images were found in the <code class="bg-admin-card px-1 rounded"
+          >files/originals/</code
+        > folder but aren't in your gallery yet.
       </p>
-      <div id="scan-results" class="max-h-48 overflow-y-auto bg-admin-bg/50 rounded-lg p-3 text-xs font-mono text-admin-muted">
+      <div
+        id="scan-results"
+        class="max-h-48 overflow-y-auto bg-admin-bg/50 rounded-lg p-3 text-xs font-mono text-admin-muted"
+      >
       </div>
     </div>
   </div>
@@ -209,66 +368,67 @@ import { Toggle } from '@components/ui/Toggle';
   .collapsible-section {
     position: relative;
   }
-  
+
   .collapsible-header {
     transition: all 0.2s ease;
     cursor: pointer;
   }
-  
+
   .collapsible-header:hover {
     transform: none;
   }
-  
+
   .collapsible-section:not(.collapsed) .collapsible-header {
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
   }
-  
+
   .collapsible-section:not(.collapsed) .collapsible-header {
     border-bottom: 1px solid var(--admin-border, #2a2a2a);
   }
-  
+
   /* Show full content when expanded, show minimal header when collapsed */
   .collapsible-section.collapsed .collapsible-header {
     display: flex;
   }
-  
+
   .collapsible-section:not(.collapsed) .collapsible-header {
     display: none;
   }
-  
+
   .collapsible-content {
     overflow: hidden;
-    transition: max-height 0.3s ease, opacity 0.2s ease;
+    transition:
+      max-height 0.3s ease,
+      opacity 0.2s ease;
     max-height: 2000px;
     opacity: 1;
   }
-  
+
   .collapsible-section.collapsed .collapsible-content {
     max-height: 0;
     opacity: 0;
     margin-top: 0;
   }
-  
+
   .collapsible-section.collapsed .collapse-chevron {
     transform: rotate(-90deg);
   }
 
-  
   .collapsible-section.collapsed .collapse-chevron {
     transform: rotate(-90deg);
   }
-  
+
   /* Collapsed header states */
   .collapsible-header .collapse-indicator {
     opacity: 0;
     transition: opacity 0.2s ease;
   }
-  
+
   .collapsible-section.collapsed .collapse-indicator-collapsed {
     opacity: 1;
   }
-  
+
   .collapsible-section:not(.collapsed) .collapse-indicator-expanded {
     opacity: 1;
   }
@@ -277,12 +437,12 @@ import { Toggle } from '@components/ui/Toggle';
   .collapsible-header:hover .collapse-indicator {
     opacity: 1;
   }
-  
+
   #drop-zone.dragover {
     border-color: var(--color-accent, #e94560);
     background: rgba(233, 69, 96, 0.1);
   }
-  
+
   .queue-item {
     display: flex;
     flex-direction: column;
@@ -291,7 +451,7 @@ import { Toggle } from '@components/ui/Toggle';
     border-radius: 12px;
     border: 1px solid var(--admin-border);
   }
-  
+
   .queue-item-header {
     display: flex;
     justify-content: space-between;
@@ -299,13 +459,13 @@ import { Toggle } from '@components/ui/Toggle';
     gap: 12px;
     margin-bottom: 8px;
   }
-  
+
   .queue-item-preview-wrapper {
     position: relative;
     border-radius: 8px;
     overflow: hidden;
   }
-  
+
   .queue-item-preview {
     width: 100%;
     max-height: 140px;
@@ -314,12 +474,12 @@ import { Toggle } from '@components/ui/Toggle';
     object-fit: cover;
     display: block;
   }
-   
+
   .queue-item-info {
     flex: 1;
     min-width: 0;
   }
-  
+
   .queue-item-name {
     font-weight: 500;
     word-break: break-all;
@@ -330,12 +490,12 @@ import { Toggle } from '@components/ui/Toggle';
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
-  
+
   .queue-item-size {
     font-size: 12px;
     color: var(--admin-muted);
   }
-  
+
   .queue-item-remove {
     position: absolute;
     top: 8px;
@@ -355,68 +515,125 @@ import { Toggle } from '@components/ui/Toggle';
     flex-shrink: 0;
     z-index: 10;
   }
-  
+
   .queue-item-remove:hover {
     background: rgba(255, 107, 107, 0.9);
   }
 </style>
 
 <script>
-  const dropZone = document.getElementById('drop-zone');
-  const fileInput = document.getElementById('file-input') as HTMLInputElement;
-  const queueSection = document.getElementById('queue-section');
-  const uploadQueue = document.getElementById('upload-queue');
-  const resultsSection = document.getElementById('results-section');
-  const results = document.getElementById('results');
-  const scanResultsSection = document.getElementById('scan-results-section');
-  const scanResults = document.getElementById('scan-results');
-  const scanCount = document.getElementById('scan-count');
-  const infoModal = document.getElementById('info-modal') as any;
-  const infoModalContent = document.getElementById('info-modal-content') as HTMLDivElement | null;
-  const infoModalTitle = document.getElementById('info-modal-title') as HTMLHeadingElement | null;
-  const publishToggleContainer = document.getElementById('publish-toggle-container');
-  const scanPublishToggleContainer = document.getElementById('scan-publish-toggle-container');
+  const dropZone = document.getElementById("drop-zone");
+  const fileInput = document.getElementById("file-input") as HTMLInputElement;
+  const queueSection = document.getElementById("queue-section");
+  const uploadQueue = document.getElementById("upload-queue");
+  const resultsSection = document.getElementById("results-section");
+  const results = document.getElementById("results");
+  const scanResultsSection = document.getElementById("scan-results-section");
+  const scanResults = document.getElementById("scan-results");
+  const scanCount = document.getElementById("scan-count");
+  const infoModal = document.getElementById("info-modal") as any;
+  const infoModalContent = document.getElementById(
+    "info-modal-content",
+  ) as HTMLDivElement | null;
+  const infoModalTitle = document.getElementById(
+    "info-modal-title",
+  ) as HTMLHeadingElement | null;
+  const publishToggleContainer = document.getElementById(
+    "publish-toggle-container",
+  );
+  const scanPublishToggleContainer = document.getElementById(
+    "scan-publish-toggle-container",
+  );
+  const uploadToolbar = document.getElementById("upload-toolbar");
+  const toolbarUploadBtn = document.getElementById("toolbar-upload-btn");
+  const toolbarProcessBtn = document.getElementById("toolbar-process-btn");
+  const toolbarFileCount = document.getElementById("toolbar-file-count");
+  const toolbarPublishToggleContainer = document.getElementById(
+    "toolbar-publish-toggle-container",
+  );
 
   let publishOnImport = false;
 
+  // Update toolbar visibility based on queue/results state
+  function updateToolbar() {
+    if (!uploadToolbar) return;
+    const hasFiles = files.length > 0;
+    const hasResults =
+      resultsSection && !resultsSection.classList.contains("hidden");
+    const hasScanResults =
+      scanResultsSection && !scanResultsSection.classList.contains("hidden");
+
+    if (hasFiles || hasResults || hasScanResults) {
+      uploadToolbar.classList.remove("hidden");
+    } else {
+      uploadToolbar.classList.add("hidden");
+    }
+
+    // Show appropriate button
+    if (toolbarUploadBtn) {
+      toolbarUploadBtn.classList.toggle("hidden", !hasFiles);
+    }
+    if (toolbarProcessBtn) {
+      toolbarProcessBtn.classList.toggle(
+        "hidden",
+        !(hasResults || hasScanResults),
+      );
+    }
+
+    // Update file count
+    if (toolbarFileCount) {
+      if (hasFiles) {
+        toolbarFileCount.textContent = `${files.length} file${files.length !== 1 ? "s" : ""} selected`;
+      } else if (hasResults || hasScanResults) {
+        toolbarFileCount.textContent = "Ready to process";
+      } else {
+        toolbarFileCount.textContent = "";
+      }
+    }
+  }
+
   // Handle collapse toggle buttons (chevrons)
-  document.querySelectorAll('.collapse-toggle').forEach(toggle => {
-    toggle.addEventListener('click', (e) => {
+  document.querySelectorAll(".collapse-toggle").forEach((toggle) => {
+    toggle.addEventListener("click", (e) => {
       e.stopPropagation();
-      const section = (e.currentTarget as HTMLElement).closest('.collapsible-section');
-      section?.classList.toggle('collapsed');
+      const section = (e.currentTarget as HTMLElement).closest(
+        ".collapsible-section",
+      );
+      section?.classList.toggle("collapsed");
     });
   });
-  
+
   // Click on upload header expands and opens file input (but not on chevron)
   const uploadHeader = document.querySelector('[data-collapse="upload"]');
   if (uploadHeader) {
-    uploadHeader.addEventListener('click', (e) => {
+    uploadHeader.addEventListener("click", (e) => {
       const target = e.target as HTMLElement;
       // Don't trigger if clicking a button inside the header or the collapse toggle
-      if (target.closest('button') || target.closest('.collapse-toggle')) return;
-      
-      const section = uploadHeader.closest('.collapsible-section');
-      if (section?.classList.contains('collapsed')) {
-        section.classList.remove('collapsed');
+      if (target.closest("button") || target.closest(".collapse-toggle"))
+        return;
+
+      const section = uploadHeader.closest(".collapsible-section");
+      if (section?.classList.contains("collapsed")) {
+        section.classList.remove("collapsed");
       }
       // Trigger file input click
       fileInput?.click();
     });
-    
-    uploadHeader.addEventListener('dragover', (e) => {
+
+    uploadHeader.addEventListener("dragover", (e) => {
       e.preventDefault();
-      (uploadHeader as HTMLElement).style.borderColor = 'var(--color-accent, #e94560)';
-      (uploadHeader as HTMLElement).style.background = 'rgba(233, 69, 96, 0.1)';
+      (uploadHeader as HTMLElement).style.borderColor =
+        "var(--color-accent, #e94560)";
+      (uploadHeader as HTMLElement).style.background = "rgba(233, 69, 96, 0.1)";
     });
-    uploadHeader.addEventListener('dragleave', () => {
-      (uploadHeader as HTMLElement).style.borderColor = '';
-      (uploadHeader as HTMLElement).style.background = '';
+    uploadHeader.addEventListener("dragleave", () => {
+      (uploadHeader as HTMLElement).style.borderColor = "";
+      (uploadHeader as HTMLElement).style.background = "";
     });
-    uploadHeader.addEventListener('drop', (e) => {
+    uploadHeader.addEventListener("drop", (e) => {
       e.preventDefault();
-      (uploadHeader as HTMLElement).style.borderColor = '';
-      (uploadHeader as HTMLElement).style.background = '';
+      (uploadHeader as HTMLElement).style.borderColor = "";
+      (uploadHeader as HTMLElement).style.background = "";
       const files = (e as DragEvent).dataTransfer?.files;
       if (files && files.length > 0) {
         // Keep section collapsed, just add files to queue
@@ -428,14 +645,15 @@ import { Toggle } from '@components/ui/Toggle';
   // Click on FTP header expands it (but doesn't trigger any action, just shows content)
   const ftpHeader = document.querySelector('[data-collapse="ftp"]');
   if (ftpHeader) {
-    ftpHeader.addEventListener('click', (e) => {
+    ftpHeader.addEventListener("click", (e) => {
       const target = e.target as HTMLElement;
       // Don't trigger if clicking a button inside the header or the collapse toggle
-      if (target.closest('button') || target.closest('.collapse-toggle')) return;
-      
-      const section = ftpHeader.closest('.collapsible-section');
-      if (section?.classList.contains('collapsed')) {
-        section.classList.remove('collapsed');
+      if (target.closest("button") || target.closest(".collapse-toggle"))
+        return;
+
+      const section = ftpHeader.closest(".collapsible-section");
+      if (section?.classList.contains("collapsed")) {
+        section.classList.remove("collapsed");
       }
     });
   }
@@ -443,21 +661,26 @@ import { Toggle } from '@components/ui/Toggle';
   // Load publishOnImport setting on page init
   async function loadSettings() {
     try {
-      const res = await fetch('/api/settings');
+      const res = await fetch("/api/settings");
       const settings = await res.json();
       publishOnImport = settings.gallery?.publishOnImport === true;
-      
+
       // Update queue section toggle state if container exists
       if (publishToggleContainer) {
         updateToggleUI(publishToggleContainer, publishOnImport);
       }
-      
+
       // Update scan results toggle state if container exists
       if (scanPublishToggleContainer) {
         updateToggleUI(scanPublishToggleContainer, publishOnImport);
       }
+
+      // Update toolbar toggle state if container exists
+      if (toolbarPublishToggleContainer) {
+        updateToggleUI(toolbarPublishToggleContainer, publishOnImport);
+      }
     } catch (e) {
-      console.error('Failed to load settings:', e);
+      console.error("Failed to load settings:", e);
     }
   }
 
@@ -465,37 +688,41 @@ import { Toggle } from '@components/ui/Toggle';
   loadSettings();
 
   // Wire up collapsed FTP section buttons
-  document.getElementById('scan-images-btn-collapsed')?.addEventListener('click', () => {
-    const ftpSection = document.getElementById('ftp-section');
-    ftpSection?.classList.remove('collapsed');
-    document.getElementById('scan-images-btn')?.click();
-  });
+  document
+    .getElementById("scan-images-btn-collapsed")
+    ?.addEventListener("click", () => {
+      const ftpSection = document.getElementById("ftp-section");
+      ftpSection?.classList.remove("collapsed");
+      document.getElementById("scan-images-btn")?.click();
+    });
 
-  document.getElementById('show-ftp-details-collapsed')?.addEventListener('click', () => {
-    const ftpSection = document.getElementById('ftp-section');
-    ftpSection?.classList.remove('collapsed');
-    document.getElementById('show-ftp-details')?.click();
-  });
+  document
+    .getElementById("show-ftp-details-collapsed")
+    ?.addEventListener("click", () => {
+      const ftpSection = document.getElementById("ftp-section");
+      ftpSection?.classList.remove("collapsed");
+      document.getElementById("show-ftp-details")?.click();
+    });
 
   function updateToggleUI(container: HTMLElement, isPressed: boolean) {
-    const toggleRoot = container.querySelector('.toggle-root') as HTMLElement;
-    const toggleThumb = container.querySelector('.toggle-thumb') as HTMLElement;
-    const labelSpan = container.querySelector('span') as HTMLSpanElement;
-    
+    const toggleRoot = container.querySelector(".toggle-root") as HTMLElement;
+    const toggleThumb = container.querySelector(".toggle-thumb") as HTMLElement;
+    const labelSpan = container.querySelector("span") as HTMLSpanElement;
+
     if (isPressed) {
-      toggleRoot?.classList.add('!bg-admin-bg');
-      toggleRoot?.classList.remove('bg-admin-sidebar');
-      toggleThumb?.classList.add('left-[26px]', 'bg-admin-success');
-      toggleThumb?.classList.remove('left-[4px]', 'bg-white');
-      if (labelSpan) labelSpan.textContent = 'Publish on import';
+      toggleRoot?.classList.add("!bg-admin-bg");
+      toggleRoot?.classList.remove("bg-admin-sidebar");
+      toggleThumb?.classList.add("left-[26px]", "bg-admin-success");
+      toggleThumb?.classList.remove("left-[4px]", "bg-white");
+      if (labelSpan) labelSpan.textContent = "Publish on import";
     } else {
-      toggleRoot?.classList.remove('!bg-admin-bg');
-      toggleRoot?.classList.add('bg-admin-sidebar');
-      toggleThumb?.classList.remove('left-[26px]', 'bg-admin-success');
-      toggleThumb?.classList.add('left-[4px]', 'bg-white');
-      if (labelSpan) labelSpan.textContent = 'Keep unpublished';
+      toggleRoot?.classList.remove("!bg-admin-bg");
+      toggleRoot?.classList.add("bg-admin-sidebar");
+      toggleThumb?.classList.remove("left-[26px]", "bg-admin-success");
+      toggleThumb?.classList.add("left-[4px]", "bg-white");
+      if (labelSpan) labelSpan.textContent = "Keep unpublished";
     }
-    
+
     // Store pressed state on the container for external access
     (container as any).pressed = isPressed;
   }
@@ -504,193 +731,215 @@ import { Toggle } from '@components/ui/Toggle';
   loadSettings();
 
   // Handle publish toggle changes
-  publishToggleContainer?.addEventListener('click', async (e) => {
+  publishToggleContainer?.addEventListener("click", async (e) => {
     const target = e.target as HTMLElement;
     // Don't handle if clicking the toggle itself (it has its own handler)
-    if (target.closest('.toggle-root')) return;
-    
+    if (target.closest(".toggle-root")) return;
+
     // Toggle the state
     publishOnImport = !publishOnImport;
-    
+
     // Update toggle UI
-    const toggleRoot = publishToggleContainer.querySelector('.toggle-root') as HTMLElement;
-    const toggleThumb = publishToggleContainer.querySelector('.toggle-thumb') as HTMLElement;
-    const labelSpan = publishToggleContainer.querySelector('span') as HTMLSpanElement;
-    
+    const toggleRoot = publishToggleContainer.querySelector(
+      ".toggle-root",
+    ) as HTMLElement;
+    const toggleThumb = publishToggleContainer.querySelector(
+      ".toggle-thumb",
+    ) as HTMLElement;
+    const labelSpan = publishToggleContainer.querySelector(
+      "span",
+    ) as HTMLSpanElement;
+
     if (publishOnImport) {
-      toggleRoot?.classList.add('!bg-admin-bg');
-      toggleRoot?.classList.remove('bg-admin-sidebar');
-      toggleThumb?.classList.add('left-[26px]', 'bg-admin-success');
-      toggleThumb?.classList.remove('left-[4px]', 'bg-white');
-      if (labelSpan) labelSpan.textContent = 'Publish on import';
+      toggleRoot?.classList.add("!bg-admin-bg");
+      toggleRoot?.classList.remove("bg-admin-sidebar");
+      toggleThumb?.classList.add("left-[26px]", "bg-admin-success");
+      toggleThumb?.classList.remove("left-[4px]", "bg-white");
+      if (labelSpan) labelSpan.textContent = "Publish on import";
     } else {
-      toggleRoot?.classList.remove('!bg-admin-bg');
-      toggleRoot?.classList.add('bg-admin-sidebar');
-      toggleThumb?.classList.remove('left-[26px]', 'bg-admin-success');
-      toggleThumb?.classList.add('left-[4px]', 'bg-white');
-      if (labelSpan) labelSpan.textContent = 'Keep unpublished';
+      toggleRoot?.classList.remove("!bg-admin-bg");
+      toggleRoot?.classList.add("bg-admin-sidebar");
+      toggleThumb?.classList.remove("left-[26px]", "bg-admin-success");
+      toggleThumb?.classList.add("left-[4px]", "bg-white");
+      if (labelSpan) labelSpan.textContent = "Keep unpublished";
     }
-    
+
     (publishToggleContainer as any).pressed = publishOnImport;
-    
+
     // Persist to settings
     try {
-      await fetch('/api/settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 'gallery.publishOnImport': publishOnImport })
+      await fetch("/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ "gallery.publishOnImport": publishOnImport }),
       });
     } catch (e) {
-      console.error('Failed to save publishOnImport setting:', e);
+      console.error("Failed to save publishOnImport setting:", e);
     }
   });
 
   // Also handle clicks on the toggle root itself
-  document.querySelectorAll('#publish-toggle-container .toggle-root').forEach(toggle => {
-    toggle.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      // Toggle state
-      publishOnImport = !publishOnImport;
-      
-      // Update both toggles UI
-      if (publishToggleContainer) updateToggleUI(publishToggleContainer, publishOnImport);
-      if (scanPublishToggleContainer) updateToggleUI(scanPublishToggleContainer, publishOnImport);
-      
-      // Persist to settings
-      try {
-        await fetch('/api/settings', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 'gallery.publishOnImport': publishOnImport })
-        });
-      } catch (e) {
-        console.error('Failed to save publishOnImport setting:', e);
-      }
+  document
+    .querySelectorAll("#publish-toggle-container .toggle-root")
+    .forEach((toggle) => {
+      toggle.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        // Toggle state
+        publishOnImport = !publishOnImport;
+
+        // Update both toggles UI
+        if (publishToggleContainer)
+          updateToggleUI(publishToggleContainer, publishOnImport);
+        if (scanPublishToggleContainer)
+          updateToggleUI(scanPublishToggleContainer, publishOnImport);
+
+        // Persist to settings
+        try {
+          await fetch("/api/settings", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              "gallery.publishOnImport": publishOnImport,
+            }),
+          });
+        } catch (e) {
+          console.error("Failed to save publishOnImport setting:", e);
+        }
+      });
     });
-  });
 
   // Handle scan results publish toggle changes
-  scanPublishToggleContainer?.addEventListener('click', async (e) => {
+  scanPublishToggleContainer?.addEventListener("click", async (e) => {
     const target = e.target as HTMLElement;
-    if (target.closest('.toggle-root')) return;
-    
+    if (target.closest(".toggle-root")) return;
+
     publishOnImport = !publishOnImport;
-    
+
     // Update both toggles UI
-    if (publishToggleContainer) updateToggleUI(publishToggleContainer, publishOnImport);
-    if (scanPublishToggleContainer) updateToggleUI(scanPublishToggleContainer, publishOnImport);
-    
+    if (publishToggleContainer)
+      updateToggleUI(publishToggleContainer, publishOnImport);
+    if (scanPublishToggleContainer)
+      updateToggleUI(scanPublishToggleContainer, publishOnImport);
+
     try {
-      await fetch('/api/settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 'gallery.publishOnImport': publishOnImport })
+      await fetch("/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ "gallery.publishOnImport": publishOnImport }),
       });
     } catch (e) {
-      console.error('Failed to save publishOnImport setting:', e);
+      console.error("Failed to save publishOnImport setting:", e);
     }
   });
 
   // Handle clicks on scan toggle root
-  document.querySelectorAll('#scan-publish-toggle-container .toggle-root').forEach(toggle => {
-    toggle.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      publishOnImport = !publishOnImport;
-      
-      // Update both toggles UI
-      if (publishToggleContainer) updateToggleUI(publishToggleContainer, publishOnImport);
-      if (scanPublishToggleContainer) updateToggleUI(scanPublishToggleContainer, publishOnImport);
-      
-      try {
-        await fetch('/api/settings', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 'gallery.publishOnImport': publishOnImport })
-        });
-      } catch (e) {
-        console.error('Failed to save publishOnImport setting:', e);
-      }
+  document
+    .querySelectorAll("#scan-publish-toggle-container .toggle-root")
+    .forEach((toggle) => {
+      toggle.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        publishOnImport = !publishOnImport;
+
+        // Update both toggles UI
+        if (publishToggleContainer)
+          updateToggleUI(publishToggleContainer, publishOnImport);
+        if (scanPublishToggleContainer)
+          updateToggleUI(scanPublishToggleContainer, publishOnImport);
+
+        try {
+          await fetch("/api/settings", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              "gallery.publishOnImport": publishOnImport,
+            }),
+          });
+        } catch (e) {
+          console.error("Failed to save publishOnImport setting:", e);
+        }
+      });
     });
-  });
 
   function setInfoModalCancelVisible(visible: boolean) {
-    const cancelBtn = infoModal?.querySelector('[data-modal-cancel]') as HTMLButtonElement | null;
+    const cancelBtn = infoModal?.querySelector(
+      "[data-modal-cancel]",
+    ) as HTMLButtonElement | null;
     if (!cancelBtn) return;
-    if (visible) cancelBtn.classList.remove('hidden');
-    else cancelBtn.classList.add('hidden');
+    if (visible) cancelBtn.classList.remove("hidden");
+    else cancelBtn.classList.add("hidden");
   }
 
-  infoModal?.addEventListener('confirm', () => {
+  infoModal?.addEventListener("confirm", () => {
     infoModal?.close?.();
   });
-  
+
   let files: File[] = [];
-  
+
   // Click to select
-  dropZone?.addEventListener('click', () => fileInput?.click());
-  
+  dropZone?.addEventListener("click", () => fileInput?.click());
+
   // File input change
-  fileInput?.addEventListener('change', (e) => {
+  fileInput?.addEventListener("change", (e) => {
     const input = e.target as HTMLInputElement;
     if (input.files) {
       addFiles(Array.from(input.files));
     }
   });
-  
+
   // Drag and drop
-  dropZone?.addEventListener('dragover', (e) => {
+  dropZone?.addEventListener("dragover", (e) => {
     e.preventDefault();
-    dropZone.classList.add('dragover');
+    dropZone.classList.add("dragover");
   });
-  
-  dropZone?.addEventListener('dragleave', () => {
-    dropZone.classList.remove('dragover');
+
+  dropZone?.addEventListener("dragleave", () => {
+    dropZone.classList.remove("dragover");
   });
-  
-  dropZone?.addEventListener('drop', (e) => {
+
+  dropZone?.addEventListener("drop", (e) => {
     e.preventDefault();
-    dropZone.classList.remove('dragover');
+    dropZone.classList.remove("dragover");
     if (e.dataTransfer?.files) {
       addFiles(Array.from(e.dataTransfer.files));
     }
   });
-  
+
   function addFiles(newFiles: File[]) {
     // Filter to images only
-    const imageFiles = newFiles.filter(f => 
-      /\.(jpg|jpeg|png|tiff|tif|heic|heif|webp)$/i.test(f.name)
+    const imageFiles = newFiles.filter((f) =>
+      /\.(jpg|jpeg|png|tiff|tif|heic|heif|webp)$/i.test(f.name),
     );
-    
+
     if (imageFiles.length > 0) {
       // Collapse both upload and FTP sections when images are added
-      document.getElementById('ftp-section')?.classList.add('collapsed');
-      document.getElementById('upload-section')?.classList.add('collapsed');
+      document.getElementById("ftp-section")?.classList.add("collapsed");
+      document.getElementById("upload-section")?.classList.add("collapsed");
     }
-    
+
     files.unshift(...imageFiles);
     renderQueue();
   }
-  
+
   function renderQueue() {
     if (!uploadQueue) return;
-    
-    uploadQueue.innerHTML = '';
-    
+
+    uploadQueue.innerHTML = "";
+
     // Set dynamic grid columns based on file count
-    let gridColsClass = 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3';
+    let gridColsClass = "grid-cols-1 md:grid-cols-2 lg:grid-cols-3";
     if (files.length === 4) {
-      gridColsClass = 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4';
+      gridColsClass = "grid-cols-1 md:grid-cols-2 lg:grid-cols-4";
     } else if (files.length >= 5) {
-      gridColsClass = 'grid-cols-1 md:grid-cols-3 lg:grid-cols-5';
+      gridColsClass = "grid-cols-1 md:grid-cols-3 lg:grid-cols-5";
     }
-    
+
     // Remove old grid classes and add new one
     uploadQueue.className = `grid ${gridColsClass} gap-4`;
-    
+
     files.forEach((file, index) => {
-      const item = document.createElement('div');
-      item.className = 'queue-item';
-      
+      const item = document.createElement("div");
+      item.className = "queue-item";
+
       item.innerHTML = `
         <div class="queue-item-header">
           <div class="queue-item-info">
@@ -703,104 +952,122 @@ import { Toggle } from '@components/ui/Toggle';
           <button class="queue-item-remove" data-index="${index}" title="Remove">×</button>
         </div>
       `;
-      
+
       uploadQueue.appendChild(item);
     });
-    
+
     // Show/hide queue section
     if (queueSection) {
-      queueSection.classList.toggle('hidden', files.length === 0);
+      queueSection.classList.toggle("hidden", files.length === 0);
     }
+
+    // Update top toolbar
+    updateToolbar();
   }
-  
+
   // Remove from queue
-  uploadQueue?.addEventListener('click', (e) => {
+  uploadQueue?.addEventListener("click", (e) => {
     const target = e.target as HTMLElement;
-    if (target.classList.contains('queue-item-remove')) {
-      const index = parseInt(target.dataset.index || '0');
+    if (target.classList.contains("queue-item-remove")) {
+      const index = parseInt(target.dataset.index || "0");
       files.splice(index, 1);
       renderQueue();
     }
   });
-  
+
   // Clear queue
-  document.getElementById('clear-queue-btn')?.addEventListener('click', () => {
+  document.getElementById("clear-queue-btn")?.addEventListener("click", () => {
     files = [];
     renderQueue();
   });
-  
+
   // Upload all
-  document.getElementById('upload-all-btn')?.addEventListener('click', async () => {
-    const btn = document.getElementById('upload-all-btn') as HTMLButtonElement;
-    btn.disabled = true;
-    btn.textContent = '⏳ Uploading...';
-    
-    const formData = new FormData();
-    files.forEach(file => formData.append('images', file));
-    formData.append('publishOnImport', publishOnImport.toString());
-    
-    try {
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData
-      });
-      
-      const data = await res.json();
-      
-      // Show results
-      if (results && resultsSection) {
-        results.innerHTML = data.uploaded?.map((u: any) => `
+  document
+    .getElementById("upload-all-btn")
+    ?.addEventListener("click", async () => {
+      const btn = document.getElementById(
+        "upload-all-btn",
+      ) as HTMLButtonElement;
+      btn.disabled = true;
+      btn.textContent = "⏳ Uploading...";
+
+      const formData = new FormData();
+      files.forEach((file) => formData.append("images", file));
+      formData.append("publishOnImport", publishOnImport.toString());
+
+      try {
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await res.json();
+
+        // Show results
+        if (results && resultsSection) {
+          results.innerHTML =
+            data.uploaded
+              ?.map(
+                (u: any) => `
           <div class="card p-3">
             ✅ ${u.filename} → ${u.slug}
           </div>
-        `).join('') || '';
-        
-        if (data.errors?.length) {
-          results.innerHTML += data.errors.map((e: string) => `
+        `,
+              )
+              .join("") || "";
+
+          if (data.errors?.length) {
+            results.innerHTML += data.errors
+              .map(
+                (e: string) => `
             <div class="card p-3 text-red-400">
               ❌ ${e}
             </div>
-          `).join('');
+          `,
+              )
+              .join("");
+          }
+
+          resultsSection.classList.remove("hidden");
+          updateToolbar();
         }
-        
-        resultsSection.classList.remove('hidden');
+
+        // Clear queue
+        renderQueue();
+      } catch (e) {
+        window.dispatchEvent(
+          new CustomEvent("artsitemaker:toast", {
+            detail: {
+              title: "Upload failed",
+              description: "An unexpected error occurred.",
+              variant: "destructive",
+            },
+          }),
+        );
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "📤 Upload All";
       }
-      
-      // Clear queue
-      renderQueue();
-      
-    } catch (e) {
-      window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
-        detail: {
-            title: 'Upload failed',
-            description: 'An unexpected error occurred.',
-            variant: 'destructive'
-        }
-      }));
-    } finally {
-      btn.disabled = false;
-      btn.textContent = '📤 Upload All';
-    }
-  });
-  
+    });
+
   // Global process logic (reused for both upload and scan)
   async function runProcessing(buttonId: string) {
     const btn = document.getElementById(buttonId) as HTMLButtonElement;
     const originalText = btn.textContent;
     btn.disabled = true;
-    btn.textContent = '⏳ Processing...';
-    
+    btn.textContent = "⏳ Processing...";
+
     try {
-      const res = await fetch('/api/process', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}) // Processes all uncataloged
+      const res = await fetch("/api/process", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}), // Processes all uncataloged
       });
-      
+
       const data = await res.json();
-      
+
       if (data && infoModalTitle && infoModalContent) {
-        infoModalTitle.textContent = 'Processing Complete';
+        infoModalTitle.textContent = "Processing Complete";
         infoModalContent.innerHTML = `
           <div class="flex flex-col gap-4">
             <div class="flex items-center gap-3 text-green-400">
@@ -827,25 +1094,31 @@ import { Toggle } from '@components/ui/Toggle';
             <p class="text-sm text-admin-muted italic">You can now head to the gallery to add details, prices, and organize your collection.</p>
           </div>
         `;
-        
+
         setInfoModalCancelVisible(true);
-        const confirmBtn = infoModal.querySelector('.confirm-modal');
-        if (confirmBtn) confirmBtn.textContent = 'Go to Gallery';
-        
+        const confirmBtn = infoModal.querySelector(".confirm-modal");
+        if (confirmBtn) confirmBtn.textContent = "Go to Gallery";
+
         infoModal.open();
-        
-        infoModal.addEventListener('confirm', () => {
-          window.location.href = '/gallery';
-        }, { once: true });
+
+        infoModal.addEventListener(
+          "confirm",
+          () => {
+            window.location.href = "/gallery";
+          },
+          { once: true },
+        );
       }
     } catch (e) {
-      window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
-        detail: {
-            title: 'Processing failed',
-            description: 'An unexpected error occurred.',
-            variant: 'destructive'
-        }
-      }));
+      window.dispatchEvent(
+        new CustomEvent("artsitemaker:toast", {
+          detail: {
+            title: "Processing failed",
+            description: "An unexpected error occurred.",
+            variant: "destructive",
+          },
+        }),
+      );
     } finally {
       btn.disabled = false;
       btn.textContent = originalText;
@@ -853,73 +1126,141 @@ import { Toggle } from '@components/ui/Toggle';
   }
 
   // Process all button (from upload)
-  document.getElementById('process-all-btn')?.addEventListener('click', () => {
-    runProcessing('process-all-btn');
+  document.getElementById("process-all-btn")?.addEventListener("click", () => {
+    runProcessing("process-all-btn");
   });
 
   // Process scanned button (from FTP scan)
-  document.getElementById('process-scanned-btn')?.addEventListener('click', () => {
-    runProcessing('process-scanned-btn');
-  });
+  document
+    .getElementById("process-scanned-btn")
+    ?.addEventListener("click", () => {
+      runProcessing("process-scanned-btn");
+    });
 
   // Clear results
-  document.getElementById('clear-results-btn')?.addEventListener('click', () => {
-    if (resultsSection) resultsSection.classList.add('hidden');
-  });
-  
+  document
+    .getElementById("clear-results-btn")
+    ?.addEventListener("click", () => {
+      if (resultsSection) {
+        resultsSection.classList.add("hidden");
+        updateToolbar();
+      }
+    });
+
   // Toggle FTP details
-  document.getElementById('show-ftp-details')?.addEventListener('click', () => {
-    const details = document.getElementById('ftp-details');
-    details?.classList.toggle('hidden');
+  document.getElementById("show-ftp-details")?.addEventListener("click", () => {
+    const details = document.getElementById("ftp-details");
+    details?.classList.toggle("hidden");
   });
-  
+
   // Scan for new images
-  document.getElementById('scan-images-btn')?.addEventListener('click', async () => {
-    const btn = document.getElementById('scan-images-btn') as HTMLButtonElement;
-    btn.disabled = true;
-    btn.textContent = '🔍 Scanning...';
-    
-    try {
-      const res = await fetch('/api/scan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({})
-      });
-      
-      const data = await res.json();
-      
-      if (data.found?.length > 0) {
-        if (scanResultsSection && scanResults && scanCount) {
-          scanCount.textContent = data.found.length.toString();
-          scanResults.innerHTML = data.found.map((f: string) => `<div>${f}</div>`).join('');
-          scanResultsSection.classList.remove('hidden');
-          scanResultsSection.scrollIntoView({ behavior: 'smooth' });
-        }
-      } else if (infoModalTitle && infoModalContent) {
-        infoModalTitle.textContent = 'Scan Results';
-        infoModalContent.innerHTML = `
+  document
+    .getElementById("scan-images-btn")
+    ?.addEventListener("click", async () => {
+      const btn = document.getElementById(
+        "scan-images-btn",
+      ) as HTMLButtonElement;
+      btn.disabled = true;
+      btn.textContent = "🔍 Scanning...";
+
+      try {
+        const res = await fetch("/api/scan", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        });
+
+        const data = await res.json();
+
+        if (data.found?.length > 0) {
+          if (scanResultsSection && scanResults && scanCount) {
+            scanCount.textContent = data.found.length.toString();
+            scanResults.innerHTML = data.found
+              .map((f: string) => `<div>${f}</div>`)
+              .join("");
+            scanResultsSection.classList.remove("hidden");
+            updateToolbar();
+            scanResultsSection.scrollIntoView({ behavior: "smooth" });
+          }
+        } else if (infoModalTitle && infoModalContent) {
+          infoModalTitle.textContent = "Scan Results";
+          infoModalContent.innerHTML = `
           <div class="text-center py-4">
             <div class="text-4xl mb-4">∅</div>
             <p>No new images found in <code class="bg-admin-card px-1 rounded">files/originals/</code></p>
           </div>
         `;
-        setInfoModalCancelVisible(false);
-        const confirmBtn = infoModal.querySelector('.confirm-modal');
-        if (confirmBtn) confirmBtn.textContent = 'OK';
-        infoModal.open();
-      }
-      
-    } catch (e) {
-      window.dispatchEvent(new CustomEvent('artsitemaker:toast', {
-        detail: {
-            title: 'Scan failed',
-            description: 'Make sure the files/originals/ folder exists.',
-            variant: 'destructive'
+          setInfoModalCancelVisible(false);
+          const confirmBtn = infoModal.querySelector(".confirm-modal");
+          if (confirmBtn) confirmBtn.textContent = "OK";
+          infoModal.open();
         }
-      }));
-    } finally {
-      btn.disabled = false;
-      btn.textContent = '🔍 Scan for New Images';
+      } catch (e) {
+        window.dispatchEvent(
+          new CustomEvent("artsitemaker:toast", {
+            detail: {
+              title: "Scan failed",
+              description: "Make sure the files/originals/ folder exists.",
+              variant: "destructive",
+            },
+          }),
+        );
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "🔍 Scan for New Images";
+      }
+    });
+
+  // Toolbar button handlers - delegate to existing buttons
+  toolbarUploadBtn?.addEventListener("click", () => {
+    document.getElementById("upload-all-btn")?.click();
+  });
+
+  toolbarProcessBtn?.addEventListener("click", () => {
+    // Prefer process-all-btn if results section is visible, else process-scanned-btn
+    if (resultsSection && !resultsSection.classList.contains("hidden")) {
+      document.getElementById("process-all-btn")?.click();
+    } else {
+      document.getElementById("process-scanned-btn")?.click();
     }
   });
+
+  // Sync toolbar publish toggle with the main one
+  toolbarPublishToggleContainer?.addEventListener("click", (e) => {
+    const target = e.target as HTMLElement;
+    if (target.closest(".toggle-root")) return;
+    publishOnImport = !publishOnImport;
+    if (publishToggleContainer)
+      updateToggleUI(publishToggleContainer, publishOnImport);
+    if (scanPublishToggleContainer)
+      updateToggleUI(scanPublishToggleContainer, publishOnImport);
+    if (toolbarPublishToggleContainer)
+      updateToggleUI(toolbarPublishToggleContainer, publishOnImport);
+  });
+
+  document
+    .querySelectorAll("#toolbar-publish-toggle-container .toggle-root")
+    .forEach((toggle) => {
+      toggle.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        publishOnImport = !publishOnImport;
+        if (publishToggleContainer)
+          updateToggleUI(publishToggleContainer, publishOnImport);
+        if (scanPublishToggleContainer)
+          updateToggleUI(scanPublishToggleContainer, publishOnImport);
+        if (toolbarPublishToggleContainer)
+          updateToggleUI(toolbarPublishToggleContainer, publishOnImport);
+        try {
+          await fetch("/api/settings", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              "gallery.publishOnImport": publishOnImport,
+            }),
+          });
+        } catch (e) {
+          console.error("Failed to save publishOnImport setting:", e);
+        }
+      });
+    });
 </script>

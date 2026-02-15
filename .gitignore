@@ -11,9 +11,7 @@ test-results/
 playwright-report/
 
 # Environment
-.env
-.env.local
-.env.*.local
+.env*
 
 # User-specific configuration
 artis.config.yaml

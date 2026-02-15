@@ -13,6 +13,7 @@ import {
   getAllArtworkSlugs,
   readImageVariants,
 } from '../../../lib/r2-sync-helper';
+import { clearConfigCache } from '../../../lib/paths';
 
 // SSE event types
 interface ProgressEvent {
@@ -149,6 +150,7 @@ async function createR2ProviderFromVault(): Promise<{
 }
 
 export const GET: APIRoute = async ({ request: _request }) => {
+  clearConfigCache();
   // Check if R2 storage mode is configured
   const configStatus = checkR2Configuration();
 

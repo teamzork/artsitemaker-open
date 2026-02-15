@@ -135,4 +135,5 @@ export interface FooterData {
   copyrightStart?: number;
   copyrightName?: string;
   showCredits?: boolean;
+  allRightsReserved?: boolean;
 }

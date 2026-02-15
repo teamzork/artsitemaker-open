@@ -14,6 +14,7 @@ interface R2TestRequest {
     accessKeyId: string;
     secretAccessKey: string;
     bucketName: string;
+    publicUrl: string;
 }
 
 export const POST: APIRoute = async ({ request }) => {
@@ -38,16 +39,17 @@ export const POST: APIRoute = async ({ request }) => {
             }
         }
 
-        const bucketName = body.bucketName || getR2BucketName();
-        const publicUrl = getR2PublicUrl();
+        const bucketName = body.bucketName ?? getR2BucketName();
+        const publicUrl = body.publicUrl ?? getR2PublicUrl();
 
-        if (!accountId || !bucketName) {
+        if (!accountId || !bucketName || !publicUrl) {
             return new Response(JSON.stringify({
                 success: false,
                 error: 'Missing required fields',
                 missingFields: [
                     !accountId && 'accountId',
-                    !bucketName && 'bucketName'
+                    !bucketName && 'bucketName',
+                    !publicUrl && 'publicUrl'
                 ].filter(Boolean)
             }), {
                 status: 400,
@@ -59,7 +61,7 @@ export const POST: APIRoute = async ({ request }) => {
         // The S3 API endpoint (accountId.r2.cloudflarestorage.com) requires
         // AWS4-HMAC-SHA256 signed requests and rejects bare HEAD/GET with
         // a TLS handshake failure, so it's not useful for a simple connectivity check.
-        const testUrl = publicUrl || `https://${accountId}.r2.cloudflarestorage.com`;
+        const testUrl = publicUrl;
 
         try {
             const controller = new AbortController();

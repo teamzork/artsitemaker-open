@@ -10,6 +10,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import yaml from 'js-yaml';
 import { getImageHostingConfigPath } from '../../lib/config-paths';
+import { clearConfigCache } from '../../lib/paths';
 
 export const GET: APIRoute = async () => {
   try {
@@ -54,6 +55,7 @@ export const PUT: APIRoute = async ({ request }) => {
 
     await fs.mkdir(configDir, { recursive: true });
     await fs.writeFile(configPath, yamlContent, 'utf-8');
+    clearConfigCache();
 
     return new Response(JSON.stringify({ success: true, config: merged }), {
       status: 200,

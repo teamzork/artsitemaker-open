@@ -31,49 +31,75 @@ export class VaultUIController {
   private setupStateHandlers(): void {
     // Setup Button
     const setupBtn = this.getElement('#setup-btn');
-    const setupModal = this.getElement('#setup-modal') as any;
-    const setupPassword = this.getElement('#setup-password') as HTMLInputElement;
-    const setupConfirm = this.getElement('#setup-confirm') as HTMLInputElement;
-    const setupError = this.getElement('#setup-error');
-    const passwordStrength = this.getElement('#password-strength');
+    const setupModal = document.getElementById('secrets-vault-setup-modal') as any;
+    const setupPassword = setupModal?.querySelector('#setup-password') as HTMLInputElement | null;
+    const setupConfirm = setupModal?.querySelector('#setup-confirm') as HTMLInputElement | null;
+    const setupError = setupModal?.querySelector('#setup-error') as HTMLElement | null;
+    const passwordStrength = setupModal?.querySelector('#password-strength') as HTMLElement | null;
 
     setupBtn?.addEventListener('click', () => {
-      setupModal?.open();
+      if (!setupModal) return;
+
+      const parentModal = this.root.closest('#secrets-vault-modal') as any;
+      const returnToModal = !!parentModal && !parentModal.classList.contains('hidden');
+
+      if (returnToModal) {
+        parentModal?.close?.();
+      }
+
+      (window as any).secretsVaultSetupContext = { returnToModal };
+
+      if (setupPassword) setupPassword.value = '';
+      if (setupConfirm) setupConfirm.value = '';
+      if (passwordStrength) passwordStrength.innerHTML = '';
+      this.hideError(setupError);
+
+      setupModal?.open?.();
       setupPassword?.focus();
     });
 
-    // Password strength check
-    setupPassword?.addEventListener('input', () => {
-      this.updatePasswordStrength(setupPassword.value, passwordStrength);
-    });
+    if (setupModal && setupModal.dataset.bound !== 'true') {
+      setupModal.dataset.bound = 'true';
 
-    // Setup modal confirm
-    setupModal?.addEventListener('confirm', async () => {
-      const password = setupPassword?.value;
-      const confirm = setupConfirm?.value;
+      // Password strength check
+      setupPassword?.addEventListener('input', () => {
+        this.updatePasswordStrength(setupPassword.value, passwordStrength);
+      });
 
-      if (!password || !confirm) {
-        this.showError(setupError, 'Please fill in both fields');
-        return;
-      }
+      // Setup modal confirm
+      setupModal?.addEventListener('confirm', async () => {
+        const password = setupPassword?.value;
+        const confirm = setupConfirm?.value;
 
-      if (password !== confirm) {
-        this.showError(setupError, 'Passwords do not match');
-        return;
-      }
+        if (!password || !confirm) {
+          this.showError(setupError, 'Please fill in both fields');
+          return;
+        }
 
-      if (!this.manager.checkPasswordStrength(password)) {
-        this.showError(setupError, 'Password does not meet requirements');
-        return;
-      }
+        if (password !== confirm) {
+          this.showError(setupError, 'Passwords do not match');
+          return;
+        }
 
-      try {
-        await this.manager.setup(password, confirm);
-        setupModal?.close();
-      } catch (e) {
-        this.showError(setupError, e instanceof Error ? e.message : 'Setup failed');
-      }
-    });
+        if (!this.manager.checkPasswordStrength(password)) {
+          this.showError(setupError, 'Password does not meet requirements');
+          return;
+        }
+
+        try {
+          await this.manager.setup(password, confirm);
+          setupModal?.close?.();
+
+          const context = (window as any).secretsVaultSetupContext;
+          if (context?.returnToModal) {
+            window.openSecretsVault?.();
+          }
+          (window as any).secretsVaultSetupContext = null;
+        } catch (e) {
+          this.showError(setupError, e instanceof Error ? e.message : 'Setup failed');
+        }
+      });
+    }
 
     // Unlock Form
     const unlockForm = this.getElement('#unlock-form');
@@ -122,7 +148,7 @@ export class VaultUIController {
 
       if (confirmBtn) {
         confirmBtn.disabled = true;
-        confirmBtn.textContent = '⏳ Resetting...';
+        confirmBtn.innerHTML = '<span class="animate-pulse">Resetting...</span>';
       }
       if (closeBtn) closeBtn.disabled = true;
 
@@ -194,9 +220,9 @@ export class VaultUIController {
     const saveBtn = this.getElement('#save-secrets-btn') as HTMLButtonElement;
 
     saveBtn?.addEventListener('click', async () => {
-      const originalText = saveBtn.textContent;
+      const originalText = saveBtn.innerHTML;
       saveBtn.disabled = true;
-      saveBtn.textContent = '⏳ Saving...';
+      saveBtn.innerHTML = '<span class="animate-pulse">Saving...</span>';
 
       try {
         // Collect form data
@@ -305,10 +331,10 @@ export class VaultUIController {
 
         if (input.type === 'password') {
           input.type = 'text';
-          btn.textContent = '🙈';
+          btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-off-icon"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" x2="23" y1="1" y2="23"/></svg>';
         } else {
           input.type = 'password';
-          btn.textContent = '👁';
+          btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
         }
       });
     });
@@ -347,7 +373,7 @@ export class VaultUIController {
 
     testBtn?.addEventListener('click', async () => {
       testBtn.disabled = true;
-      testBtn.textContent = '⏳ Testing...';
+      testBtn.innerHTML = '<span class="animate-pulse">Testing...</span>';
 
       if (statusEl) {
         statusEl.innerHTML = '<span class="text-admin-muted">Checking credentials...</span>';
@@ -360,7 +386,7 @@ export class VaultUIController {
         if (!accountId || !apiToken) {
           if (statusEl) {
             statusEl.innerHTML =
-              '<span class="text-yellow-400">⚠️ Enter your Account ID and API Token to test the connection</span>';
+              '<span class="text-yellow-400 flex items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg> Enter your Account ID and API Token to test the connection</span>';
           }
           return;
         }
@@ -370,20 +396,20 @@ export class VaultUIController {
         if (result.success) {
           const accountLabel = result.accountName ? ` (Account: ${result.accountName})` : '';
           if (statusEl) {
-            statusEl.innerHTML = `<span class="text-green-500">✓ Connection successful${accountLabel}</span>`;
+            statusEl.innerHTML = `<span class="text-green-400 flex items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Connection successful${accountLabel}</span>`;
           }
         } else {
           if (statusEl) {
-            statusEl.innerHTML = `<span class="text-red-400">✗ ${result.error || 'Connection failed'}</span>`;
+            statusEl.innerHTML = `<span class="text-red-400 flex items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" x2="9" y1="9" y2="15"/><line x1="9" x2="15" y1="15" y2="9"/></svg> ${result.error || 'Connection failed'}</span>`;
           }
         }
       } catch (e) {
         if (statusEl) {
-          statusEl.innerHTML = '<span class="text-red-400">✗ Test failed</span>';
+          statusEl.innerHTML = '<span class="text-red-400 flex items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" x2="9" y1="9" y2="15"/><line x1="9" x2="15" y1="15" y2="9"/></svg> Test failed</span>';
         }
       } finally {
         testBtn.disabled = false;
-        testBtn.textContent = '🔗 Test Connection';
+        testBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Test Connection';
       }
     });
   }
@@ -488,7 +514,7 @@ export class VaultUIController {
       .map(
         (c) => `
         <div class="flex items-center gap-2 text-xs ${c.valid ? 'text-green-400' : 'text-admin-muted'}">
-          <span>${c.valid ? '✓' : '○'}</span>
+          <span>${c.valid ? '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' : '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>'}</span>
           <span>${c.label}</span>
         </div>
       `

@@ -1,5 +1,6 @@
 import { spawn, exec, type ChildProcess } from 'child_process';
 import { EventEmitter } from 'events';
+import path from 'path';
 import { promisify } from 'util';
 
 const execAsync = promisify(exec);
@@ -365,12 +366,21 @@ export function registerDefaultServices(): void {
   });
 
   // Image file server
+  // Resolve files path from admin's path resolution
+  let filesPath: string;
+  try {
+    // Use require for synchronous import since this function is not async
+    const { getFilesPath } = require('./paths');
+    filesPath = getFilesPath();
+  } catch {
+    filesPath = path.resolve(repoRoot, 'files');
+  }
+
   processManager.registerService({
     id: 'images',
     name: 'Image Server',
     command: 'npx',
-    args: ['serve', 'files', '-p', '3001', '--cors'],
-    cwd: repoRoot,
+    args: ['serve', filesPath, '-p', '3001', '--cors'],
     port: 3001,
     healthCheckUrl: 'http://localhost:3001',
   });

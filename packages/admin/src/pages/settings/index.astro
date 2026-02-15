@@ -4,9 +4,9 @@ import fs from "fs/promises";
 import path from "path";
 import yaml from "js-yaml";
 import {
-  getContentPath,
+  getUserDataPath,
   getThemesPath,
-  getContentAssetsBaseUrl,
+  getUserAssetsBaseUrl,
 } from "../../lib/paths";
 import { getSettingsFilePath, getIdentityConfigPath } from "../../lib/config-paths";
 import Modal from "../../components/Modal.astro";
@@ -31,7 +31,7 @@ import {
 import { loadFontData } from "../../lib/fonts";
 
 // Load current settings
-const contentPath = getContentPath();
+const userDataPath = getUserDataPath();
 const themesPath = getThemesPath();
 let settings: any = {};
 let identityKit: any = {};
@@ -52,7 +52,7 @@ try {
 }
 
 // Load fonts
-const { sections: fontSections, css: contentFontsCss } = await loadFontData(contentPath);
+const { sections: fontSections, css: contentFontsCss } = await loadFontData(userDataPath);
 
 // Load current theme config for fallback values
 let themeConfig: any = {};
@@ -72,7 +72,7 @@ function resolveAssetPreview(
 ): { url: string | null; isFromTheme: boolean } {
   // First check identityKit
   if (identityPath) {
-    const baseUrl = getContentAssetsBaseUrl();
+    const baseUrl = getUserAssetsBaseUrl();
     const normalizedPath = identityPath.startsWith("/")
       ? identityPath.slice(1)
       : identityPath;
@@ -716,7 +716,7 @@ try {
           <div id="logo-library-status" class="text-xs hidden mt-2"></div>
           <div id="logo-library-grid" class="logo-library-grid mt-3"></div>
           <div id="logo-library-empty" class="text-xs text-admin-muted mt-3 hidden">
-            No logos found in {contentPath}/assets/logos.
+            No logos found in {userDataPath}/assets/logos.
           </div>
         </div>
 
@@ -836,7 +836,7 @@ try {
               </button>
             </div>
             <p class="text-xs text-admin-muted mt-1">
-              Assets are stored in: {contentPath}/assets/textures
+              Assets are stored in: {userDataPath}/assets/textures
             </p>
             <div id="texture-library-status" class="text-xs hidden mt-2"></div>
             <div id="texture-library-grid" class="texture-library-grid mt-3"></div>
@@ -844,7 +844,7 @@ try {
               id="texture-library-empty"
               class="text-xs text-admin-muted mt-3 hidden"
             >
-              No textures found in {contentPath}/assets/textures.
+              No textures found in {userDataPath}/assets/textures.
             </div>
           </div>
         </div>
@@ -965,7 +965,7 @@ try {
           <div class="flex items-center gap-3">
             <code
               class="flex-1 px-3 py-2 bg-admin-bg rounded text-sm font-mono overflow-x-auto"
-              >{contentPath}</code
+              >{userDataPath}</code
             >
             <span class="text-green-500 text-sm whitespace-nowrap">✓ Found</span
             >

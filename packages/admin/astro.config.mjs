@@ -231,10 +231,9 @@ function serveSitePublic() {
                     }
                 }
 
-                // Serve user assets: map /user-assets/* and /content-assets/* to user-data/assets/*
-                if (req.url && (req.url.startsWith('/user-assets/') || req.url.startsWith('/content-assets/'))) {
-                    const prefix = req.url.startsWith('/user-assets/') ? '/user-assets/' : '/content-assets/';
-                    const assetPath = req.url.substring(prefix.length);
+                // Serve user assets: map /user-assets/* to user-data/assets/*
+                if (req.url && req.url.startsWith('/user-assets/')) {
+                    const assetPath = req.url.substring('/user-assets/'.length);
                     // Prevent directory traversal
                     const sanitizedPath = assetPath.replace(/\.\.\//g, '').replace(/\\/g, '');
                     const filePath = path.join(userAssetsPath, sanitizedPath);

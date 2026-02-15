@@ -81,9 +81,9 @@ function showDeprecationWarnings(config: SiteConfig, resolvedPath: string): void
         const userDataEquivalent = resolvedPath.replace(/\/content\/?$/, '/user-data');
 
         if (!fs.existsSync(userDataEquivalent) && fs.existsSync(resolvedPath)) {
-            console.warn('⚠️  DEPRECATION: "/content/" directory naming is deprecated.');
-            console.warn(`   Consider renaming to: ${userDataEquivalent}`);
-            console.warn('   Both names will be supported until v2.0.');
+            console.error('❌ DEPRECATION ERROR: Deprecated "/content/" directory structure detected.');
+            console.error('   Support for /content-assets URLs has been removed.');
+            console.error(`   Migrate to: ${userDataEquivalent}`);
         }
     }
 }
@@ -712,10 +712,6 @@ export function getUserAssetsBaseUrl(): string {
     if (globalThis.__ARTSITEMAKER_PREVIEW__?.userAssetsBaseUrl !== undefined) {
         return globalThis.__ARTSITEMAKER_PREVIEW__.userAssetsBaseUrl;
     }
-    // Priority 2: Preview context contentAssetsBaseUrl (deprecated)
-    if (globalThis.__ARTSITEMAKER_PREVIEW__?.contentAssetsBaseUrl !== undefined) {
-        return globalThis.__ARTSITEMAKER_PREVIEW__.contentAssetsBaseUrl;
-    }
     return '/user-assets';
 }
 
@@ -739,13 +735,6 @@ export function resolveUserAssetUrl(relativePath: string): string {
     return `${baseUrl}/${normalizedPath}`;
 }
 
-// Backward compatibility aliases
-/** @deprecated Use getUserAssetsPath() instead. Will be removed in v2.0. */
-export const getContentAssetsPath = getUserAssetsPath;
-/** @deprecated Use getUserAssetsBaseUrl() instead. Will be removed in v2.0. */
-export const getContentAssetsBaseUrl = getUserAssetsBaseUrl;
-/** @deprecated Use resolveUserAssetUrl() instead. Will be removed in v2.0. */
-export const resolveContentAssetUrl = resolveUserAssetUrl;
 
 /**
  * Clear cached values
@@ -763,6 +752,4 @@ export const siteConfig = {
     get imageStorage() { return getImageStorageMode(); },
     get imageBaseUrl() { return getImageBaseUrl(); },
     get userAssetsBaseUrl() { return getUserAssetsBaseUrl(); },
-    /** @deprecated Use userAssetsBaseUrl instead */
-    get contentAssetsBaseUrl() { return getUserAssetsBaseUrl(); },
 };

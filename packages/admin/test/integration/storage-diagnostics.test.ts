@@ -2,15 +2,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createMockAPIContext, parseJSONResponse } from '../helpers/mock-astro';
 import { GET, POST } from '../../src/pages/api/storage-diagnostics';
 
-const getStorageDiagnostics = vi.fn();
-const createR2ClientFromVault = vi.fn();
+const mocks = vi.hoisted(() => ({
+  getStorageDiagnostics: vi.fn(),
+  createR2ClientFromVault: vi.fn(),
+}));
 
 vi.mock('../../src/lib/storage/storage-diagnostics', () => ({
-  getStorageDiagnostics,
+  getStorageDiagnostics: mocks.getStorageDiagnostics,
 }));
 
 vi.mock('../../src/lib/storage/r2-vault', () => ({
-  createR2ClientFromVault,
+  createR2ClientFromVault: mocks.createR2ClientFromVault,
 }));
 
 vi.mock('../../src/lib/storage/storage-logger', () => ({
@@ -61,7 +63,7 @@ describe('Storage Diagnostics API', () => {
   });
 
   it('returns diagnostics payload on GET', async () => {
-    getStorageDiagnostics.mockResolvedValue(diagnosticsFixture);
+    mocks.getStorageDiagnostics.mockResolvedValue(diagnosticsFixture);
 
     const response = await GET(createMockAPIContext());
     const data = await parseJSONResponse(response);
@@ -72,7 +74,7 @@ describe('Storage Diagnostics API', () => {
   });
 
   it('skips checks when storage mode is external', async () => {
-    getStorageDiagnostics.mockResolvedValue({
+    mocks.getStorageDiagnostics.mockResolvedValue({
       ...diagnosticsFixture,
       storageMode: 'external',
     });
@@ -82,11 +84,11 @@ describe('Storage Diagnostics API', () => {
 
     expect(response.status).toBe(200);
     expect(data.check.status).toBe('skipped');
-    expect(createR2ClientFromVault).not.toHaveBeenCalled();
+    expect(mocks.createR2ClientFromVault).not.toHaveBeenCalled();
   });
 
   it('returns local check details when storage mode is local', async () => {
-    getStorageDiagnostics.mockResolvedValue({
+    mocks.getStorageDiagnostics.mockResolvedValue({
       ...diagnosticsFixture,
       storageMode: 'local',
     });
@@ -101,7 +103,7 @@ describe('Storage Diagnostics API', () => {
   });
 
   it('returns user-data validation errors during local checks', async () => {
-    getStorageDiagnostics.mockResolvedValue({
+    mocks.getStorageDiagnostics.mockResolvedValue({
       ...diagnosticsFixture,
       storageMode: 'local',
       userDataStructure: {
@@ -121,8 +123,8 @@ describe('Storage Diagnostics API', () => {
   });
 
   it('returns vault failure details when R2 client cannot be created', async () => {
-    getStorageDiagnostics.mockResolvedValue(diagnosticsFixture);
-    createR2ClientFromVault.mockResolvedValue({
+    mocks.getStorageDiagnostics.mockResolvedValue(diagnosticsFixture);
+    mocks.createR2ClientFromVault.mockResolvedValue({
       ok: false,
       reason: 'vault-locked',
     });
@@ -136,8 +138,8 @@ describe('Storage Diagnostics API', () => {
   });
 
   it('returns success for a valid R2 connectivity check', async () => {
-    getStorageDiagnostics.mockResolvedValue(diagnosticsFixture);
-    createR2ClientFromVault.mockResolvedValue({
+    mocks.getStorageDiagnostics.mockResolvedValue(diagnosticsFixture);
+    mocks.createR2ClientFromVault.mockResolvedValue({
       ok: true,
       client: {
         send: vi.fn().mockResolvedValue({ KeyCount: 1 }),

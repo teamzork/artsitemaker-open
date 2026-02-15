@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 import fs from 'fs/promises';
 import path from 'path';
 import sharp from 'sharp';
-import { getContentAssetsPath } from '../../../lib/paths';
+import { getUserAssetsPath } from '../../../lib/paths';
 import {
   ALLOWED_TEXTURE_IMAGE_EXTENSIONS,
   ALLOWED_TEXTURE_IMAGE_MIME_TYPES,
@@ -26,7 +26,7 @@ async function fileExists(filePath: string): Promise<boolean> {
  */
 export const GET: APIRoute = async () => {
   try {
-    const assetsPath = getContentAssetsPath();
+    const assetsPath = getUserAssetsPath();
     const texturesPath = path.join(assetsPath, 'textures');
 
     // Ensure textures directory exists
@@ -43,7 +43,7 @@ export const GET: APIRoute = async () => {
         textures.push({
           filename: file,
           path: relativePath,
-          url: `/content-assets/${relativePath}`
+          url: `/user-assets/${relativePath}`
         });
       }
     }
@@ -96,8 +96,8 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    // Get content assets path and ensure directory exists
-    const assetsPath = getContentAssetsPath();
+    // Get user assets path and ensure directory exists
+    const assetsPath = getUserAssetsPath();
     const targetDir = temporary ? '.temp/textures' : 'textures';
     const texturesDir = path.join(assetsPath, targetDir);
     await fs.mkdir(texturesDir, { recursive: true });
@@ -154,7 +154,7 @@ export const POST: APIRoute = async ({ request }) => {
       success: true,
       path: relativePath,
       filename: filename,
-      url: `/content-assets/${relativePath}`,
+      url: `/user-assets/${relativePath}`,
       isTemporary: temporary
     }), {
       status: 200,
@@ -192,7 +192,7 @@ export const PUT: APIRoute = async ({ request }) => {
       });
     }
 
-    const assetsPath = getContentAssetsPath();
+    const assetsPath = getUserAssetsPath();
     const tempFilePath = path.join(assetsPath, tempPath);
 
     // Check if temp file exists
@@ -217,7 +217,7 @@ export const PUT: APIRoute = async ({ request }) => {
     return new Response(JSON.stringify({
       success: true,
       path: permanentPath,
-      url: `/content-assets/${permanentPath}`
+      url: `/user-assets/${permanentPath}`
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
@@ -256,8 +256,8 @@ export const DELETE: APIRoute = async ({ request }) => {
       });
     }
 
-    // Get content assets path
-    const assetsPath = getContentAssetsPath();
+    // Get user assets path
+    const assetsPath = getUserAssetsPath();
     const filePath = path.join(assetsPath, texturePath);
 
     // Check if file exists and delete it

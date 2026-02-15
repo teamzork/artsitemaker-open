@@ -57,10 +57,8 @@ const previewUserDataPath = path.join(artSiteMakerRoot, 'demo-site', 'user-data'
 
 globalThis.__ARTSITEMAKER_PREVIEW__ = {
   userDataPath: previewUserDataPath,
-  contentPath: previewUserDataPath, // Deprecated but kept for backward compatibility
   themeName: previewTheme,
   userAssetsBaseUrl: '/demo-user-assets',
-  contentAssetsBaseUrl: '/demo-user-assets', // Deprecated but kept for backward compatibility
   imageBaseUrl: '', // Empty string means images are served from root (/, not /demo)
   mode: 'demo'
 };

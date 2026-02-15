@@ -22,6 +22,8 @@ function ensureMigration(): void {
   runAutoMigration();
 }
 
+let oauthWarningLogged = false;
+
 export const onRequest = defineMiddleware(async (context, next) => {
   // Run auto-migration on first request
   ensureMigration();
@@ -48,7 +50,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
   if (!isOAuthConfigured()) {
     // In development without OAuth config, allow access with a warning
     if (import.meta.env.DEV) {
-      console.warn('⚠️  OAuth not configured - admin access is unrestricted in development');
+      if (!oauthWarningLogged) {
+        oauthWarningLogged = true;
+        console.warn('⚠️  OAuth not configured - admin access is unrestricted in development');
+      }
       return next();
     }
     // In production, redirect to login which will show config error

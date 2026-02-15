@@ -11,7 +11,18 @@ WATCHER_PID=$!
 
 # Start image server in the background
 echo "🖼️  Starting image server..."
-npx serve files -p 3001 --cors &
+# Resolve files path from artis.config.yaml (user-data project)
+FILES_DIR=$(node -e "
+const y=require('js-yaml'),f=require('fs'),p=require('path');
+try {
+  const c=y.load(f.readFileSync('artis.config.yaml','utf-8'));
+  const udp=c.userDataPath||c.contentPath||'';
+  if(udp){const r=p.isAbsolute(udp)?udp:p.resolve(udp);const fp=p.join(r,'files');if(f.existsSync(fp)){console.log(fp);process.exit(0)}}
+} catch{}
+console.log('files');
+" 2>/dev/null)
+echo "   Serving from: $FILES_DIR"
+npx serve "$FILES_DIR" -p 3001 --cors &
 IMAGE_SERVER_PID=$!
 
 # Cleanup function to kill watcher and image server on exit

@@ -20,8 +20,6 @@ export interface ArtSiteMakerContext {
     imageBaseUrl?: string;
     /** Override user assets base URL (new, preferred) */
     userAssetsBaseUrl?: string;
-    /** Override content assets base URL (deprecated, use userAssetsBaseUrl) */
-    contentAssetsBaseUrl?: string;
     /** Current mode: 'production' | 'preview' | 'demo' */
     mode?: 'production' | 'preview' | 'demo';
 }

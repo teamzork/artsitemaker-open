@@ -8,7 +8,15 @@ import Modal from "../../components/Modal.astro";
 import Button from "../../components/ui/Button.astro";
 import { Toaster } from "../../components/ui/Toast";
 import { getContentPath } from "../../lib/paths";
-import { FileText, Compass, PanelBottom, FileCog, Trash2, ChevronRight, Save } from "lucide-react";
+import {
+  FileText,
+  Compass,
+  PanelBottom,
+  FileCog,
+  Trash2,
+  ChevronRight,
+  Save,
+} from "lucide-react";
 import { isCoreContentFile, getCoreContentFileDefault } from "../../lib/pages";
 
 const contentPath = getContentPath();
@@ -271,44 +279,8 @@ try {
           />
         </div>
 
-        <!-- Copyright -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm text-admin-muted mb-2"
-              >Copyright Start Year</label
-            >
-            <input
-              type="number"
-              name="copyrightStart"
-              value={footerSettings.copyrightStart || new Date().getFullYear()}
-              class="w-full"
-            />
-          </div>
-          <div>
-            <label class="block text-sm text-admin-muted mb-2"
-              >Copyright Name</label
-            >
-            <input
-              type="text"
-              name="copyrightName"
-              value={footerSettings.copyrightName || ""}
-              class="w-full"
-              placeholder="Artist Name Art"
-            />
-          </div>
-        </div>
-
         <!-- Options -->
         <div class="flex items-center gap-6">
-          <label class="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              name="showCredits"
-              checked={footerSettings.showCredits !== false}
-              class="w-4 h-4"
-            />
-            <span class="text-sm">Show credits</span>
-          </label>
           <label class="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
@@ -320,13 +292,21 @@ try {
           </label>
         </div>
 
+        <p class="text-xs text-admin-muted">
+          Copyright line settings are managed in <a
+            href="/settings/pages"
+            class="text-admin-accent hover:underline">Settings → Pages & Nav</a
+          >.
+        </p>
+
         <div class="flex items-center gap-4">
           <Button
             type="submit"
             id="footer-save-btn"
             variant="accent"
             disabled
-            tooltip="No changes to save"><Save className="w-4 h-4" />  Save Footer</Button
+            tooltip="No changes to save"
+            ><Save className="w-4 h-4" /> Save Footer</Button
           >
           <span id="footer-status" class="text-sm text-admin-muted"></span>
         </div>
@@ -499,7 +479,6 @@ try {
         }
 
         // Handle unchecked checkboxes
-        if (!formData.has("showCredits")) footerData.showCredits = false;
         if (!formData.has("showLogo")) footerData.showLogo = false;
 
         return fetch("/api/footer", {

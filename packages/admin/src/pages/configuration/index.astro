@@ -331,24 +331,6 @@ const comboboxOptions = Array.from(detectedProjects)
 ---
 
 <AdminLayout title="Configuration">
-  <!-- Vault status lock icon in header -->
-  <a
-    href="#secrets-vault"
-    slot="header-badge"
-    class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-colors"
-    data-vault-badge="config"
-    title="Secrets Vault Status"
-  >
-    <LockClosed
-      class="vault-lock-icon w-4 h-4 text-gray-400"
-      data-vault-icon="closed"
-    />
-    <LockOpen
-      class="vault-lock-icon w-4 h-4 text-gray-400 hidden"
-      data-vault-icon="open"
-    />
-  </a>
-
   <!-- Save button in header -->
   <Button
     type="submit"
@@ -644,16 +626,6 @@ const comboboxOptions = Array.from(detectedProjects)
         <div class="bg-admin-bg rounded-lg p-3 mb-4">
           <div class="text-xs text-admin-muted mb-1">Example Image URL:</div>
           <code class="text-xs text-blue-400 break-all">{exampleImageUrl}</code>
-        </div>
-
-        <div class="flex items-center gap-2 text-sm text-admin-muted">
-          <AlertTriangle className="w-4 h-4 shrink-0 text-yellow-500" />
-          <span
-            >Configure Account ID, Access Key ID, and Secret Access Key in the <a
-              href="#secrets-vault"
-              class="text-blue-400 hover:underline">Secrets Vault</a
-            > below.</span
-          >
         </div>
 
         <div id="r2-status" class="text-sm mt-3"></div>
@@ -2342,6 +2314,25 @@ const comboboxOptions = Array.from(detectedProjects)
     ?.addEventListener("click", async () => {
       const btn = document.getElementById("test-r2-btn") as HTMLButtonElement;
       const statusEl = document.getElementById("r2-status");
+      const accountIdInput = document.getElementById(
+        "r2-account-id",
+      ) as HTMLInputElement | null;
+      const publicUrlInput = document.querySelector(
+        'input[name="r2.publicUrl"]',
+      ) as HTMLInputElement | null;
+      const bucketNameInput = document.querySelector(
+        'input[name="r2.bucketName"]',
+      ) as HTMLInputElement | null;
+
+      const setInputError = (
+        input: HTMLInputElement | null,
+        hasError: boolean,
+      ) => {
+        if (!input) return;
+        input.classList.toggle("border-red-400", hasError);
+        input.classList.toggle("ring-1", hasError);
+        input.classList.toggle("ring-red-400", hasError);
+      };
 
       btn.disabled = true;
       const btnText = btn.querySelector("[data-btn-text]");
@@ -2350,6 +2341,9 @@ const comboboxOptions = Array.from(detectedProjects)
       if (statusEl)
         statusEl.innerHTML =
           '<span class="text-admin-muted">Checking connection...</span>';
+      setInputError(accountIdInput, false);
+      setInputError(publicUrlInput, false);
+      setInputError(bucketNameInput, false);
 
       try {
         // Read credentials from Secrets Vault fields (populated when vault is unlocked)
@@ -2363,22 +2357,20 @@ const comboboxOptions = Array.from(detectedProjects)
           (document.getElementById("r2-secret-access-key") as HTMLInputElement)
             ?.value || "";
         // Read bucket name from Image Hosting form
-        const bucketNameInput = document.querySelector(
-          'input[name="r2.bucketName"]',
-        ) as HTMLInputElement;
         const bucketName = bucketNameInput?.value || "";
+        const publicUrl = publicUrlInput?.value || "";
 
-        if (!accountId) {
+        if (!accountId && vaultState !== "unlocked") {
           if (statusEl) {
             if (vaultState === "locked") {
               statusEl.innerHTML =
-                '<span class="text-yellow-400">⚠️ Unlock the Secrets Vault below and enter your Account ID first</span>';
+                '<span class="text-yellow-400">⚠️ Unlock the Secrets Vault and enter your Account ID first</span>';
             } else if (vaultState === "not-initialized") {
               statusEl.innerHTML =
                 '<span class="text-yellow-400">⚠️ Set up the Secrets Vault and enter your Account ID first</span>';
             } else {
               statusEl.innerHTML =
-                '<span class="text-yellow-400">⚠️ Enter your Account ID in the Secrets Vault to test the connection</span>';
+                '<span class="text-yellow-400">⚠️ Configure Account ID, Access Key ID, and Secret Access Key in the <button type="button" class="text-blue-400 underline underline-offset-2 hover:text-blue-300" onclick="window.openSecretsVault?.()">Secrets Vault</button> to test the connection</span>';
             }
           }
           return;
@@ -2392,6 +2384,7 @@ const comboboxOptions = Array.from(detectedProjects)
             accessKeyId,
             secretAccessKey,
             bucketName,
+            publicUrl,
           }),
         });
         const data = await res.json();
@@ -2401,8 +2394,54 @@ const comboboxOptions = Array.from(detectedProjects)
             statusEl.innerHTML =
               '<span class="text-green-500">✓ Connection successful</span>';
         } else {
-          if (statusEl)
+          const missingFields = Array.isArray(data.missingFields)
+            ? data.missingFields
+            : [];
+
+          if (missingFields.length > 0) {
+            const missingLabels = missingFields.map((field: string) => {
+              if (field === "accountId") {
+                return `Account ID in the <button type="button" class="text-blue-400 underline underline-offset-2 hover:text-blue-300" onclick="window.openSecretsVault?.()">Secrets Vault</button>`;
+              }
+              if (field === "bucketName") {
+                return "Bucket Name";
+              }
+              if (field === "publicUrl") {
+                return "Public URL";
+              }
+              return field;
+            });
+
+            setInputError(
+              accountIdInput,
+              missingFields.includes("accountId"),
+            );
+            setInputError(
+              publicUrlInput,
+              missingFields.includes("publicUrl"),
+            );
+            setInputError(
+              bucketNameInput,
+              missingFields.includes("bucketName"),
+            );
+
+            const focusTarget = missingFields.includes("accountId")
+              ? accountIdInput
+              : missingFields.includes("publicUrl")
+                ? publicUrlInput
+              : missingFields.includes("bucketName")
+                ? bucketNameInput
+                : null;
+            focusTarget?.focus();
+
+            if (statusEl) {
+              statusEl.innerHTML = `<span class="text-red-400">✗ Missing ${missingLabels.join(
+                " and ",
+              )}</span>`;
+            }
+          } else if (statusEl) {
             statusEl.innerHTML = `<span class="text-red-400">✗ ${data.error || "Connection failed"}</span>`;
+          }
         }
       } catch (e) {
         if (statusEl)

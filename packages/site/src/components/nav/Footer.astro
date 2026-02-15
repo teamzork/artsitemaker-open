@@ -94,6 +94,27 @@ const copyrightStart = footer.copyrightStart || 2009;
 const copyrightName = footer.copyrightName || siteTitle;
 const artistName = footer.artistName || "";
 const showCredits = footer.showCredits !== false;
+const allRightsReserved = footer.allRightsReserved !== false;
+
+// Service pages for copyright bar (dynamic from showInCopyright flag)
+const copyrightPages: { label: string; href: string }[] = [];
+try {
+  const pagesDir = path.join(getUserDataPath(), "pages");
+  const files = await fs.readdir(pagesDir);
+  for (const file of files) {
+    if (!file.endsWith(".yaml")) continue;
+    const slug = file.replace(".yaml", "");
+    const content = await fs.readFile(path.join(pagesDir, file), "utf-8");
+    const page = yaml.load(content) as any;
+    if (page?.showInCopyright === true) {
+      const href =
+        page?.pageType === "service" ? `/service/${slug}` : `/${slug}`;
+      copyrightPages.push({ label: page?.title || slug, href });
+    }
+  }
+} catch (e) {
+  // No pages directory or read error
+}
 
 // Navigation items from settings.nav
 let navItems = settings?.nav?.items || [
@@ -107,7 +128,10 @@ navItems = await filterNavigationItems(navItems);
 
 // Footer-specific visibility for custom pages
 const predefinedPageIds = getPredefinedPageIds();
-const footerPageMap = new Map<string, { label: string; href: string; showInFooter: boolean }>();
+const footerPageMap = new Map<
+  string,
+  { label: string; href: string; showInFooter: boolean }
+>();
 
 try {
   const pagesDir = path.join(getUserDataPath(), "pages");
@@ -121,8 +145,7 @@ try {
     const page = yaml.load(content) as any;
     const showInFooter =
       page?.showInFooter === undefined ? true : page?.showInFooter === true;
-    const href =
-      page?.pageType === "service" ? `/service/${slug}` : `/${slug}`;
+    const href = page?.pageType === "service" ? `/service/${slug}` : `/${slug}`;
     footerPageMap.set(slug, {
       label: page?.title || slug,
       href,
@@ -243,19 +266,23 @@ for (const footerMeta of footerPageMap.values()) {
       showCredits && (
         <div class="mt-12 text-center text-xs footer-text">
           <span>
-            © {copyrightStart}-{new Date().getFullYear()} {copyrightName}
+            &copy; {copyrightStart}-{new Date().getFullYear()} {copyrightName}
           </span>
           {artistName && <span> by {artistName}</span>}
-          <span class="mx-2">·</span>
-          <span>All rights reserved</span>
-          <span class="mx-2">·</span>
-          <a href="/service/terms" class="footer-link">
-            Terms of Use
-          </a>
-          <span class="mx-2">·</span>
-          <a href="/service/privacy" class="footer-link">
-            Privacy Policy
-          </a>
+          {allRightsReserved && (
+            <>
+              <span class="mx-2">&middot;</span>
+              <span>All rights reserved</span>
+            </>
+          )}
+          {copyrightPages.map((page) => (
+            <>
+              <span class="mx-2">&middot;</span>
+              <a href={page.href} class="footer-link">
+                {page.label}
+              </a>
+            </>
+          ))}
         </div>
       )
     }

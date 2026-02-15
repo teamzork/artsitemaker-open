@@ -1,6 +1,6 @@
 import path from "path";
 import fs from "fs/promises";
-import { getContentAssetsBaseUrl } from "./paths";
+import { getUserAssetsBaseUrl } from "./paths";
 import { getFontFormat } from "@artsitemaker/shared";
 
 export interface FontFile {
@@ -76,15 +76,15 @@ function generateFontOptions(fonts: FontFile[]): FontOption[] {
  * Generates CSS @font-face rules for the available fonts
  */
 function generateFontFaceCss(fonts: FontFile[]): string {
-  const contentAssetsBaseUrl = getContentAssetsBaseUrl();
+  const userAssetsBaseUrl = getUserAssetsBaseUrl();
 
   return fonts
     .map((font) => {
       const relativePath = path.posix.join("fonts", font.name);
       // Ensure we don't have double slashes if base url ends with /
-      const baseUrl = contentAssetsBaseUrl.endsWith("/")
-        ? contentAssetsBaseUrl.slice(0, -1)
-        : contentAssetsBaseUrl;
+      const baseUrl = userAssetsBaseUrl.endsWith("/")
+        ? userAssetsBaseUrl.slice(0, -1)
+        : userAssetsBaseUrl;
       const fontUrl = `${baseUrl}/${encodeURI(relativePath)}`;
       const format = getFontFormat(font.name);
 
@@ -116,4 +116,3 @@ export async function loadFontData(contentPath: string): Promise<FontData> {
 
   return { sections, css };
 }
-

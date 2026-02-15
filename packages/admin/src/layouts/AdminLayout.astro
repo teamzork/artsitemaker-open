@@ -5,6 +5,7 @@ import { Toaster } from "@components/ui/Toast";
 import Button from "@components/ui/Button.astro";
 import QuickActionsDropdown from "@components/ui/QuickActionsDropdown.astro";
 import SecretsVaultModal from "@components/SecretsVault/SecretsVaultModal.astro";
+import SecretsVaultSetupModal from "@components/SecretsVault/SecretsVaultSetupModal.astro";
 import Modal from "@components/Modal.astro";
 import LockClosed from "../components/icons/LockClosed.astro";
 import LockOpen from "../components/icons/LockOpen.astro";
@@ -245,6 +246,7 @@ const { title, currentPath = Astro.url.pathname } = Astro.props;
 
 <!-- Secrets Vault Modal (global access) -->
 <SecretsVaultModal />
+<SecretsVaultSetupModal />
 
 <!-- Update lock badge when vault state changes -->
 <script>

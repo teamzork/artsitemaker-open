@@ -6,8 +6,58 @@ import Button from "@components/ui/Button.astro";
 import fs from "fs/promises";
 import path from "path";
 import yaml from "js-yaml";
-import { getSettingsFilePath } from "../../lib/config-paths";
-import { FileText, Compass, Home, ListChecks, Save } from "lucide-react";
+import { getSettingsFilePath, getFooterPath } from "../../lib/config-paths";
+import { getContentPath } from "../../lib/paths";
+import {
+  FileText,
+  Compass,
+  Home,
+  ListChecks,
+  Save,
+  Copyright,
+} from "lucide-react";
+
+// Load footer data for copyright bar
+let footerData: any = {};
+try {
+  const footerContent = await fs.readFile(getFooterPath(), "utf-8");
+  footerData = (yaml.load(footerContent) as any) || {};
+} catch (e) {
+  // If footer.yaml doesn't exist, try fallback to settings.yaml footer section
+  try {
+    const settingsPath = getSettingsFilePath();
+    const content = await fs.readFile(settingsPath, "utf-8");
+    const settings = yaml.load(content) as any;
+    if (settings?.footer) footerData = settings.footer;
+  } catch (e2) {}
+}
+
+// Load pages that could appear in copyright line
+interface CopyrightPageInfo {
+  slug: string;
+  title: string;
+  showInCopyright: boolean;
+  pageType?: string;
+}
+const copyrightPages: CopyrightPageInfo[] = [];
+try {
+  const contentPath = getContentPath();
+  const pagesDir = path.join(contentPath, "pages");
+  const files = await fs.readdir(pagesDir);
+  for (const file of files) {
+    if (!file.endsWith(".yaml")) continue;
+    const slug = file.replace(".yaml", "");
+    const content = await fs.readFile(path.join(pagesDir, file), "utf-8");
+    const page = yaml.load(content) as any;
+    if (!page) continue;
+    copyrightPages.push({
+      slug,
+      title: page.title || slug,
+      showInCopyright: page.showInCopyright === true,
+      pageType: page.pageType,
+    });
+  }
+} catch (e) {}
 
 // Load nav config on server side to set Toggle initial state
 let showLogoDefault = true;
@@ -34,7 +84,7 @@ try {
       tooltip="No changes to save"
       tooltipSide="bottom"
     >
-      <Save className="w-4 h-4" />  Save Changes
+      <Save className="w-4 h-4" /> Save Changes
     </Button>
   </div>
   <div class="max-w-5xl space-y-8">
@@ -171,6 +221,128 @@ try {
         </table>
       </div>
     </div>
+
+    <!-- Copyright Bar -->
+    <div class="card">
+      <div class="flex items-center gap-2 mb-2">
+        <Copyright className="w-5 h-5 text-admin-accent" />
+        <h3 class="text-lg font-semibold">Copyright Bar</h3>
+      </div>
+      <p class="text-admin-muted text-sm mb-4">
+        Configure the copyright line that appears at the bottom of every page.
+      </p>
+
+      <!-- Live Preview -->
+      <div class="copyright-preview mb-6">
+        <div class="text-xs text-admin-muted mb-2 uppercase tracking-wider">
+          Preview
+        </div>
+        <div id="copyright-preview-line" class="text-sm text-admin-muted"></div>
+      </div>
+
+      <div class="space-y-4">
+        <!-- Copyright Name & Start Year -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm text-admin-muted mb-2"
+              >Copyright Name</label
+            >
+            <input
+              type="text"
+              id="copyright-name"
+              value={footerData.copyrightName || ""}
+              class="w-full bg-admin-sidebar border border-admin-border rounded-lg p-3 text-sm text-admin-text"
+              placeholder="Artist Name Art"
+            />
+          </div>
+          <div>
+            <label class="block text-sm text-admin-muted mb-2"
+              >Copyright Start Year</label
+            >
+            <input
+              type="number"
+              id="copyright-start"
+              value={footerData.copyrightStart || new Date().getFullYear()}
+              class="w-full bg-admin-sidebar border border-admin-border rounded-lg p-3 text-sm text-admin-text"
+            />
+          </div>
+        </div>
+
+        <!-- Artist Name -->
+        <div>
+          <label class="block text-sm text-admin-muted mb-2"
+            >Artist Name <span class="text-xs">(shown as "by Artist Name")</span
+            ></label
+          >
+          <input
+            type="text"
+            id="copyright-artist"
+            value={footerData.artistName || ""}
+            class="w-full bg-admin-sidebar border border-admin-border rounded-lg p-3 text-sm text-admin-text"
+            placeholder="Jane Doe"
+          />
+        </div>
+
+        <!-- Toggles -->
+        <div class="flex flex-wrap items-center gap-6">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              id="copyright-all-rights"
+              checked={footerData.allRightsReserved !== false}
+              class="w-4 h-4 accent-[var(--admin-accent)]"
+            />
+            <span class="text-sm">Show "All rights reserved"</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              id="copyright-show-credits"
+              checked={footerData.showCredits !== false}
+              class="w-4 h-4 accent-[var(--admin-accent)]"
+            />
+            <span class="text-sm">Show copyright bar</span>
+          </label>
+        </div>
+
+        <!-- Service Pages in Copyright -->
+        {
+          copyrightPages.length > 0 && (
+            <div>
+              <label class="block text-sm text-admin-muted mb-2">
+                Service Page Links
+              </label>
+              <p class="text-xs text-admin-muted mb-3">
+                Choose which service pages appear as links in the copyright
+                line.
+              </p>
+              <div class="space-y-2">
+                {copyrightPages.map((sp: CopyrightPageInfo) => (
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      class="copyright-service-page w-4 h-4 accent-[var(--admin-accent)]"
+                      data-slug={sp.slug}
+                      data-title={sp.title}
+                      data-page-type={sp.pageType}
+                      checked={sp.showInCopyright}
+                    />
+                    <span class="text-sm">{sp.title}</span>
+                    <span class="text-xs text-admin-muted">
+                      {sp.pageType === "service"
+                        ? `/service/${sp.slug}`
+                        : `/${sp.slug}`}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )
+        }
+
+
+      </div>
+    </div>
   </div>
 </AdminLayout>
 
@@ -264,6 +436,18 @@ try {
   .nav-checkbox {
     accent-color: var(--admin-accent);
   }
+
+  .copyright-preview {
+    background: var(--admin-sidebar);
+    border: 1px solid var(--admin-border);
+    border-radius: 0.5rem;
+    padding: 1rem 1.25rem;
+  }
+
+  .copyright-preview-disabled {
+    opacity: 0.4;
+    text-decoration: line-through;
+  }
 </style>
 
 <script>
@@ -321,6 +505,9 @@ try {
   let navConfig: NavConfig = { showLogo: true, items: [] };
   let originalNavConfig: string = "";
 
+  // Copyright state
+  let originalCopyrightState = "";
+
   let hasChanges = false;
   let isSaving = false;
 
@@ -374,6 +561,70 @@ try {
   const navItemsContainer = document.getElementById("nav-items-container");
   const navEmptyState = document.getElementById("nav-empty-state");
   const addNavItemBtn = document.getElementById("add-nav-item-btn");
+
+  // Copyright elements
+  const copyrightNameInput = document.getElementById(
+    "copyright-name",
+  ) as HTMLInputElement;
+  const copyrightStartInput = document.getElementById(
+    "copyright-start",
+  ) as HTMLInputElement;
+  const copyrightArtistInput = document.getElementById(
+    "copyright-artist",
+  ) as HTMLInputElement;
+  const copyrightAllRightsCheckbox = document.getElementById(
+    "copyright-all-rights",
+  ) as HTMLInputElement;
+  const copyrightShowCreditsCheckbox = document.getElementById(
+    "copyright-show-credits",
+  ) as HTMLInputElement;
+  const copyrightPreviewLine = document.getElementById(
+    "copyright-preview-line",
+  ) as HTMLElement;
+  const copyrightServicePageCheckboxes = document.querySelectorAll(
+    ".copyright-service-page",
+  ) as NodeListOf<HTMLInputElement>;
+
+  // Copyright helper functions
+  function getCopyrightState() {
+    const servicePageStates: Record<string, boolean> = {};
+    copyrightServicePageCheckboxes.forEach((cb) => {
+      servicePageStates[cb.dataset.slug || ""] = cb.checked;
+    });
+    return JSON.stringify({
+      name: copyrightNameInput?.value || "",
+      start: copyrightStartInput?.value || "",
+      artist: copyrightArtistInput?.value || "",
+      allRights: copyrightAllRightsCheckbox?.checked ?? true,
+      showCredits: copyrightShowCreditsCheckbox?.checked ?? true,
+      servicePages: servicePageStates,
+    });
+  }
+
+  function updateCopyrightPreview() {
+    if (!copyrightPreviewLine) return;
+    const name = copyrightNameInput?.value || "Site Name";
+    const start = copyrightStartInput?.value || new Date().getFullYear();
+    const artist = copyrightArtistInput?.value || "";
+    const allRights = copyrightAllRightsCheckbox?.checked ?? true;
+    const showCredits = copyrightShowCreditsCheckbox?.checked ?? true;
+
+    const parts: string[] = [];
+    parts.push(`© ${start}-${new Date().getFullYear()} ${name}`);
+    if (artist) parts[0] += ` by ${artist}`;
+    if (allRights) parts.push("All rights reserved");
+
+    copyrightServicePageCheckboxes.forEach((cb) => {
+      if (cb.checked) parts.push(cb.dataset.title || cb.dataset.slug || "");
+    });
+
+    copyrightPreviewLine.textContent = parts.join(" · ");
+    copyrightPreviewLine.classList.toggle(
+      "copyright-preview-disabled",
+      !showCredits,
+    );
+  }
+
 
   // ============================================================================
   // Constants
@@ -1261,10 +1512,12 @@ try {
         ...customNavItems,
       ],
     });
+    const currentCopyrightState = getCopyrightState();
 
     hasChanges =
       currentPagesConfig !== originalPagesConfig ||
-      currentNavConfig !== originalNavConfig;
+      currentNavConfig !== originalNavConfig ||
+      currentCopyrightState !== originalCopyrightState;
     updateSaveButton();
   }
 
@@ -1325,6 +1578,48 @@ try {
         throw new Error(error.error || "Failed to save navigation config");
       }
 
+      // Save copyright/footer data
+      const footerRes = await fetch("/api/footer");
+      let existingFooter: any = {};
+      if (footerRes.ok) {
+        existingFooter = await footerRes.json();
+      }
+
+      const updatedFooter = {
+        ...existingFooter,
+        copyrightName: copyrightNameInput?.value || "",
+        copyrightStart: parseInt(
+          copyrightStartInput?.value || "" + new Date().getFullYear(),
+        ),
+        artistName: copyrightArtistInput?.value || "",
+        allRightsReserved: copyrightAllRightsCheckbox?.checked ?? true,
+        showCredits: copyrightShowCreditsCheckbox?.checked ?? true,
+      };
+
+      const saveFooterRes = await fetch("/api/footer", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedFooter),
+      });
+
+      if (!saveFooterRes.ok) throw new Error("Failed to save footer data");
+
+      // Save showInCopyright to each service page
+      const pageUpdates: Promise<Response>[] = [];
+      copyrightServicePageCheckboxes.forEach((cb) => {
+        const slug = cb.dataset.slug;
+        if (!slug) return;
+        pageUpdates.push(
+          fetch(`/api/page/${slug}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ showInCopyright: cb.checked }),
+          }),
+        );
+      });
+
+      await Promise.all(pageUpdates);
+
       const pagesResult = await pagesRes.json();
       const navResult = await navRes.json();
 
@@ -1333,6 +1628,8 @@ try {
 
       navConfig = navResult.nav;
       originalNavConfig = JSON.stringify(navConfig);
+
+      originalCopyrightState = getCopyrightState();
 
       hasChanges = false;
 
@@ -1350,7 +1647,7 @@ try {
         new CustomEvent("artsitemaker:toast", {
           detail: {
             title: "Settings saved",
-            description: "Pages and navigation configuration updated",
+            description: "Pages, navigation, and copyright settings updated",
             variant: "success",
           },
         }),
@@ -1366,4 +1663,40 @@ try {
   // Initialize
   loadData();
   saveBtn.addEventListener("click", saveConfig);
+
+  // ==========================================================================
+  // Copyright Bar Event Listeners
+  // ==========================================================================
+
+  // Initialize copyright state and preview
+  if (copyrightNameInput && copyrightStartInput && copyrightArtistInput) {
+    originalCopyrightState = getCopyrightState();
+    updateCopyrightPreview();
+
+    const copyrightInputs = [
+      copyrightNameInput,
+      copyrightStartInput,
+      copyrightArtistInput,
+    ];
+    copyrightInputs.forEach((input) => {
+      input.addEventListener("input", () => {
+        updateCopyrightPreview();
+        markChanged();
+      });
+    });
+
+    [copyrightAllRightsCheckbox, copyrightShowCreditsCheckbox].forEach((cb) => {
+      cb?.addEventListener("change", () => {
+        updateCopyrightPreview();
+        markChanged();
+      });
+    });
+
+    copyrightServicePageCheckboxes.forEach((cb) => {
+      cb.addEventListener("change", () => {
+        updateCopyrightPreview();
+        markChanged();
+      });
+    });
+  }
 </script>

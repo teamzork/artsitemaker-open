@@ -255,13 +255,11 @@ As of this version, the `content/` directory has been renamed to `user-data/` fo
 - **Old naming**: `content/` directory with `contentPath` config option
 - **New naming**: `user-data/` directory with `userDataPath` config option
 - **Backward compatibility**: Both names are fully supported during the migration period
-- **Asset URLs**: Both `/content-assets/*` and `/user-assets/*` URL paths work
+- **Asset URLs**: `/user-assets/*` URL paths work (`/content-assets/*` removed)
 
 **Function aliases available:**
 - `getContentPath()` → `getUserDataPath()` (deprecated)
-- `getContentAssetsPath()` → `getUserAssetsPath()` (deprecated)
-- `getContentAssetsBaseUrl()` → `getUserAssetsBaseUrl()` (deprecated)
-- `resolveContentAssetUrl()` → `resolveUserAssetUrl()` (deprecated)
+- Content-assets aliases (`getContentAssetsPath()`, `getContentAssetsBaseUrl()`, `resolveContentAssetUrl()`) have been removed
 
 **Configuration:**
 ```yaml

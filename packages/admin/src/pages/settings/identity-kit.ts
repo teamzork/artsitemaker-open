@@ -691,7 +691,7 @@ export class IdentityKitManager {
     ) {
       return texturePath;
     }
-    return `/content-assets/${texturePath}`;
+    return `/user-assets/${texturePath}`;
   }
 
   private initAssetLibrary(config: AssetLibraryConfig) {

@@ -1,12 +1,12 @@
 // packages/admin/src/pages/api/identity/logo.ts
 // API endpoint for uploading Identity Kit logo assets
-// Stores files in content/assets/logos/ and returns relative path
+// Stores files in user-data/assets/logos/ and returns relative path
 
 import type { APIRoute } from 'astro';
 import fs from 'fs/promises';
 import path from 'path';
 import sharp from 'sharp';
-import { getContentAssetsPath } from '../../../lib/paths';
+import { getUserAssetsPath } from '../../../lib/paths';
 import {
     ALLOWED_IDENTITY_IMAGE_EXTENSIONS,
     ALLOWED_IDENTITY_IMAGE_MIME_TYPES,
@@ -21,7 +21,7 @@ const MAX_LOGO_WIDTH = 400; // Max width for processed logos
  */
 export const GET: APIRoute = async () => {
     try {
-        const assetsPath = getContentAssetsPath();
+        const assetsPath = getUserAssetsPath();
         const logosPath = path.join(assetsPath, 'logos');
 
         // Ensure logos directory exists
@@ -38,7 +38,7 @@ export const GET: APIRoute = async () => {
                 logos.push({
                     filename: file,
                     path: relativePath,
-                    url: `/content-assets/${relativePath}`
+                    url: `/user-assets/${relativePath}`
                 });
             }
         }
@@ -94,8 +94,8 @@ export const POST: APIRoute = async ({ request }) => {
             });
         }
 
-        // Get content assets path
-        const assetsPath = getContentAssetsPath();
+        // Get user assets path
+        const assetsPath = getUserAssetsPath();
         const logosPath = path.join(assetsPath, 'logos');
 
         // Ensure logos directory exists
@@ -172,7 +172,7 @@ export const POST: APIRoute = async ({ request }) => {
             path: relativePath,
             filename: filename,
             size: stats.size,
-            url: `/content-assets/${relativePath}`
+            url: `/user-assets/${relativePath}`
         }), {
             status: 200,
             headers: { 'Content-Type': 'application/json' }
@@ -208,8 +208,8 @@ export const DELETE: APIRoute = async ({ request }) => {
             });
         }
 
-        // Get content assets path
-        const assetsPath = getContentAssetsPath();
+        // Get user assets path
+        const assetsPath = getUserAssetsPath();
         const filePath = path.join(assetsPath, logoPath);
 
         // Check if file exists and delete it

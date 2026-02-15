@@ -188,31 +188,43 @@ function hasArtworks(contentPath: string): boolean {
 
 /**
  * Check if a theme is configured
- * Checks both settings.yaml and settings/theme.yaml for theme configuration
+ * Checks settings/settings.yaml first (canonical source), then settings/theme.yaml as fallback
  */
 function hasActiveTheme(contentPath: string): boolean {
-    // Check settings/theme.yaml first (preferred location)
+    // Check settings/settings.yaml first (canonical source used by theme selector)
+    const settingsPath = path.join(contentPath, 'settings', 'settings.yaml');
+    if (fs.existsSync(settingsPath)) {
+        try {
+            const content = fs.readFileSync(settingsPath, 'utf-8');
+            const settings = yaml.load(content) as any;
+            if (typeof settings?.theme === 'string' && settings.theme) {
+                return true;
+            }
+        } catch {
+            // Fall through
+        }
+    }
+
+    // Fallback: check settings/theme.yaml
     const themeYamlPath = path.join(contentPath, 'settings', 'theme.yaml');
     if (fs.existsSync(themeYamlPath)) {
         try {
             const content = fs.readFileSync(themeYamlPath, 'utf-8');
             const themeConfig = yaml.load(content) as any;
-            // Check for theme: <name> or active: <name>
             if (themeConfig?.theme || themeConfig?.active) {
                 return true;
             }
         } catch {
-            // Fall through to check settings.yaml
+            // Fall through
         }
     }
 
-    // Check settings.yaml as fallback
-    const settingsPath = path.join(contentPath, 'settings.yaml');
-    if (fs.existsSync(settingsPath)) {
+    // Legacy: check root settings.yaml
+    const legacySettingsPath = path.join(contentPath, 'settings.yaml');
+    if (fs.existsSync(legacySettingsPath)) {
         try {
-            const content = fs.readFileSync(settingsPath, 'utf-8');
+            const content = fs.readFileSync(legacySettingsPath, 'utf-8');
             const settings = yaml.load(content) as any;
-            // Check for theme.active or theme (string)
             if (settings?.theme?.active || (typeof settings?.theme === 'string' && settings.theme)) {
                 return true;
             }
@@ -230,22 +242,36 @@ function hasActiveTheme(contentPath: string): boolean {
 function getThemeInfo(contentPath: string, themesPath: string, repoRoot: string): ThemeInfo | null {
     let themeName: string | null = null;
 
-    // Try to get theme name from settings/theme.yaml
-    const themeYamlPath = path.join(contentPath, 'settings', 'theme.yaml');
-    if (fs.existsSync(themeYamlPath)) {
+    // Check settings/settings.yaml first (canonical source used by theme selector)
+    const settingsPath = path.join(contentPath, 'settings', 'settings.yaml');
+    if (fs.existsSync(settingsPath)) {
         try {
-            const content = fs.readFileSync(themeYamlPath, 'utf-8');
-            const config = yaml.load(content) as any;
-            themeName = config?.theme || config?.active;
+            const content = fs.readFileSync(settingsPath, 'utf-8');
+            const settings = yaml.load(content) as any;
+            if (typeof settings?.theme === 'string' && settings.theme) {
+                themeName = settings.theme;
+            }
         } catch { }
     }
 
-    // Fallback to settings.yaml
+    // Fallback: check settings/theme.yaml
     if (!themeName) {
-        const settingsPath = path.join(contentPath, 'settings.yaml');
-        if (fs.existsSync(settingsPath)) {
+        const themeYamlPath = path.join(contentPath, 'settings', 'theme.yaml');
+        if (fs.existsSync(themeYamlPath)) {
             try {
-                const content = fs.readFileSync(settingsPath, 'utf-8');
+                const content = fs.readFileSync(themeYamlPath, 'utf-8');
+                const config = yaml.load(content) as any;
+                themeName = config?.theme || config?.active;
+            } catch { }
+        }
+    }
+
+    // Legacy: check root settings.yaml
+    if (!themeName) {
+        const legacySettingsPath = path.join(contentPath, 'settings.yaml');
+        if (fs.existsSync(legacySettingsPath)) {
+            try {
+                const content = fs.readFileSync(legacySettingsPath, 'utf-8');
                 const settings = yaml.load(content) as any;
                 themeName = settings?.theme?.active || (typeof settings?.theme === 'string' ? settings.theme : null);
             } catch { }
