@@ -471,12 +471,16 @@ SLIDESHOW - White background, thumbnails below
 
 .more-info-btn {
     color: #000000;
-    text-decoration: underline;
+    background: transparent;
+    border: 1px solid rgba(0, 0, 0, 0.2);
     font-size: 12px;
+    letter-spacing: 0.05em;
+    border-radius: 4px;
 }
 
 .more-info-btn:hover {
-    text-decoration: none;
+    background: rgba(0, 0, 0, 0.04);
+    border-color: rgba(0, 0, 0, 0.4);
 }
 
 

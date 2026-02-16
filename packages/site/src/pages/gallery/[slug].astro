@@ -114,7 +114,7 @@ const mainImageUrl = artwork?.processing?.processedAt
       <div class="space-y-4 metadata-section">
         <h1 class="text-3xl artwork-title">{artwork.title}</h1>
         
-        <div class="flex flex-wrap gap-4 text-sm text-muted">
+        <div class="flex flex-wrap gap-2 text-sm">
           {artwork.year && <span>{artwork.year}</span>}
           {artwork.medium && <span>• {artwork.medium}</span>}
           {artwork.dimensions && <span>• {artwork.dimensions}</span>}
@@ -123,6 +123,14 @@ const mainImageUrl = artwork?.processing?.processedAt
         {artwork.description && (
           <div class="prose prose-invert max-w-none">
             <p class="description">{artwork.description}</p>
+          </div>
+        )}
+
+        {artwork.tags?.length > 0 && (
+          <div class="tags-container">
+            {artwork.tags.map((tag: string) => (
+              <span class="art-tag">#{tag}</span>
+            ))}
           </div>
         )}
       </div>
@@ -160,17 +168,8 @@ const mainImageUrl = artwork?.processing?.processedAt
         </div>
       )}
       
-      <!-- Tags and Sales Info -->
+      <!-- Sales Info -->
       <div class="space-y-4">
-        <!-- Tags - hashtag style -->
-        {artwork.tags?.length > 0 && (
-          <div class="tags-container">
-            {artwork.tags.map((tag: string) => (
-              <span class="tag">#{tag}</span>
-            ))}
-          </div>
-        )}
-        
         <!-- Sales info -->
         {artwork.price && !artwork.sold && (
           <div class="mt-6 p-4 price-box w-fit">

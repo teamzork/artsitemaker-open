@@ -66,6 +66,13 @@ h1, h2, h3 {
 
 .slideshow-container .more-info-btn {
     color: var(--color-text-inverted, #e0e0e0);
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.slideshow-container .more-info-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: var(--color-accent, #efb600);
 }
 
 .slideshow-container .carousel-container {
@@ -411,7 +418,7 @@ SLIDESHOW
 .artwork-title {
     font-family: var(--font-heading, sans-serif);
     font-weight: 100;
-    font-size: 20px;
+    font-size: 22px;
     color: var(--color-text, #323232);
 }
 
@@ -500,6 +507,77 @@ ARTWORK DETAIL PAGE
 .artwork-detail {
     padding-top: 40px;
     padding-bottom: 60px;
+}
+
+/* Museum plaque metadata styling */
+.metadata-section {
+    position: relative;
+    padding: 18px 20px 16px;
+    display: block;
+    width: fit-content;
+    max-width: 100%;
+    margin: 0 auto;
+    background: linear-gradient(180deg, #efede8 0%, #e7e3dc 55%, #e2ddd5 100%);
+    border: 1px solid #d5d0c7;
+    border-radius: 4px;
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.15), 0 12px 24px rgba(0, 0, 0, 0.22);
+    color: #3b3b3b;
+}
+
+.metadata-section::before {
+    content: '';
+    position: absolute;
+    inset: 6px;
+    border: 1px solid #dcd7ce;
+    border-radius: 2px;
+    pointer-events: none;
+}
+
+.metadata-section .artwork-title {
+    font-size: clamp(1.4rem, 1.1rem + 1vw, 2rem);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    margin: 0;
+}
+
+.metadata-section {
+    color: #4a4a4a;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    opacity: 0.85;
+}
+
+.metadata-section .description {
+    color: #3b3b3b;
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.metadata-section .tags-container {
+    margin-top: 10px;
+    gap: 6px;
+}
+
+.metadata-section .art-tag {
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #4a4a4a;
+    background: rgba(255, 255, 255, 0.5);
+    border: 1px solid #d5d0c7;
+    padding: 2px 6px;
+    border-radius: 2px;
+    opacity: 1;
+}
+
+@media (max-width: 720px) {
+    .metadata-section {
+        padding: 14px 16px 12px;
+    }
+
+    .metadata-section::before {
+        inset: 4px;
+    }
 }
 
 

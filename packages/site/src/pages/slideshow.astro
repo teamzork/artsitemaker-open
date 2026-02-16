@@ -23,9 +23,12 @@ const artworks: ArtworkData[] = await listArtworks();
     <!-- Main image area -->
     <div class="main-image-wrapper">
       <button id="prev-btn" class="nav-btn nav-prev" aria-label="Previous" data-testid="slideshow-prev-btn">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="15,18 9,12 15,6"></polyline>
-        </svg>
+        <img
+          src="/themes/kazya-mazya/assets/nav-arrow.svg"
+          alt=""
+          aria-hidden="true"
+          class="nav-btn-icon"
+        />
       </button>
 
       <div id="slide-viewport" class="slide-viewport" data-testid="slideshow-main-image">
@@ -47,9 +50,12 @@ const artworks: ArtworkData[] = await listArtworks();
       </div>
 
       <button id="next-btn" class="nav-btn nav-next" aria-label="Next" data-testid="slideshow-next-btn">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="9,18 15,12 9,6"></polyline>
-        </svg>
+        <img
+          src="/themes/kazya-mazya/assets/nav-arrow.svg"
+          alt=""
+          aria-hidden="true"
+          class="nav-btn-icon"
+        />
       </button>
     </div>
 
@@ -58,11 +64,11 @@ const artworks: ArtworkData[] = await listArtworks();
       <span id="artwork-title" class="artwork-title" data-testid="slideshow-title">
         {artworks[0]?.title || ''}
       </span>
-      <a id="more-info-link" href={`/gallery/${artworks[0]?.slug}`} class="more-info-btn" title="More Info" data-testid="slideshow-more-info">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <a id="more-info-link" href={`/gallery/${artworks[0]?.slug}`} class="more-info-btn" title="View details" data-testid="slideshow-more-info">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="10"></circle>
-          <line x1="12" y1="16" x2="12" y2="12"></line>
-          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          <path d="M12 16v-4"></path>
+          <path d="M12 8h.01"></path>
         </svg>
       </a>
     </div>
@@ -127,7 +133,6 @@ const artworks: ArtworkData[] = await listArtworks();
     max-width: 100%;
     max-height: 100%;
     position: relative;
-    overflow: hidden;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -146,6 +151,7 @@ const artworks: ArtworkData[] = await listArtworks();
     transition: transform 800ms ease;
     will-change: transform;
     z-index: 0;
+    padding: 0 9%;
   }
 
   .slide-panel.active {
@@ -170,7 +176,7 @@ const artworks: ArtworkData[] = await listArtworks();
   
   .slide-panel img {
     max-width: 100%;
-    max-height: calc(100vh - 250px);
+    max-height: calc(100vh - 280px);
     object-fit: contain;
     border-radius: var(--corner-radius, 12px);
     box-shadow: 2px 2px 20px rgba(0, 0, 0, 0.5);
@@ -202,11 +208,21 @@ const artworks: ArtworkData[] = await listArtworks();
     background-color: rgba(255, 255, 255, 0.12);
     border: none;
     color: var(--color-text);
-    padding: 30px 18px;
+    padding: 16px 12px;
     cursor: pointer;
     transition: background-color 0.4s ease-in-out, opacity 0.2s ease;
     z-index: 10;
     border-radius: 8px;
+  }
+
+  .nav-btn-icon {
+    display: block;
+    width: auto;
+    height: 100px;
+  }
+
+  .nav-prev .nav-btn-icon {
+    transform: scaleX(-1);
   }
   
   .nav-btn:hover {
@@ -234,26 +250,35 @@ const artworks: ArtworkData[] = await listArtworks();
   
   .artwork-title {
     font-family: var(--font-heading, sans-serif);
-    font-size: 20px;
     font-weight: 100;
     color: var(--color-text, #323232);
     letter-spacing: 0.05em;
   }
   
   .more-info-btn {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: var(--color-text);
-    opacity: 0.6;
-    transition: opacity 0.2s, color 0.2s;
-    border: none;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 8px 12px;
+    font-family: var(--font-body, sans-serif);
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    color: var(--color-text, #323232);
+    background: var(--color-surface, rgba(0, 0, 0, 0.06));
+    border: 1px solid var(--color-text, rgba(0, 0, 0, 0.12));
+    border-radius: 6px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
   }
   
   .more-info-btn:hover {
-    opacity: 1;
     color: var(--color-accent, #efb600);
-    border: none;
+    background: var(--color-surface-hover, rgba(0, 0, 0, 0.1));
+    border-color: var(--color-accent, #efb600);
   }
   
   /* Carousel container - fixed at bottom */
@@ -368,12 +393,13 @@ const artworks: ArtworkData[] = await listArtworks();
       padding: 35px 0 15px; /* Maintain spacing from nav on mobile */
     }
     
-    .nav-btn {
-      padding: 15px 10px;
+    .slide-panel {
+      padding: 0 3%;
     }
     
-    .nav-prev { left: 5px; }
-    .nav-next { right: 5px; }
+    .nav-btn {
+      display: none;
+    }
   }
 </style>
 

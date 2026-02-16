@@ -277,6 +277,17 @@ SLIDESHOW
         color: var(--color-text-muted, #a1a1aa);
         letter-spacing: 0.02em;
     }
+    
+    .more-info-btn {
+        color: var(--color-text-light, #f4f4f5);
+        background: rgba(255, 255, 255, 0.08);
+        border-color: rgba(255, 255, 255, 0.15);
+    }
+    
+    .more-info-btn:hover {
+        background: rgba(255, 255, 255, 0.12);
+        border-color: var(--color-accent, #3b82f6);
+    }
     /* Carousel container */
     
     .carousel-container {

@@ -1482,13 +1482,10 @@ try {
         data.seo.disallowAiTraining = false;
       }
 
-      // Handle nav.showLogo toggle
+      // Handle nav.showLogo toggle (only if present in form)
       if (formData.has("nav.showLogo")) {
         if (!data.nav) data.nav = {};
         data.nav.showLogo = formData.get("nav.showLogo") === "on";
-      } else {
-        if (!data.nav) data.nav = {};
-        data.nav.showLogo = false;
       }
 
       // Parse nav.items JSON
