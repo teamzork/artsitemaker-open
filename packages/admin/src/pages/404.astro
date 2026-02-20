@@ -1,0 +1,55 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import Button from "@components/ui/Button.astro";
+import { Home } from "lucide-react";
+import { getAppDisplayName } from "../lib/app-config";
+
+const appDisplayName = getAppDisplayName();
+---
+
+<BaseLayout title="Page Not Found">
+  <main
+    class="not-found-page min-h-screen flex items-center justify-center px-4 py-8"
+  >
+    <section class="not-found-panel w-full max-w-md mx-auto">
+      <div class="not-found-card card bg-admin-sidebar border border-admin-border rounded-2xl p-6 sm:p-8 text-center">
+        <p class="text-xs uppercase tracking-[0.3em] text-admin-muted">
+          Missing Route · Error 404
+        </p>
+
+        <div class="not-found-frame mt-4 rounded-xl border-2 border-dashed border-admin-border bg-admin-bg/50 p-6">
+          <h1 class="text-2xl sm:text-3xl font-semibold text-admin-text">
+            This page isn’t found in {appDisplayName}.
+          </h1>
+          <p class="mt-2 text-sm text-admin-muted">
+            The admin URL you entered doesn't exist. Head back to the dashboard
+            to continue managing your site.
+          </p>
+        </div>
+
+        <div class="not-found-actions mt-6 flex items-center justify-center gap-3">
+          <Button
+            type="button"
+            variant="accent"
+            class="flex items-center gap-2"
+            onclick="window.location.assign('/')"
+          >
+            <Home className="w-4 h-4" />
+            Go to Dashboard
+          </Button>
+        </div>
+      </div>
+    </section>
+  </main>
+</BaseLayout>
+
+<style>
+  .not-found-page {
+    background-image:
+      radial-gradient(
+        circle at top,
+        color-mix(in srgb, var(--admin-accent) 14%, transparent),
+        transparent 60%
+      );
+  }
+</style>

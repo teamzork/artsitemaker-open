@@ -60,13 +60,15 @@ let identityKit: any = {};
 let shouldLoadInter = false;
 
 try {
-  const theme = await loadTheme(activeTheme);
-  identityKit = await loadIdentityKit();
-  themeCSS = generateCSSVariables(theme, identityKit);
-  
-  // Load Content Folder fonts for font lookup
   const { getContentFolderFonts } = await import('@lib/fonts');
-  const contentFolderFonts = await getContentFolderFonts();
+
+  const [theme, identityKit, contentFolderFonts] = await Promise.all([
+    loadTheme(activeTheme),
+    loadIdentityKit(),
+    getContentFolderFonts()
+  ]);
+
+  themeCSS = generateCSSVariables(theme, identityKit);
   fontFacesCSS = generateFontFaces(identityKit, contentFolderFonts);
   const resolveFontFamily = (font: any, fallback = ''): string => {
     if (!font) return fallback;

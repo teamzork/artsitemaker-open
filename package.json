@@ -3,8 +3,9 @@
     "version": "1.0.0",
     "private": true,
     "type": "module",
-    "scripts": {
+"scripts": {
         "dev": "./scripts/dev.sh",
+        "dev:tailnet": "TAILNET=1 ./scripts/dev.sh",
         "dev:admin": "pnpm --filter @artsitemaker/admin dev",
         "dev:site": "pnpm sync:themes && pnpm --filter @artsitemaker/site dev",
         "build": "pnpm sync:themes && pnpm -r build",

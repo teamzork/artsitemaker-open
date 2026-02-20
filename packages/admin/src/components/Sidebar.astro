@@ -1,9 +1,11 @@
 ---
 import fs from "fs";
 import path from "path";
-import { getSession } from "../lib/auth";
+import { getSession, SESSION_COOKIE_NAME } from "../lib/auth";
+import { isEmailAuthConfigured, validateSession } from "../lib/db-auth";
 import { getAppMeta } from "../lib/app-config";
 import { getRepoPath } from "../lib/paths";
+import { getInitials } from "../lib/string-utils";
 import Chevron from "./icons/Chevron.astro";
 
 import {
@@ -38,8 +40,31 @@ interface Props {
 
 const { currentPath } = Astro.props;
 
-// Get current user session
-const session = getSession(Astro.cookies);
+// Get current user session (basic/github or email DB session)
+const sessionCookie = Astro.cookies.get(SESSION_COOKIE_NAME)?.value;
+const basicSession = getSession(Astro.cookies);
+
+let sessionUser: { username: string; avatarUrl?: string | null; role?: string } | null = null;
+
+if (basicSession) {
+  sessionUser = {
+    username: basicSession.username,
+    avatarUrl: basicSession.avatarUrl,
+    role: 'admin',
+  };
+} else if (sessionCookie && /^[a-f0-9]{64}$/i.test(sessionCookie)) {
+  const emailConfigured = await isEmailAuthConfigured();
+  if (emailConfigured) {
+    const result = await validateSession(sessionCookie);
+    if (result.valid) {
+      sessionUser = {
+        username: result.user.username || result.user.email,
+        avatarUrl: null,
+        role: result.user.role,
+      };
+    }
+  }
+}
 const {
   displayName: projectDisplayName,
   shortDescription: projectShortDescription,
@@ -298,15 +323,37 @@ const getActiveHash = () => {
   <!-- Footer -->
   <div class="p-4 border-t border-admin-border">
     {
-      session && (
-        <div class="flex items-center gap-3 px-4 py-2">
-          <img
-            src={session.avatarUrl}
-            alt={session.username}
-            class="w-8 h-8 rounded-full"
-          />
+      sessionUser && (
+        <div class="flex items-center gap-3 py-2">
+          <a href="/profile" class="block shrink-0 transition-opacity hover:opacity-80">
+            {sessionUser.avatarUrl ? (
+              <img
+                src={sessionUser.avatarUrl}
+                alt={sessionUser.username}
+                class="w-8 h-8 rounded-full"
+              />
+            ) : (
+              <div
+                class:list={[
+                  "w-8 h-8 rounded-full text-xs font-semibold flex items-center justify-center",
+                  sessionUser.role === "admin"
+                    ? "bg-orange-700 text-white shadow-sm shadow-orange-900/50"
+                    : "bg-admin-card text-admin-text",
+                ]}
+                aria-hidden="true"
+                title={sessionUser.role === "admin" ? "Administrator" : "User"}
+              >
+                {getInitials(sessionUser.username)}
+              </div>
+            )}
+          </a>
           <div class="flex-1 min-w-0">
-            <p class="text-sm text-admin-text truncate">{session.username}</p>
+            <a
+              href="/profile"
+              class="text-sm text-admin-text truncate hover:text-admin-accent transition-colors block"
+            >
+              {sessionUser.username}
+            </a>
           </div>
           <a
             href="/auth/logout"

@@ -136,4 +136,6 @@ export interface FooterData {
   copyrightName?: string;
   showCredits?: boolean;
   allRightsReserved?: boolean;
+  /** When true, show "Powered by ArtSiteMaker" link in the copyright bar */
+  poweredByArtSiteMaker?: boolean;
 }

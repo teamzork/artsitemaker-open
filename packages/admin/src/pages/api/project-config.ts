@@ -46,6 +46,7 @@ export const PUT: APIRoute = async ({ request }) => {
 
     const updates = await request.json();
     const merged = { ...existing, ...updates };
+    // Deep merge deploy
     if (updates?.deploy) {
       merged.deploy = { ...(existing.deploy || {}), ...(updates.deploy || {}) };
       if (existing.deploy?.cloudflarePages || updates.deploy?.cloudflarePages) {
@@ -62,6 +63,22 @@ export const PUT: APIRoute = async ({ request }) => {
             ...(updates.deploy?.cloudflarePages?.customDomain || {}),
           };
         }
+      }
+    }
+    // Deep merge auth (preserve passwordHash when saving method/username from form)
+    if (updates?.auth) {
+      merged.auth = { ...(existing.auth || {}), ...(updates.auth || {}) };
+      if (existing.auth?.basic || updates.auth?.basic) {
+        merged.auth.basic = {
+          ...(existing.auth?.basic || {}),
+          ...(updates.auth?.basic || {}),
+        };
+      }
+      if (existing.auth?.github || updates.auth?.github) {
+        merged.auth.github = {
+          ...(existing.auth?.github || {}),
+          ...(updates.auth?.github || {}),
+        };
       }
     }
 

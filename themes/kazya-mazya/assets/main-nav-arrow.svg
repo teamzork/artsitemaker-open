@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="211px" height="685px" viewBox="0 0 211 685" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>main-nav-arrow@2x</title>
+    <defs>
+        <path d="M0,0 L211,0 L211,685 L0,685 L0,0 Z" id="path-1"></path>
+    </defs>
+    <g id="main-nav-arrow" stroke="none" fill="none" xlink:href="#path-1">
+        <polyline id="Path" stroke="#555555" stroke-width="10" stroke-linecap="round" points="157.0625 96 56 333.046875 157.0625 589.828125"></polyline>
+        <rect id="Rectangle" stroke="#666666" stroke-width="1" fill="#D8D8D8" fill-rule="evenodd" opacity="0.01" x="0.5" y="0.5" width="210" height="684" rx="20"></rect>
+    </g>
+</svg>

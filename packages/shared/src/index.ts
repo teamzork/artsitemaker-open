@@ -13,5 +13,9 @@ export {
 
 export {
     getFontFormat,
-    type ContentFolderFont
+    type ContentFolderFont,
+    type DimkaFontFamily,
+    type DimkaFontVariant,
+    DIMKA_FONTS,
+    findDimkaFont
 } from './fonts.js';

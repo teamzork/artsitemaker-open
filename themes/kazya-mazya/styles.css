@@ -49,7 +49,9 @@ body>* {
     z-index: 1;
 }
 
-h1, h2, h3 {
+h1,
+h2,
+h3 {
     font-family: var(--font-heading, sans-serif);
 }
 
@@ -62,17 +64,6 @@ h1, h2, h3 {
 
 .slideshow-container .artwork-title {
     color: var(--color-text-inverted, #e0e0e0);
-}
-
-.slideshow-container .more-info-btn {
-    color: var(--color-text-inverted, #e0e0e0);
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.2);
-}
-
-.slideshow-container .more-info-btn:hover {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: var(--color-accent, #efb600);
 }
 
 .slideshow-container .carousel-container {
@@ -129,6 +120,7 @@ HEADER / LOGO
         padding: 6px 10px;
         box-shadow: none;
     }
+
     .logo-image {
         width: 60px;
         /* Larger on mobile - was 44px */
@@ -196,6 +188,7 @@ NAVIGATION BAR
         line-height: 30px;
         padding-right: 10px;
     }
+
     .nav-item {
         height: 30px;
         line-height: 30px;
@@ -248,6 +241,7 @@ to eliminate whitespace between inline-block items */
     .gallery-container {
         padding: 30px 12px 40px 12px;
     }
+
     .justified-gallery {
         padding: 30px 12px 40px 12px;
     }
@@ -324,9 +318,11 @@ ABOUT PAGE
         grid-template-columns: 1fr;
         gap: 30px;
     }
+
     .about-photo-wrapper {
         position: static;
     }
+
     .about-photo {
         max-width: 250px;
         margin: 0 auto;
@@ -381,9 +377,11 @@ GALLERY ITEMS
         border-radius: 12px !important;
         border-width: 2px !important;
     }
+
     .gallery-item img {
         border-radius: 8px !important;
     }
+
     .gallery-item .caption {
         display: none !important;
     }
@@ -400,12 +398,25 @@ SLIDESHOW
 }
 
 .main-image-wrapper {
-    padding: 15px 80px;
+    padding: 50px;
+    position: relative;
+    z-index: 1002;
+    /* Above logo (1001) so art piece overlaps it */
+    pointer-events: none;
+}
+
+.main-image-wrapper .nav-btn,
+.main-image-wrapper .slide-viewport {
+    pointer-events: auto;
 }
 
 .main-image img {
     border-radius: 12px;
-    box-shadow: 2px 2px 20px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 15px 100px 20px rgba(0, 0, 0, 0.4);
+}
+
+.slide-panel img {
+    box-shadow: 0 15px 100px 20px rgba(0, 0, 0, 0.4) !important;
 }
 
 
@@ -415,11 +426,36 @@ SLIDESHOW
     padding: 10px 10px;
 }
 
+.slideshow-container .title-link {
+    color: var(--color-text-inverted, #e0e0e0);
+    border: none !important;
+}
+
+.slideshow-container .title-link:hover {
+    border: none !important;
+}
+
 .artwork-title {
     font-family: var(--font-heading, sans-serif);
     font-weight: 100;
     font-size: 22px;
     color: var(--color-text, #323232);
+}
+
+.slideshow-container .artwork-title {
+    text-decoration: underline;
+    text-decoration-style: dashed;
+    text-underline-offset: 4px;
+    opacity: 0.5;
+}
+
+.slideshow-container .info-icon {
+    opacity: 0.5;
+}
+
+.slideshow-container .title-link:hover .artwork-title,
+.slideshow-container .title-link:hover .info-icon {
+    opacity: 0.8;
 }
 
 
@@ -441,6 +477,8 @@ SLIDESHOW
 .carousel-track {
     gap: 12px;
     padding: 5px 10px;
+    -webkit-mask-image: linear-gradient(to right, transparent 0px, black 40px, black calc(100% - 40px), transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0px, black 40px, black calc(100% - 40px), transparent 100%);
 }
 
 
@@ -509,28 +547,17 @@ ARTWORK DETAIL PAGE
     padding-bottom: 60px;
 }
 
-/* Museum plaque metadata styling */
+/* Museum plaque metadata styling - Simplified */
 .metadata-section {
     position: relative;
-    padding: 18px 20px 16px;
     display: block;
-    width: fit-content;
-    max-width: 100%;
-    margin: 0 auto;
-    background: linear-gradient(180deg, #efede8 0%, #e7e3dc 55%, #e2ddd5 100%);
-    border: 1px solid #d5d0c7;
-    border-radius: 4px;
-    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.15), 0 12px 24px rgba(0, 0, 0, 0.22);
-    color: #3b3b3b;
+    width: 100%;
+    margin: 0;
+    color: var(--color-text, #323232);
 }
 
 .metadata-section::before {
-    content: '';
-    position: absolute;
-    inset: 6px;
-    border: 1px solid #dcd7ce;
-    border-radius: 2px;
-    pointer-events: none;
+    display: none;
 }
 
 .metadata-section .artwork-title {
@@ -538,45 +565,39 @@ ARTWORK DETAIL PAGE
     font-weight: 600;
     letter-spacing: 0.01em;
     margin: 0;
+    color: var(--color-text, #323232);
 }
 
 .metadata-section {
-    color: #4a4a4a;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    opacity: 0.85;
+    color: var(--color-text, #323232);
+    /* Removed uppercase and letter-spacing */
 }
 
 .metadata-section .description {
-    color: #3b3b3b;
-    font-size: 0.95rem;
+    color: var(--color-text, #323232);
+    font-size: 1rem;
     line-height: 1.6;
 }
 
 .metadata-section .tags-container {
     margin-top: 10px;
-    gap: 6px;
+    gap: 8px;
 }
 
 .metadata-section .art-tag {
-    font-size: 0.7rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: #4a4a4a;
-    background: rgba(255, 255, 255, 0.5);
-    border: 1px solid #d5d0c7;
-    padding: 2px 6px;
-    border-radius: 2px;
-    opacity: 1;
+    font-size: 0.9rem;
+    color: var(--color-text, #323232);
+    background: transparent;
+    border: none;
+    padding: 0;
+    opacity: 0.8;
+    text-transform: none;
+    /* Ensure no uppercase */
 }
 
 @media (max-width: 720px) {
     .metadata-section {
-        padding: 14px 16px 12px;
-    }
-
-    .metadata-section::before {
-        inset: 4px;
+        padding: 0;
     }
 }
 
@@ -679,12 +700,15 @@ ARTWORK DETAIL PAGE
         width: 28px;
         height: 28px;
     }
+
     .artwork-nav-btn {
         padding: 18px 10px;
     }
+
     .artwork-nav-prev {
         left: 5px;
     }
+
     .artwork-nav-next {
         right: 5px;
     }

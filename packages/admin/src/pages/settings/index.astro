@@ -52,7 +52,7 @@ try {
 }
 
 // Load fonts
-const { sections: fontSections, css: contentFontsCss } = await loadFontData(userDataPath);
+const { sections: fontSections, css: contentFontsCss } = await loadFontData();
 
 // Load current theme config for fallback values
 let themeConfig: any = {};
@@ -121,6 +121,11 @@ try {
 ---
 
 <AdminLayout title="Settings">
+  <!-- Font CSS for preview -->
+  <slot name="head">
+    {contentFontsCss && <style is:global set:html={contentFontsCss} />}
+  </slot>
+
   <!-- Save button in header -->
   <Button
     type="submit"
@@ -598,7 +603,18 @@ try {
           name="identityKit.fonts.heading"
           value={getFontFamily(identityKit?.fonts?.heading) || "Aziu"}
           placeholder="Aziu"
-          description="Type any font family or choose from Content Folder fonts."
+          description="Choose from curated Dimka Fonts or type any font family."
+          sections={fontSections}
+          emptyLabel="No matching fonts"
+        />
+
+        <Combobox
+          label="Body Text Font"
+          name="identityKit.fonts.body"
+          value={getFontFamily(identityKit?.fonts?.body) ||
+            "DimkaSans"}
+          placeholder="DimkaSans"
+          description='Choose from Dimka Fonts or type any font family (e.g., "Arial, sans-serif").'
           sections={fontSections}
           emptyLabel="No matching fonts"
         />
@@ -1008,12 +1024,6 @@ try {
     </div>
   </form>
 </AdminLayout>
-
-{
-  contentFontsCss && (
-    <style is:global>{contentFontsCss}</style>
-  )
-}
 
 <style>
   /* Color picker styling for Identity Kit */

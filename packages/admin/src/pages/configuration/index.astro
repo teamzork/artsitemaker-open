@@ -35,10 +35,12 @@ import Modal from "../../components/Modal.astro";
 import Button from "../../components/ui/Button.astro";
 import Combobox from "../../components/ui/Combobox.astro";
 import LockClosed from "../../components/icons/LockClosed.astro";
-import LockOpen from "../../components/icons/LockOpen.astro";
+import LockOpenIcon from "../../components/icons/LockOpen.astro";
 import SecretsVault from "../../components/SecretsVault/SecretsVault.astro";
 import { Toggle } from "../../components/ui/Toggle";
 import { getApexDomain, isApexDomain } from "../../lib/domain-utils";
+import { getSession, SESSION_COOKIE_NAME } from "../../lib/auth";
+import { isEmailAuthConfigured, validateSession } from "../../lib/db-auth";
 import {
   FolderOpen,
   Image,
@@ -57,7 +59,6 @@ import {
   Palette,
   Building2,
   Package,
-  LockOpen,
   Key,
   Github,
   Lock,
@@ -65,6 +66,7 @@ import {
   Search,
   Info,
   AlertTriangle,
+  Eye,
   Zap,
 } from "lucide-react";
 
@@ -81,6 +83,8 @@ const defaultUserDataRoot = repoRoot
 let settings: any = {};
 let projectConfig: any = {};
 let imageHostingConfig: any = {};
+
+
 
 // Load settings from settings/settings.yaml
 try {
@@ -130,6 +134,28 @@ async function countFiles(dir: string): Promise<number> {
   } catch {
     return 0;
   }
+}
+
+// Get current user session for role-based access
+const sessionCookie = Astro.cookies.get(SESSION_COOKIE_NAME)?.value;
+const basicSession = getSession(Astro.cookies);
+let isAdmin = false;
+
+if (basicSession) {
+  // Basic auth is considered admin
+  isAdmin = true;
+} else if (sessionCookie && /^[a-f0-9]{64}$/i.test(sessionCookie)) {
+  if (await isEmailAuthConfigured()) {
+    const result = await validateSession(sessionCookie);
+    if (result.valid && result.user.role === 'admin') {
+      isAdmin = true;
+    }
+  }
+}
+
+// If no auth is configured, everyone is effectively an admin
+if (!settings.auth?.method || settings.auth?.method === 'none') {
+  isAdmin = true;
 }
 
 // Get first image for example URL
@@ -221,7 +247,8 @@ const customDomainProjectName =
 let customDomainEnabled = false;
 let customDomainDomain = "";
 let customDomainAddWww = false;
-let customDomainHostingTarget: "cloudflare_pages" | "elsewhere" = "cloudflare_pages";
+let customDomainHostingTarget: "cloudflare_pages" | "elsewhere" =
+  "cloudflare_pages";
 let customDomainDnsStatus = "not_configured";
 let customDomainLastChecked: string | null = null;
 let customDomainErrorMessage: string | null = null;
@@ -233,15 +260,19 @@ if (cd) {
   customDomainEnabled = !!cd.enabled;
   customDomainDomain = (cd.domain as string) || "";
   customDomainAddWww = !!cd.addWww;
-  customDomainHostingTarget = cd.hostingTarget === "elsewhere" ? "elsewhere" : "cloudflare_pages";
+  customDomainHostingTarget =
+    cd.hostingTarget === "elsewhere" ? "elsewhere" : "cloudflare_pages";
   customDomainDnsStatus = (cd.dns_status as string) || "not_configured";
   customDomainLastChecked = (cd.last_checked as string) || null;
   customDomainErrorMessage = (cd.error_message as string) || null;
 }
 
 const customDomainApex = getApexDomain(customDomainDomain);
-const customDomainIsApex = !!customDomainDomain && isApexDomain(customDomainDomain);
-const customDomainWwwPreview = customDomainApex ? `www.${customDomainApex}` : "www.example.com";
+const customDomainIsApex =
+  !!customDomainDomain && isApexDomain(customDomainDomain);
+const customDomainWwwPreview = customDomainApex
+  ? `www.${customDomainApex}`
+  : "www.example.com";
 
 function resolveConfigPath(base: string | null, rawPath: string): string {
   if (!rawPath) return "";
@@ -252,7 +283,9 @@ function resolveConfigPath(base: string | null, rawPath: string): string {
 async function isProjectRoot(dirPath: string): Promise<boolean> {
   try {
     await fs.access(path.join(dirPath, "settings", "settings.yaml"));
-    await fs.access(path.join(dirPath, "configuration", "project-configuration.yaml"));
+    await fs.access(
+      path.join(dirPath, "configuration", "project-configuration.yaml"),
+    );
     return true;
   } catch {
     return false;
@@ -262,9 +295,9 @@ async function isProjectRoot(dirPath: string): Promise<boolean> {
 async function listProjectFolders(rootPath: string): Promise<string[]> {
   try {
     const entries = await fs.readdir(rootPath, { withFileTypes: true });
-    const dirs = entries.filter((entry) => entry.isDirectory()).map((entry) =>
-      path.join(rootPath, entry.name),
-    );
+    const dirs = entries
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => path.join(rootPath, entry.name));
     const results: string[] = [];
     for (const dir of dirs) {
       if (await isProjectRoot(dir)) {
@@ -302,7 +335,10 @@ if (resolvedSettingsPath) identifiedRoots.add(resolvedSettingsPath);
 const detectedProjects = new Set<string>();
 const normalizedUserDataRoot = path.resolve(defaultUserDataRoot);
 function isWithinUserDataRoot(candidate: string): boolean {
-  const relative = path.relative(normalizedUserDataRoot, path.resolve(candidate));
+  const relative = path.relative(
+    normalizedUserDataRoot,
+    path.resolve(candidate),
+  );
   return !!relative && !relative.startsWith("..") && !path.isAbsolute(relative);
 }
 
@@ -317,7 +353,7 @@ for (const root of identifiedRoots) {
       .filter((project) => isWithinUserDataRoot(project))
       .forEach((project) => detectedProjects.add(project));
   }
-  if (await isProjectRoot(root) && isWithinUserDataRoot(root)) {
+  if ((await isProjectRoot(root)) && isWithinUserDataRoot(root)) {
     detectedProjects.add(root);
   }
 }
@@ -399,14 +435,16 @@ const comboboxOptions = Array.from(detectedProjects)
             <Info className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
             <div class="text-xs text-admin-muted">
               <p class="mb-1">
-                <strong>Content is excluded from the ArtSiteMaker repo.</strong> Your artworks,
-                settings, and customizations are safely separated from the ArtSiteMaker engine.
+                <strong>Content is excluded from the ArtSiteMaker repo.</strong> Your
+                artworks, settings, and customizations are safely separated from the
+                ArtSiteMaker engine.
               </p>
               {
                 imageStorage === "local" && (
                   <p class="text-yellow-500">
-                    The <code>/files</code> folder is excluded from both ArtSiteMaker
-                    and your content repo to avoid large binaries in git.
+                    The <code>/files</code> folder is excluded from both
+                    ArtSiteMaker and your content repo to avoid large binaries
+                    in git.
                   </p>
                 )
               }
@@ -493,7 +531,9 @@ const comboboxOptions = Array.from(detectedProjects)
             class={`p-4 bg-admin-sidebar rounded-lg border-2 cursor-pointer hover:border-admin-border transition-colors relative storage-card ${imageStorage === "local" ? "border-admin-accent" : "border-transparent"}`}
             data-storage="local"
           >
-            <div class="mb-2"><HardDrive className="w-6 h-6 text-admin-accent" /></div>
+            <div class="mb-2">
+              <HardDrive className="w-6 h-6 text-admin-accent" />
+            </div>
             <div class="font-semibold">Local Storage</div>
             <p class="text-xs text-admin-muted mt-1">
               Images stored in /files folder
@@ -518,7 +558,9 @@ const comboboxOptions = Array.from(detectedProjects)
             class={`p-4 bg-admin-sidebar rounded-lg border-2 cursor-pointer hover:border-admin-border transition-colors relative storage-card ${imageStorage === "external" ? "border-admin-accent" : "border-transparent"}`}
             data-storage="external"
           >
-            <div class="mb-2"><Globe className="w-6 h-6 text-admin-accent" /></div>
+            <div class="mb-2">
+              <Globe className="w-6 h-6 text-admin-accent" />
+            </div>
             <div class="font-semibold">External Server</div>
             <p class="text-xs text-admin-muted mt-1">Custom image server URL</p>
             <span
@@ -541,7 +583,9 @@ const comboboxOptions = Array.from(detectedProjects)
             class={`p-4 bg-admin-sidebar rounded-lg border-2 cursor-pointer hover:border-admin-border transition-colors relative storage-card ${imageStorage === "r2" ? "border-admin-accent" : "border-transparent"}`}
             data-storage="r2"
           >
-            <div class="mb-2"><Cloud className="w-6 h-6 text-admin-accent" /></div>
+            <div class="mb-2">
+              <Cloud className="w-6 h-6 text-admin-accent" />
+            </div>
             <div class="font-semibold">Cloudflare R2</div>
             <p class="text-xs text-admin-muted mt-1">
               Fast CDN-backed cloud storage
@@ -673,9 +717,9 @@ const comboboxOptions = Array.from(detectedProjects)
         </div>
 
         <p class="text-xs text-admin-muted">
-          Images must be manually synced to your external server. ArtSiteMaker will use
-          the Base URL + Path Prefix + variant folder (large/medium/thumb) +
-          filename to construct image URLs.
+          Images must be manually synced to your external server. ArtSiteMaker
+          will use the Base URL + Path Prefix + variant folder
+          (large/medium/thumb) + filename to construct image URLs.
         </p>
       </div>
 
@@ -697,15 +741,17 @@ const comboboxOptions = Array.from(detectedProjects)
           </div>
         </div>
         <p class="text-xs text-admin-muted mt-3">
-          Note: The /files folder is excluded from both the ArtSiteMaker repo and your
-          content repo to avoid bloating git history.
+          Note: The /files folder is excluded from both the ArtSiteMaker repo
+          and your content repo to avoid bloating git history.
         </p>
       </div>
     </div>
 
     <!-- Storage Diagnostics -->
     <div id="storage-diagnostics" class="card scroll-mt-24">
-      <div class="flex flex-col gap-4 mb-4 lg:flex-row lg:items-start lg:justify-between">
+      <div
+        class="flex flex-col gap-4 mb-4 lg:flex-row lg:items-start lg:justify-between"
+      >
         <div class="flex-1 lg:max-w-[65%]">
           <div class="flex items-center gap-2 mb-1">
             <FlaskConical className="w-5 h-5 text-admin-accent" />
@@ -742,53 +788,77 @@ const comboboxOptions = Array.from(detectedProjects)
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div class="bg-admin-sidebar rounded-lg p-4">
           <div class="text-xs text-admin-muted">Storage Mode</div>
-          <div
-            id="diagnostics-storage-mode"
-            class="text-sm font-semibold"
-          >
+          <div id="diagnostics-storage-mode" class="text-sm font-semibold">
             —
           </div>
-          <div id="diagnostics-storage-base" class="text-xs text-admin-muted mt-1">
+          <div
+            id="diagnostics-storage-base"
+            class="text-xs text-admin-muted mt-1"
+          >
           </div>
         </div>
         <div class="bg-admin-sidebar rounded-lg p-4" data-storage-section="r2">
           <div class="text-xs text-admin-muted">Secrets Vault</div>
-          <div id="diagnostics-vault-status" class="text-sm font-semibold">—</div>
-          <div id="diagnostics-vault-missing" class="text-xs text-admin-muted mt-1">
+          <div id="diagnostics-vault-status" class="text-sm font-semibold">
+            —
+          </div>
+          <div
+            id="diagnostics-vault-missing"
+            class="text-xs text-admin-muted mt-1"
+          >
           </div>
         </div>
         <div class="bg-admin-sidebar rounded-lg p-4" data-storage-section="r2">
           <div class="text-xs text-admin-muted">R2 Config</div>
-          <div id="diagnostics-r2-config-status" class="text-sm font-semibold">—</div>
+          <div id="diagnostics-r2-config-status" class="text-sm font-semibold">
+            —
+          </div>
           <div
             id="diagnostics-r2-config-missing"
             class="text-xs text-admin-muted mt-1"
           >
           </div>
         </div>
-        <div class="bg-admin-sidebar rounded-lg p-4" data-storage-section="local">
+        <div
+          class="bg-admin-sidebar rounded-lg p-4"
+          data-storage-section="local"
+        >
           <div class="text-xs text-admin-muted">Local Paths</div>
           <div class="text-xs text-admin-muted mt-2">
             Files:
-            <span id="diagnostics-local-files-path" class="text-admin-text">—</span>
+            <span id="diagnostics-local-files-path" class="text-admin-text"
+              >—</span
+            >
           </div>
           <div class="text-xs text-admin-muted mt-1">
             Thumbnails:
-            <span id="diagnostics-local-thumbnails-path" class="text-admin-text">—</span>
+            <span id="diagnostics-local-thumbnails-path" class="text-admin-text"
+              >—</span
+            >
           </div>
         </div>
-        <div class="bg-admin-sidebar rounded-lg p-4" data-storage-section="local">
+        <div
+          class="bg-admin-sidebar rounded-lg p-4"
+          data-storage-section="local"
+        >
           <div class="text-xs text-admin-muted">Local Status</div>
-          <div id="diagnostics-local-status" class="text-sm font-semibold">—</div>
+          <div id="diagnostics-local-status" class="text-sm font-semibold">
+            —
+          </div>
           <div
             id="diagnostics-local-missing"
             class="text-xs text-admin-muted mt-1"
           >
           </div>
         </div>
-        <div class="bg-admin-sidebar rounded-lg p-4" data-storage-section="local">
+        <div
+          class="bg-admin-sidebar rounded-lg p-4"
+          data-storage-section="local"
+        >
           <div class="text-xs text-admin-muted">User Data Structure</div>
-          <div id="diagnostics-user-data-status" class="text-sm font-semibold">—</div>
+          <div id="diagnostics-user-data-status" class="text-sm font-semibold">
+            —
+          </div>
           <div
             id="diagnostics-user-data-summary"
             class="text-xs text-admin-muted mt-1"
@@ -797,7 +867,10 @@ const comboboxOptions = Array.from(detectedProjects)
         </div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4" data-storage-section="r2">
+      <div
+        class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4"
+        data-storage-section="r2"
+      >
         <div class="bg-admin-sidebar rounded-lg p-4">
           <div class="text-xs text-admin-muted">Bucket Name</div>
           <div id="diagnostics-r2-bucket" class="text-sm font-medium">—</div>
@@ -817,10 +890,16 @@ const comboboxOptions = Array.from(detectedProjects)
         </div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4" data-storage-section="local">
+      <div
+        class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4"
+        data-storage-section="local"
+      >
         <div class="bg-admin-sidebar rounded-lg p-4">
           <div class="text-xs text-admin-muted">Variant Counts</div>
-          <div id="diagnostics-local-variant-counts" class="text-sm font-medium">
+          <div
+            id="diagnostics-local-variant-counts"
+            class="text-sm font-medium"
+          >
             —
           </div>
         </div>
@@ -866,8 +945,8 @@ const comboboxOptions = Array.from(detectedProjects)
         </summary>
         <pre
           id="storage-diagnostics-json"
-          class="mt-2 text-xs bg-admin-bg border border-admin-border rounded p-3 overflow-x-auto"
-        ></pre>
+          class="mt-2 text-xs bg-admin-bg border border-admin-border rounded p-3 overflow-x-auto">
+        </pre>
       </details>
 
       <p class="text-xs text-admin-muted mt-3">
@@ -1173,9 +1252,10 @@ const comboboxOptions = Array.from(detectedProjects)
         <label class="block text-sm text-admin-muted mb-3"
           >Authentication Method</label
         >
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="flex flex-wrap gap-4">
           <!-- No Auth -->
-          <label class="auth-method-card" data-auth-method="none">
+          {isAdmin && (
+          <label class="auth-method-card flex-1 min-w-[180px]" data-auth-method="none">
             <input
               type="radio"
               name="auth.method"
@@ -1187,16 +1267,41 @@ const comboboxOptions = Array.from(detectedProjects)
             <div
               class="p-4 bg-admin-sidebar rounded-lg border-2 border-transparent cursor-pointer hover:border-admin-border transition-colors"
             >
-              <div class="mb-2"><LockOpen className="w-6 h-6 text-admin-accent" /></div>
+              <div class="mb-2">
+                <LockOpenIcon className="w-6 h-6 text-admin-accent" />
+              </div>
               <div class="font-semibold">No Authentication</div>
               <p class="text-xs text-admin-muted mt-1">
-                Open access (not recommended for production)
+                Open access for testing
+              </p>
+            </div>
+          </label>
+          )}
+
+          <!-- Email Auth -->
+          <label class="auth-method-card flex-1 min-w-[180px]" data-auth-method="email">
+            <input
+              type="radio"
+              name="auth.method"
+              value="email"
+              class="hidden"
+              checked={settings.auth?.method === "email"}
+            />
+            <div
+              class="p-4 bg-admin-sidebar rounded-lg border-2 border-transparent cursor-pointer hover:border-admin-border transition-colors"
+            >
+              <div class="mb-2">
+                <Key className="w-6 h-6 text-admin-accent" />
+              </div>
+              <div class="font-semibold">Email/Password</div>
+              <p class="text-xs text-admin-muted mt-1">
+                Email signup & login
               </p>
             </div>
           </label>
 
           <!-- Basic Auth -->
-          <label class="auth-method-card" data-auth-method="basic">
+          <label class="auth-method-card flex-1 min-w-[180px]" data-auth-method="basic">
             <input
               type="radio"
               name="auth.method"
@@ -1207,16 +1312,18 @@ const comboboxOptions = Array.from(detectedProjects)
             <div
               class="p-4 bg-admin-sidebar rounded-lg border-2 border-transparent cursor-pointer hover:border-admin-border transition-colors"
             >
-              <div class="mb-2"><Key className="w-6 h-6 text-admin-accent" /></div>
+              <div class="mb-2">
+                <Lock className="w-6 h-6 text-admin-accent" />
+              </div>
               <div class="font-semibold">Basic Auth</div>
               <p class="text-xs text-admin-muted mt-1">
-                Username & password login
+                Single username & password
               </p>
             </div>
           </label>
 
           <!-- GitHub OAuth -->
-          <label class="auth-method-card" data-auth-method="github">
+          <label class="auth-method-card flex-1 min-w-[180px]" data-auth-method="github">
             <input
               type="radio"
               name="auth.method"
@@ -1227,10 +1334,12 @@ const comboboxOptions = Array.from(detectedProjects)
             <div
               class="p-4 bg-admin-sidebar rounded-lg border-2 border-transparent cursor-pointer hover:border-admin-border transition-colors"
             >
-              <div class="mb-2"><Github className="w-6 h-6 text-admin-accent" /></div>
+              <div class="mb-2">
+                <Github className="w-6 h-6 text-admin-accent" />
+              </div>
               <div class="font-semibold">GitHub OAuth</div>
               <p class="text-xs text-admin-muted mt-1">
-                Sign in with GitHub account
+                Sign in with GitHub
               </p>
             </div>
           </label>
@@ -1260,41 +1369,101 @@ const comboboxOptions = Array.from(detectedProjects)
               <label class="block text-sm text-admin-muted mb-2"
                 >Current Password</label
               >
-              <input
-                type="password"
-                id="current-password"
-                placeholder="Enter current password to make changes"
-                class="w-full"
-                autocomplete="current-password"
-              />
+              <div class="relative">
+                <input
+                  type="password"
+                  id="current-password"
+                  placeholder="Enter current password to make changes"
+                  class="w-full pr-10"
+                  autocomplete="current-password"
+                />
+                <button
+                  type="button"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 text-admin-muted hover:text-admin-main"
+                  onclick="togglePasswordVisibility('current-password')"
+                >
+                  <Eye className="w-4 h-4" />
+                </button>
+              </div>
+              {
+                !settings.auth?.basic?.passwordHash && (
+                  <div class="mt-1 text-xs text-yellow-400 flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3" />
+                    <span>No password currently set</span>
+                  </div>
+                )
+              }
             </div>
           </div>
 
           <div class="border-t border-admin-border pt-4 mt-4">
+            <div class="flex items-center justify-between mb-4">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  id="enforce-strong-password"
+                  class="rounded bg-admin-input border-admin-border text-admin-accent focus:ring-admin-accent"
+                  checked={settings.auth?.basic?.enforceStrongPassword ?? true}
+                />
+                <span class="text-sm">Enforce strong password</span>
+              </label>
+            </div>
+
             <label class="block text-sm text-admin-muted mb-2"
               >New Password</label
             >
-            <input
-              type="password"
-              id="new-password"
-              placeholder="Leave empty to keep current, or enter to set new"
-              class="w-full"
-              autocomplete="new-password"
-            />
+            <div class="relative">
+              <input
+                type="password"
+                id="new-password"
+                placeholder="Leave empty to keep current, or enter to set new"
+                class="w-full pr-10"
+                autocomplete="new-password"
+              />
+              <button
+                type="button"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-admin-muted hover:text-admin-main"
+                onclick="togglePasswordVisibility('new-password')"
+              >
+                <Eye className="w-4 h-4" />
+              </button>
+            </div>
             <div id="account-password-strength" class="mt-2 text-xs"></div>
 
             <div class="mt-3">
               <label class="block text-sm text-admin-muted mb-2"
                 >Confirm New Password</label
               >
-              <input
-                type="password"
-                id="confirm-password"
-                placeholder="Confirm new password"
-                class="w-full"
-                autocomplete="new-password"
-              />
+              <div class="relative">
+                <input
+                  type="password"
+                  id="confirm-password"
+                  placeholder="Confirm new password"
+                  class="w-full pr-10"
+                  autocomplete="new-password"
+                />
+                <button
+                  type="button"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 text-admin-muted hover:text-admin-main"
+                  onclick="togglePasswordVisibility('confirm-password')"
+                >
+                  <Eye className="w-4 h-4" />
+                </button>
+              </div>
               <div id="password-match" class="mt-1 text-xs"></div>
+            </div>
+
+            <div class="mt-3">
+              <label class="block text-sm text-admin-muted mb-2"
+                >Password Hint (Optional)</label
+              >
+              <input
+                type="text"
+                id="password-hint"
+                value={settings.auth?.basic?.passwordHint || ""}
+                placeholder="Enter a hint to help you remember your password"
+                class="w-full"
+              />
             </div>
           </div>
 
@@ -1519,7 +1688,8 @@ const comboboxOptions = Array.from(detectedProjects)
       id="custom-domain-help-data"
       class="hidden"
       data-project-name={customDomainProjectName}
-    ></div>
+    >
+    </div>
 
     <div class="space-y-5">
       <!-- Enable toggle -->
@@ -1534,12 +1704,28 @@ const comboboxOptions = Array.from(detectedProjects)
       </label>
 
       <!-- Fields (shown when enabled) -->
-      <div id="custom-domain-fields" class={`space-y-5 ${customDomainEnabled ? "" : "hidden"}`}>
+      <div
+        id="custom-domain-fields"
+        class={`space-y-5 ${customDomainEnabled ? "" : "hidden"}`}
+      >
         <!-- SUMMARY MODE (shown when configured) -->
-        <div id="custom-domain-summary" class={`flex items-center gap-3 p-3 bg-admin-sidebar rounded-lg ${customDomainDomain ? "" : "hidden"}`}>
+        <div
+          id="custom-domain-summary"
+          class={`flex items-center gap-3 p-3 bg-admin-sidebar rounded-lg ${customDomainDomain ? "" : "hidden"}`}
+        >
           <div class="flex-1 flex items-center gap-3">
-            <span id="custom-domain-summary-domain" class="text-sm font-medium">{customDomainDomain}</span>
-            <span id="custom-domain-summary-hosting" class="text-xs px-2 py-1 rounded bg-admin-bg text-admin-muted">{customDomainHostingTarget === "cloudflare_pages" ? "Cloudflare Pages" : "Manual DNS"}</span>
+            <span id="custom-domain-summary-domain" class="text-sm font-medium"
+              >{customDomainDomain}</span
+            >
+            <span
+              id="custom-domain-summary-hosting"
+              class="text-xs px-2 py-1 rounded bg-admin-bg text-admin-muted"
+              >{
+                customDomainHostingTarget === "cloudflare_pages"
+                  ? "Cloudflare Pages"
+                  : "Manual DNS"
+              }</span
+            >
             <span
               id="custom-domain-summary-status"
               class={`text-xs px-2 py-1 rounded ${
@@ -1552,13 +1738,15 @@ const comboboxOptions = Array.from(detectedProjects)
                       : "bg-admin-bg text-admin-muted"
               }`}
             >
-              {customDomainDnsStatus === "active"
-                ? "Active"
-                : customDomainDnsStatus === "pending"
-                  ? "Pending"
-                  : customDomainDnsStatus === "error"
-                    ? "Error"
-                    : "Not configured"}
+              {
+                customDomainDnsStatus === "active"
+                  ? "Active"
+                  : customDomainDnsStatus === "pending"
+                    ? "Pending"
+                    : customDomainDnsStatus === "error"
+                      ? "Error"
+                      : "Not configured"
+              }
             </span>
           </div>
           <button
@@ -1571,10 +1759,16 @@ const comboboxOptions = Array.from(detectedProjects)
         </div>
 
         <!-- EDIT MODE (form) -->
-        <div id="custom-domain-edit" class={`space-y-5 ${customDomainDomain ? "hidden" : ""}`}>
+        <div
+          id="custom-domain-edit"
+          class={`space-y-5 ${customDomainDomain ? "hidden" : ""}`}
+        >
           <!-- Step 1: Domain input -->
           <div>
-            <label class="block text-sm text-admin-muted mb-2" for="custom-domain-input">Domain name</label>
+            <label
+              class="block text-sm text-admin-muted mb-2"
+              for="custom-domain-input">Domain name</label
+            >
             <input
               type="text"
               id="custom-domain-input"
@@ -1583,18 +1777,33 @@ const comboboxOptions = Array.from(detectedProjects)
               placeholder="example.com or www.example.com"
             />
             <!-- Inline apex helper (shown when apex detected) -->
-            <div id="custom-domain-apex-hint" class={`text-xs text-admin-muted mt-2 ${customDomainIsApex ? "" : "hidden"}`}>
+            <div
+              id="custom-domain-apex-hint"
+              class={`text-xs text-admin-muted mt-2 ${customDomainIsApex ? "" : "hidden"}`}
+            >
               ✓ Apex detected — you can also add
               <label class="inline-flex items-center gap-1 ml-1 cursor-pointer">
-                <input type="checkbox" id="custom-domain-add-www" class="w-4 h-4 accent-primary" checked={customDomainAddWww} />
-                <span id="custom-domain-www-preview">{customDomainWwwPreview}</span>
+                <input
+                  type="checkbox"
+                  id="custom-domain-add-www"
+                  class="w-4 h-4 accent-primary"
+                  checked={customDomainAddWww}
+                />
+                <span id="custom-domain-www-preview"
+                  >{customDomainWwwPreview}</span
+                >
               </label>
             </div>
           </div>
 
           <!-- Step 2: Hosting target (shown after domain entered) -->
-          <div id="custom-domain-hosting-section" class={`${customDomainDomain ? "" : "hidden"}`}>
-            <span class="block text-sm text-admin-muted mb-2">Where is this domain hosted?</span>
+          <div
+            id="custom-domain-hosting-section"
+            class={`${customDomainDomain ? "" : "hidden"}`}
+          >
+            <span class="block text-sm text-admin-muted mb-2"
+              >Where is this domain hosted?</span
+            >
             <div class="flex flex-col gap-2">
               <label class="flex items-center gap-2 cursor-pointer">
                 <input
@@ -1604,7 +1813,11 @@ const comboboxOptions = Array.from(detectedProjects)
                   class="w-4 h-4 accent-primary"
                   checked={customDomainHostingTarget === "cloudflare_pages"}
                 />
-                <span class="text-sm">Cloudflare Pages <span class="text-admin-muted">(automatic DNS setup)</span></span>
+                <span class="text-sm"
+                  >Cloudflare Pages <span class="text-admin-muted"
+                    >(automatic DNS setup)</span
+                  ></span
+                >
               </label>
               <label class="flex items-center gap-2 cursor-pointer">
                 <input
@@ -1614,13 +1827,20 @@ const comboboxOptions = Array.from(detectedProjects)
                   class="w-4 h-4 accent-primary"
                   checked={customDomainHostingTarget === "elsewhere"}
                 />
-                <span class="text-sm">Elsewhere <span class="text-admin-muted">(manual DNS setup)</span></span>
+                <span class="text-sm"
+                  >Elsewhere <span class="text-admin-muted"
+                    >(manual DNS setup)</span
+                  ></span
+                >
               </label>
             </div>
           </div>
 
           <!-- Cloudflare-specific: DNS Status + Verify button (shown only for Cloudflare + domain) -->
-          <div id="custom-domain-cloudflare-actions" class={`${customDomainDomain && customDomainHostingTarget === "cloudflare_pages" ? "" : "hidden"}`}>
+          <div
+            id="custom-domain-cloudflare-actions"
+            class={`${customDomainDomain && customDomainHostingTarget === "cloudflare_pages" ? "" : "hidden"}`}
+          >
             <div class="flex items-center gap-3 flex-wrap">
               <span class="text-sm text-admin-muted">DNS status:</span>
               <span
@@ -1635,15 +1855,19 @@ const comboboxOptions = Array.from(detectedProjects)
                         : "bg-admin-bg text-admin-muted"
                 }`}
                 data-status={customDomainDnsStatus}
-                title={customDomainLastChecked ? `Last checked: ${new Date(customDomainLastChecked).toLocaleString()}` : ""}
+                title={customDomainLastChecked
+                  ? `Last checked: ${new Date(customDomainLastChecked).toLocaleString()}`
+                  : ""}
               >
-                {customDomainDnsStatus === "active"
-                  ? "Active"
-                  : customDomainDnsStatus === "pending"
-                    ? "Pending"
-                    : customDomainDnsStatus === "error"
-                      ? "Error"
-                      : "Not configured"}
+                {
+                  customDomainDnsStatus === "active"
+                    ? "Active"
+                    : customDomainDnsStatus === "pending"
+                      ? "Pending"
+                      : customDomainDnsStatus === "error"
+                        ? "Error"
+                        : "Not configured"
+                }
               </span>
               <Button
                 type="button"
@@ -1662,17 +1886,32 @@ const comboboxOptions = Array.from(detectedProjects)
                 Verify DNS
               </button>
             </div>
-            <p id="custom-domain-vault-warning" class="text-xs text-yellow-400 mt-2 hidden"></p>
+            <p
+              id="custom-domain-vault-warning"
+              class="text-xs text-yellow-400 mt-2 hidden"
+            >
+            </p>
           </div>
 
           <!-- Elsewhere-specific message (shown only for elsewhere + domain) -->
-          <div id="custom-domain-elsewhere-message" class={`text-xs text-admin-muted bg-admin-sidebar/50 rounded-lg p-3 ${customDomainDomain && customDomainHostingTarget === "elsewhere" ? "" : "hidden"}`}>
+          <div
+            id="custom-domain-elsewhere-message"
+            class={`text-xs text-admin-muted bg-admin-sidebar/50 rounded-lg p-3 ${customDomainDomain && customDomainHostingTarget === "elsewhere" ? "" : "hidden"}`}
+          >
             <p class="mb-2"><strong>Manual DNS setup required:</strong></p>
-            <p>Add a CNAME or ALIAS record at your domain host pointing to your deployment. No Cloudflare account needed.</p>
+            <p>
+              Add a CNAME or ALIAS record at your domain host pointing to your
+              deployment. No Cloudflare account needed.
+            </p>
           </div>
 
           <!-- Error message -->
-          <p id="custom-domain-error" class={`text-sm text-red-400 ${customDomainErrorMessage ? "" : "hidden"}`}>{customDomainErrorMessage || ""}</p>
+          <p
+            id="custom-domain-error"
+            class={`text-sm text-red-400 ${customDomainErrorMessage ? "" : "hidden"}`}
+          >
+            {customDomainErrorMessage || ""}
+          </p>
         </div>
       </div>
     </div>
@@ -1696,10 +1935,7 @@ const comboboxOptions = Array.from(detectedProjects)
         <div id="custom-domain-help-domain" class="text-base font-semibold">
           —
         </div>
-        <p
-          id="custom-domain-help-status"
-          class="text-xs text-admin-muted mt-1"
-        >
+        <p id="custom-domain-help-status" class="text-xs text-admin-muted mt-1">
           Cloudflare is verifying your DNS. This can take up to 24 hours.
         </p>
       </div>
@@ -1708,8 +1944,12 @@ const comboboxOptions = Array.from(detectedProjects)
         <p class="font-medium text-admin-text mb-2">What happens next</p>
         <ul class="list-disc list-inside space-y-1 text-admin-muted">
           <li>Cloudflare checks your DNS record and validates the domain</li>
-          <li>Your domain switches to Active automatically after verification</li>
-          <li>You will get an email from Cloudflare when verification completes</li>
+          <li>
+            Your domain switches to Active automatically after verification
+          </li>
+          <li>
+            You will get an email from Cloudflare when verification completes
+          </li>
         </ul>
       </div>
 
@@ -1749,13 +1989,9 @@ const comboboxOptions = Array.from(detectedProjects)
       </div>
     </div>
   </Modal>
-
-
 </AdminLayout>
 
 <style>
-
-
   /* Auth method card styling */
   .auth-method-card input:checked + div {
     border-color: var(--admin-accent);
@@ -1827,15 +2063,33 @@ const comboboxOptions = Array.from(detectedProjects)
   // Type definitions for Secrets
   type SecretsData = {
     encryption_version: string;
-    auth?: { type: "none" | "password" | "github"; github_client_id?: string; github_client_secret?: string };
-    r2?: { account_id: string; access_key_id: string; secret_access_key: string };
-    deployment?: { type: "static" | "ftp" | "sftp" | "git"; ftp_host?: string; ftp_user?: string; ftp_password?: string; github_token?: string; deploy_repo?: string };
+    auth?: {
+      type: "none" | "password" | "github";
+      github_client_id?: string;
+      github_client_secret?: string;
+    };
+    r2?: {
+      account_id: string;
+      access_key_id: string;
+      secret_access_key: string;
+    };
+    deployment?: {
+      type: "static" | "ftp" | "sftp" | "git";
+      ftp_host?: string;
+      ftp_user?: string;
+      ftp_password?: string;
+      github_token?: string;
+      deploy_repo?: string;
+    };
     cloudflare?: { account_id: string; api_token: string };
   };
 
   function normalizeDomainInput(input: string): string {
     if (!input) return "";
-    const stripped = input.toLowerCase().trim().replace(/^https?:\/\//, "");
+    const stripped = input
+      .toLowerCase()
+      .trim()
+      .replace(/^https?:\/\//, "");
     const withoutPath = stripped.split("/")[0].split("?")[0].split("#")[0];
     return withoutPath.replace(/:\d+$/, "").replace(/\.+$/, "");
   }
@@ -1874,6 +2128,11 @@ const comboboxOptions = Array.from(detectedProjects)
     "r2.projectFolder",
     "external.baseUrl",
     "external.pathPrefix",
+    "auth.method",
+    "auth.basic.username",
+    "auth.github.clientId",
+    "auth.github.clientSecret",
+    "auth.github.allowedUsers",
   ];
 
   // Change detection
@@ -2032,6 +2291,72 @@ const comboboxOptions = Array.from(detectedProjects)
           ok: res.ok,
           error: !res.ok ? await res.text() : null,
         });
+      }
+
+      // 2b. Auth + Git + Images → project-configuration.yaml
+      if (configOk) {
+        const projectConfigPayload: Record<string, any> = {};
+        // Auth settings
+        const authMethod = data["auth.method"];
+        if (authMethod) {
+          // Warn about unconfigured auth methods (but still save — middleware will fall back)
+          if (authMethod === "github") {
+            // Check if vault has GitHub credentials
+            try {
+              const statusRes = await fetch("/api/secrets/status");
+              const statusData = await statusRes.json();
+              if (!statusData.unlocked) {
+                window.dispatchEvent(
+                  new CustomEvent("artsitemaker:toast", {
+                    detail: {
+                      title: "GitHub auth: vault locked",
+                      description:
+                        "Auth won't be enforced until GitHub credentials are configured in the secrets vault.",
+                      variant: "default",
+                    },
+                  }),
+                );
+              }
+            } catch {
+              // Can't check vault status — just warn
+              window.dispatchEvent(
+                new CustomEvent("artsitemaker:toast", {
+                  detail: {
+                    title: "GitHub auth selected",
+                    description:
+                      "Make sure GitHub OAuth credentials are configured in the secrets vault.",
+                    variant: "default",
+                  },
+                }),
+              );
+            }
+          }
+
+          projectConfigPayload.auth = {
+            method: authMethod,
+            basic: {
+              username: data["auth.basic.username"] || "admin",
+            },
+            github: {
+              // Only save non-secret fields to project config
+              // clientId and clientSecret belong in the secrets vault
+              allowedUsers: data["auth.github.allowedUsers"] || "",
+            },
+          };
+        }
+
+        if (Object.keys(projectConfigPayload).length > 0) {
+          const res = await fetch("/api/project-config", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(projectConfigPayload),
+          });
+          results.push({
+            type: "project-config",
+            ok: res.ok,
+            error: !res.ok ? await res.text() : null,
+          });
+        }
       }
 
       // 3. Image hosting config
@@ -2412,14 +2737,8 @@ const comboboxOptions = Array.from(detectedProjects)
               return field;
             });
 
-            setInputError(
-              accountIdInput,
-              missingFields.includes("accountId"),
-            );
-            setInputError(
-              publicUrlInput,
-              missingFields.includes("publicUrl"),
-            );
+            setInputError(accountIdInput, missingFields.includes("accountId"));
+            setInputError(publicUrlInput, missingFields.includes("publicUrl"));
             setInputError(
               bucketNameInput,
               missingFields.includes("bucketName"),
@@ -2429,9 +2748,9 @@ const comboboxOptions = Array.from(detectedProjects)
               ? accountIdInput
               : missingFields.includes("publicUrl")
                 ? publicUrlInput
-              : missingFields.includes("bucketName")
-                ? bucketNameInput
-                : null;
+                : missingFields.includes("bucketName")
+                  ? bucketNameInput
+                  : null;
             focusTarget?.focus();
 
             if (statusEl) {
@@ -2470,11 +2789,13 @@ const comboboxOptions = Array.from(detectedProjects)
 
       try {
         const accountId =
-          (document.getElementById("cf-account-id") as HTMLInputElement)
-            ?.value?.trim() || "";
+          (
+            document.getElementById("cf-account-id") as HTMLInputElement
+          )?.value?.trim() || "";
         const apiToken =
-          (document.getElementById("cf-api-token") as HTMLInputElement)
-            ?.value?.trim() || "";
+          (
+            document.getElementById("cf-api-token") as HTMLInputElement
+          )?.value?.trim() || "";
 
         if (!accountId || !apiToken) {
           if (statusEl) {
@@ -2592,7 +2913,8 @@ const comboboxOptions = Array.from(detectedProjects)
   const diagnosticsSections = Array.from(
     document.querySelectorAll("[data-storage-section]"),
   ) as HTMLElement[];
-  let diagnosticsStorageMode: "local" | "r2" | "external" | "unknown" = "unknown";
+  let diagnosticsStorageMode: "local" | "r2" | "external" | "unknown" =
+    "unknown";
 
   const diagnosticsToneClasses = {
     ok: "text-green-500",
@@ -2669,10 +2991,7 @@ const comboboxOptions = Array.from(detectedProjects)
 
     diagnosticsSections.forEach((section) => {
       const sectionMode = section.dataset.storageSection;
-      section.classList.toggle(
-        "hidden",
-        sectionMode !== storageMode,
-      );
+      section.classList.toggle("hidden", sectionMode !== storageMode);
     });
 
     if (diagnosticsCheckBtn) {
@@ -2749,7 +3068,10 @@ const comboboxOptions = Array.from(detectedProjects)
     if (diagnostics?.local && diagnostics.local.filesPathExists === false) {
       localMissing.push("filesPath");
     }
-    if (diagnostics?.local && diagnostics.local.thumbnailsPathExists === false) {
+    if (
+      diagnostics?.local &&
+      diagnostics.local.thumbnailsPathExists === false
+    ) {
       localMissing.push("thumbnailsPath");
     }
     if (localMissing.length === 0) {
@@ -2762,11 +3084,7 @@ const comboboxOptions = Array.from(detectedProjects)
         diagnosticsLocalMissingEl.textContent = "";
       }
     } else {
-      setDiagnosticsText(
-        diagnosticsLocalStatusEl,
-        "Missing paths",
-        "error",
-      );
+      setDiagnosticsText(diagnosticsLocalStatusEl, "Missing paths", "error");
       if (diagnosticsLocalMissingEl) {
         diagnosticsLocalMissingEl.textContent = `Missing: ${localMissing.join(
           ", ",
@@ -3016,7 +3334,9 @@ const comboboxOptions = Array.from(detectedProjects)
       progress: number | undefined;
     }>,
   ) {
-    window.dispatchEvent(new CustomEvent("artsitemaker:toast:update", { detail }));
+    window.dispatchEvent(
+      new CustomEvent("artsitemaker:toast:update", { detail }),
+    );
   }
 
   // Helper: Reset sync UI state
@@ -3199,9 +3519,7 @@ const comboboxOptions = Array.from(detectedProjects)
     "path-validation-message",
   );
   const contentPathSync = document.getElementById("content-path-sync");
-  const contentPathSyncText = document.getElementById(
-    "content-path-sync-text",
-  );
+  const contentPathSyncText = document.getElementById("content-path-sync-text");
 
   let pathValidationTimeout: number;
   let autoRefreshTimeout: number;
@@ -3256,14 +3574,20 @@ const comboboxOptions = Array.from(detectedProjects)
   ) {
     if (!pathValidationMessage) return;
 
-    const uniqueIssues = issues?.filter((issue, index, all) => {
-      const key = `${issue.message}::${issue.targetPath}`;
-      return all.findIndex((item) => `${item.message}::${item.targetPath}` === key) === index;
-    }) ?? [];
+    const uniqueIssues =
+      issues?.filter((issue, index, all) => {
+        const key = `${issue.message}::${issue.targetPath}`;
+        return (
+          all.findIndex(
+            (item) => `${item.message}::${item.targetPath}` === key,
+          ) === index
+        );
+      }) ?? [];
 
-    const summaryText = uniqueIssues.length > 0
-      ? `${uniqueIssues.length} issue${uniqueIssues.length === 1 ? "" : "s"} found`
-      : message;
+    const summaryText =
+      uniqueIssues.length > 0
+        ? `${uniqueIssues.length} issue${uniqueIssues.length === 1 ? "" : "s"} found`
+        : message;
 
     pathValidationMessage.className = `text-sm ${
       variant === "success"
@@ -3341,22 +3665,14 @@ const comboboxOptions = Array.from(detectedProjects)
             "text-sm whitespace-nowrap text-yellow-500";
           pathValidationIndicator.textContent = "⚠️ Warning";
         }
-        renderValidationMessage(
-          result.message,
-          "warning",
-          result.errors ?? [],
-        );
+        renderValidationMessage(result.message, "warning", result.errors ?? []);
       } else {
         if (pathValidationIndicator) {
           pathValidationIndicator.className =
             "text-sm whitespace-nowrap text-red-500";
           pathValidationIndicator.textContent = "✗ Invalid";
         }
-        renderValidationMessage(
-          result.message,
-          "error",
-          result.errors ?? [],
-        );
+        renderValidationMessage(result.message, "error", result.errors ?? []);
       }
 
       return result;
@@ -3538,12 +3854,12 @@ const comboboxOptions = Array.from(detectedProjects)
     let changed = false;
     const configResult = await applyConfigFilesFromPath(selectedPath);
     changed = changed || configResult.changed;
-      if (settingsPayload) {
-        changed =
-          applySettingsToForm(settingsPayload, {
-            skipFields: ["userDataPath", "contentPath", ...settingsSkipFields],
-          }) || changed;
-      }
+    if (settingsPayload) {
+      changed =
+        applySettingsToForm(settingsPayload, {
+          skipFields: ["userDataPath", "contentPath", ...settingsSkipFields],
+        }) || changed;
+    }
 
     refreshStorageUI();
 
@@ -3795,7 +4111,7 @@ const comboboxOptions = Array.from(detectedProjects)
       }
     });
 
-  // ========== Account Management ==========
+  // ========== Account  // DOM Elements for Account
   const usernameInput = document.getElementById(
     "account-username",
   ) as HTMLInputElement;
@@ -3808,6 +4124,12 @@ const comboboxOptions = Array.from(detectedProjects)
   const confirmPasswordInput = document.getElementById(
     "confirm-password",
   ) as HTMLInputElement;
+  const passwordHintInput = document.getElementById(
+    "password-hint",
+  ) as HTMLInputElement;
+  const enforceStrongPasswordInput = document.getElementById(
+    "enforce-strong-password",
+  ) as HTMLInputElement;
   const saveAccountBtn = document.getElementById(
     "save-account-btn",
   ) as HTMLButtonElement;
@@ -3816,6 +4138,14 @@ const comboboxOptions = Array.from(detectedProjects)
     "account-password-strength",
   );
   const passwordMatch = document.getElementById("password-match");
+
+  // Toggle Password Visibility
+  (window as any).togglePasswordVisibility = (id: string) => {
+    const input = document.getElementById(id) as HTMLInputElement;
+    if (input) {
+      input.type = input.type === "password" ? "text" : "password";
+    }
+  };
 
   // Password requirements
   const accountRequirements = {
@@ -3847,6 +4177,27 @@ const comboboxOptions = Array.from(detectedProjects)
   } {
     let score = 0;
     let allMet = true;
+    const enforce = enforceStrongPasswordInput?.checked ?? true;
+
+    // Reset UI first
+    for (const req of Object.values(accountRequirements)) {
+      if (req.el) req.el.className = "flex items-center gap-2 text-admin-muted";
+      const icon = req.el?.querySelector(".req-icon");
+      if (icon) {
+        icon.textContent = "○";
+        icon.className = "req-icon";
+      }
+    }
+
+    if (!enforce) {
+      // If not enforced, we only care about length >= 8 roughly, or maybe allow anything?
+      // Let's just update UI to show what IS met, but return valid=true if length > 0
+      // Or actually if not enforced, any password is valid?
+      // User requested "Strong password enforcement which should be on, but still optional"
+      // If optional, we probably just warn or don't require all checks.
+      // Let's still show the checks but return true for valid if length >= 1.
+      // Actually, let's keep showing the checks status but bypass the block.
+    }
 
     for (const [key, req] of Object.entries(accountRequirements)) {
       const met = req.check(password);
@@ -3863,6 +4214,8 @@ const comboboxOptions = Array.from(detectedProjects)
       }
     }
 
+    if (!enforce && password.length > 0) return { valid: true, score };
+
     return { valid: allMet, score };
   }
 
@@ -3871,12 +4224,12 @@ const comboboxOptions = Array.from(detectedProjects)
     const newPwd = newPasswordInput?.value || "";
     const confirmPwd = confirmPasswordInput?.value || "";
     const username = usernameInput?.value?.trim() || "";
+    const enforce = enforceStrongPasswordInput?.checked ?? true;
 
-    // Must have current password to make any changes
-    if (!currentPwd) {
-      if (accountStatus) accountStatus.textContent = "";
-      return false;
-    }
+    // If we have no password set (first run), currentPwd might be empty?
+    // But backend requires currentPassword if hash exists.
+    // The UI knows if hash exists (from template), but JS handling might need care.
+    // Ideally user inputs current password.
 
     // Username must be at least 3 characters
     if (username.length < 3) {
@@ -3898,9 +4251,16 @@ const comboboxOptions = Array.from(detectedProjects)
         return false;
       } else {
         if (accountPasswordStrengthEl) {
-          accountPasswordStrengthEl.textContent =
-            "Password meets all requirements ✓";
-          accountPasswordStrengthEl.className = "mt-2 text-xs text-green-400";
+          if (enforce) {
+            accountPasswordStrengthEl.textContent =
+              "Password meets all requirements ✓";
+            accountPasswordStrengthEl.className = "mt-2 text-xs text-green-400";
+          } else {
+            accountPasswordStrengthEl.textContent =
+              "Weak password allowed (not enforced)";
+            accountPasswordStrengthEl.className =
+              "mt-2 text-xs text-yellow-400";
+          }
         }
       }
 
@@ -3919,6 +4279,19 @@ const comboboxOptions = Array.from(detectedProjects)
       }
     }
 
+    // If we are just changing username/hint/settings, we might need current password?
+    // Backend says: "When no password hash exists yet (first setup), currentPassword is not required."
+    // "If a password hash already exists, verify the current password"
+    // So if hash exists, we need currentPwd.
+    // How do we know if hash exists in JS?
+    // We can check if the "No password currently set" warning is absent?
+    const noPasswordWarning = document
+      .querySelector(".text-yellow-400 span")
+      ?.textContent?.includes("No password");
+    // Or we can rely on user input. If they didn't input currentPwd, and backend requires it, backend will error.
+    // Let's let backend handle the strict check for currentPwd to avoid duplicating that logic here,
+    // unless we want to block the button.
+    // But we need to enable the button if *anything* changed.
     return true;
   }
 
@@ -3928,14 +4301,21 @@ const comboboxOptions = Array.from(detectedProjects)
     currentPasswordInput,
     newPasswordInput,
     confirmPasswordInput,
+    passwordHintInput,
+    enforceStrongPasswordInput,
   ].forEach((input) => {
     input?.addEventListener("input", () => {
       const newPwd = newPasswordInput?.value || "";
       if (newPwd) {
         checkAccountPasswordStrength(newPwd);
       }
+      // Also re-check if enforce checkbox changed
+      if (input === enforceStrongPasswordInput && newPwd) {
+        checkAccountPasswordStrength(newPwd);
+      }
 
       const valid = validateAccountForm();
+      // Enable button if valid (and maybe if changed? simplifying to just valid for now)
       if (saveAccountBtn) saveAccountBtn.disabled = !valid;
     });
   });
@@ -3950,6 +4330,8 @@ const comboboxOptions = Array.from(detectedProjects)
     const payload: any = {
       currentPassword: currentPasswordInput.value,
       username: usernameInput.value.trim(),
+      passwordHint: passwordHintInput?.value.trim(),
+      enforceStrongPassword: enforceStrongPasswordInput?.checked,
     };
 
     if (newPasswordInput.value) {
@@ -3978,6 +4360,8 @@ const comboboxOptions = Array.from(detectedProjects)
         for (const req of Object.values(accountRequirements)) {
           const icon = req.el?.querySelector(".req-icon");
           if (icon) icon.textContent = "○";
+          if (req.el)
+            req.el.className = "flex items-center gap-2 text-admin-muted";
         }
         if (accountPasswordStrengthEl)
           accountPasswordStrengthEl.textContent = "";
@@ -3999,7 +4383,10 @@ const comboboxOptions = Array.from(detectedProjects)
       }
     } finally {
       saveAccountBtn.disabled = false;
-      setBtnLabel(saveAccountBtn, "Update Credentials");
+      saveAccountBtn.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-lock w-4 h-4 shrink-0"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <span data-btn-text>Update Credentials</span>
+      `;
     }
   });
 
@@ -4017,46 +4404,100 @@ const comboboxOptions = Array.from(detectedProjects)
   const sessionTimerEl = document.getElementById("session-timer");
 
   // Listen to Secrets Vault state changes from the component
-  window.addEventListener('secrets-vault:state-change', (e) => {
+  window.addEventListener("secrets-vault:state-change", (e) => {
     const { state } = (e as CustomEvent).detail;
     vaultState = state;
-    
+
     // Update custom domain vault warnings when vault state changes
     updateCustomDomainVaultWarning(
       customDomainInputEl?.value?.trim() ?? "",
-      (document.querySelector('input[name="custom-domain-hosting"]:checked') as HTMLInputElement | null)?.value ?? "cloudflare_pages",
+      (
+        document.querySelector(
+          'input[name="custom-domain-hosting"]:checked',
+        ) as HTMLInputElement | null
+      )?.value ?? "cloudflare_pages",
     );
   });
 
   // ── Custom Domain ──────────────────────────────────────────────────────
-  const customDomainEnabledEl = document.getElementById("custom-domain-enabled") as HTMLInputElement | null;
+  const customDomainEnabledEl = document.getElementById(
+    "custom-domain-enabled",
+  ) as HTMLInputElement | null;
   const customDomainFieldsEl = document.getElementById("custom-domain-fields");
-  const customDomainInputEl = document.getElementById("custom-domain-input") as HTMLInputElement | null;
-  const customDomainApexHintEl = document.getElementById("custom-domain-apex-hint");
-  const customDomainAddWwwCheckboxEl = document.getElementById("custom-domain-add-www") as HTMLInputElement | null;
-  const customDomainWwwPreviewEl = document.getElementById("custom-domain-www-preview");
-  const customDomainHostingRadiosEl = document.querySelectorAll('input[name="custom-domain-hosting"]');
-  const customDomainHostingSectionEl = document.getElementById("custom-domain-hosting-section");
-  const customDomainCloudflareActionsEl = document.getElementById("custom-domain-cloudflare-actions");
-  const customDomainElsewhereMessageEl = document.getElementById("custom-domain-elsewhere-message");
-  const customDomainVerifyBtnEl = document.getElementById("custom-domain-verify-btn") as HTMLButtonElement | null;
-  const customDomainStatusBadgeEl = document.getElementById("custom-domain-status-badge");
+  const customDomainInputEl = document.getElementById(
+    "custom-domain-input",
+  ) as HTMLInputElement | null;
+  const customDomainApexHintEl = document.getElementById(
+    "custom-domain-apex-hint",
+  );
+  const customDomainAddWwwCheckboxEl = document.getElementById(
+    "custom-domain-add-www",
+  ) as HTMLInputElement | null;
+  const customDomainWwwPreviewEl = document.getElementById(
+    "custom-domain-www-preview",
+  );
+  const customDomainHostingRadiosEl = document.querySelectorAll(
+    'input[name="custom-domain-hosting"]',
+  );
+  const customDomainHostingSectionEl = document.getElementById(
+    "custom-domain-hosting-section",
+  );
+  const customDomainCloudflareActionsEl = document.getElementById(
+    "custom-domain-cloudflare-actions",
+  );
+  const customDomainElsewhereMessageEl = document.getElementById(
+    "custom-domain-elsewhere-message",
+  );
+  const customDomainVerifyBtnEl = document.getElementById(
+    "custom-domain-verify-btn",
+  ) as HTMLButtonElement | null;
+  const customDomainStatusBadgeEl = document.getElementById(
+    "custom-domain-status-badge",
+  );
   const customDomainErrorEl = document.getElementById("custom-domain-error");
-  const customDomainSummaryEl = document.getElementById("custom-domain-summary");
+  const customDomainSummaryEl = document.getElementById(
+    "custom-domain-summary",
+  );
   const customDomainEditEl = document.getElementById("custom-domain-edit");
-  const customDomainEditBtnEl = document.getElementById("custom-domain-edit-btn") as HTMLButtonElement | null;
-  const customDomainSummaryDomainEl = document.getElementById("custom-domain-summary-domain");
-  const customDomainSummaryHostingEl = document.getElementById("custom-domain-summary-hosting");
-  const customDomainSummarySatusEl = document.getElementById("custom-domain-summary-status");
-  const customDomainVaultWarningEl = document.getElementById("custom-domain-vault-warning");
-  const customDomainHelpBtnEl = document.getElementById("custom-domain-help-btn") as HTMLButtonElement | null;
-  const customDomainHelpModalEl = document.getElementById("custom-domain-help-modal") as (HTMLElement & { open?: () => void }) | null;
-  const customDomainHelpDomainEl = document.getElementById("custom-domain-help-domain");
-  const customDomainHelpStatusEl = document.getElementById("custom-domain-help-status");
-  const customDomainHelpRecordEl = document.getElementById("custom-domain-help-record");
-  const customDomainHelpRecordNameEl = document.getElementById("custom-domain-help-record-name");
-  const customDomainHelpRecordTargetEl = document.getElementById("custom-domain-help-record-target");
-  const customDomainHelpDataEl = document.getElementById("custom-domain-help-data");
+  const customDomainEditBtnEl = document.getElementById(
+    "custom-domain-edit-btn",
+  ) as HTMLButtonElement | null;
+  const customDomainSummaryDomainEl = document.getElementById(
+    "custom-domain-summary-domain",
+  );
+  const customDomainSummaryHostingEl = document.getElementById(
+    "custom-domain-summary-hosting",
+  );
+  const customDomainSummarySatusEl = document.getElementById(
+    "custom-domain-summary-status",
+  );
+  const customDomainVaultWarningEl = document.getElementById(
+    "custom-domain-vault-warning",
+  );
+  const customDomainHelpBtnEl = document.getElementById(
+    "custom-domain-help-btn",
+  ) as HTMLButtonElement | null;
+  const customDomainHelpModalEl = document.getElementById(
+    "custom-domain-help-modal",
+  ) as (HTMLElement & { open?: () => void }) | null;
+  const customDomainHelpDomainEl = document.getElementById(
+    "custom-domain-help-domain",
+  );
+  const customDomainHelpStatusEl = document.getElementById(
+    "custom-domain-help-status",
+  );
+  const customDomainHelpRecordEl = document.getElementById(
+    "custom-domain-help-record",
+  );
+  const customDomainHelpRecordNameEl = document.getElementById(
+    "custom-domain-help-record-name",
+  );
+  const customDomainHelpRecordTargetEl = document.getElementById(
+    "custom-domain-help-record-target",
+  );
+  const customDomainHelpDataEl = document.getElementById(
+    "custom-domain-help-data",
+  );
 
   const CUSTOM_DOMAIN_DRAFT_KEY = "artsitemaker:custom-domain:draft";
   type CustomDomainDraft = {
@@ -4070,9 +4511,17 @@ const comboboxOptions = Array.from(detectedProjects)
 
   let customDomainForceEdit = false;
 
-  function getCustomDomainState(): Omit<CustomDomainDraft, "editMode" | "updatedAt"> {
+  function getCustomDomainState(): Omit<
+    CustomDomainDraft,
+    "editMode" | "updatedAt"
+  > {
     const domain = customDomainInputEl?.value?.trim() ?? "";
-    const hostingTarget = (document.querySelector('input[name="custom-domain-hosting"]:checked') as HTMLInputElement | null)?.value ?? "cloudflare_pages";
+    const hostingTarget =
+      (
+        document.querySelector(
+          'input[name="custom-domain-hosting"]:checked',
+        ) as HTMLInputElement | null
+      )?.value ?? "cloudflare_pages";
     return {
       enabled: customDomainEnabledEl?.checked ?? false,
       domain,
@@ -4087,7 +4536,9 @@ const comboboxOptions = Array.from(detectedProjects)
       removeLocalStorage(CUSTOM_DOMAIN_DRAFT_KEY);
       return;
     }
-    const isEditMode = customDomainEditEl ? !customDomainEditEl.classList.contains("hidden") : true;
+    const isEditMode = customDomainEditEl
+      ? !customDomainEditEl.classList.contains("hidden")
+      : true;
     const draft: CustomDomainDraft = {
       ...state,
       editMode: customDomainForceEdit || isEditMode,
@@ -4097,7 +4548,10 @@ const comboboxOptions = Array.from(detectedProjects)
   }
 
   function applyCustomDomainDraft(): void {
-    const draft = readLocalStorage<CustomDomainDraft | null>(CUSTOM_DOMAIN_DRAFT_KEY, null);
+    const draft = readLocalStorage<CustomDomainDraft | null>(
+      CUSTOM_DOMAIN_DRAFT_KEY,
+      null,
+    );
     if (!draft) return;
     const initialState = getCustomDomainState();
     const differsFromInitial =
@@ -4109,7 +4563,8 @@ const comboboxOptions = Array.from(detectedProjects)
 
     if (customDomainEnabledEl) customDomainEnabledEl.checked = !!draft.enabled;
     if (customDomainInputEl) customDomainInputEl.value = draft.domain || "";
-    if (customDomainAddWwwCheckboxEl) customDomainAddWwwCheckboxEl.checked = !!draft.addWww;
+    if (customDomainAddWwwCheckboxEl)
+      customDomainAddWwwCheckboxEl.checked = !!draft.addWww;
     if (customDomainHostingRadiosEl?.length) {
       customDomainHostingRadiosEl.forEach((radio) => {
         const input = radio as HTMLInputElement;
@@ -4120,12 +4575,25 @@ const comboboxOptions = Array.from(detectedProjects)
     customDomainForceEdit = draft.editMode || differsFromInitial;
   }
 
-  function showDomainToast(message: string, type: "success" | "error" | "info" = "info") {
-    const variant = type === "error" ? "destructive" : type === "success" ? "success" : "default";
+  function showDomainToast(
+    message: string,
+    type: "success" | "error" | "info" = "info",
+  ) {
+    const variant =
+      type === "error"
+        ? "destructive"
+        : type === "success"
+          ? "success"
+          : "default";
     window.dispatchEvent(
       new CustomEvent("artsitemaker:toast", {
         detail: {
-          title: type === "error" ? "Error" : type === "success" ? "Success" : "Info",
+          title:
+            type === "error"
+              ? "Error"
+              : type === "success"
+                ? "Success"
+                : "Info",
           description: message,
           variant,
         },
@@ -4133,21 +4601,32 @@ const comboboxOptions = Array.from(detectedProjects)
     );
   }
 
-  function updateCustomDomainFieldsVisibility(options: { allowRemove?: boolean } = {}) {
+  function updateCustomDomainFieldsVisibility(
+    options: { allowRemove?: boolean } = {},
+  ) {
     if (!customDomainFieldsEl) return;
     const enabled = customDomainEnabledEl?.checked ?? false;
     customDomainFieldsEl.classList.toggle("hidden", !enabled);
-    if (options.allowRemove !== false && !enabled && customDomainInputEl?.value.trim()) {
+    if (
+      options.allowRemove !== false &&
+      !enabled &&
+      customDomainInputEl?.value.trim()
+    ) {
       fetch("/api/deployment/custom-domain", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "remove", domain: customDomainInputEl.value.trim() }),
-      }).then(() => {
-        if (customDomainInputEl) customDomainInputEl.value = "";
-        updateCustomDomainProgressiveDisclosure();
-        removeLocalStorage(CUSTOM_DOMAIN_DRAFT_KEY);
-        showDomainToast("Custom domain removed", "success");
-      }).catch(() => {});
+        body: JSON.stringify({
+          action: "remove",
+          domain: customDomainInputEl.value.trim(),
+        }),
+      })
+        .then(() => {
+          if (customDomainInputEl) customDomainInputEl.value = "";
+          updateCustomDomainProgressiveDisclosure();
+          removeLocalStorage(CUSTOM_DOMAIN_DRAFT_KEY);
+          showDomainToast("Custom domain removed", "success");
+        })
+        .catch(() => {});
     }
     if (!enabled) {
       persistCustomDomainDraft();
@@ -4163,9 +4642,15 @@ const comboboxOptions = Array.from(detectedProjects)
   });
 
   // Progressive disclosure: update visibility based on domain and hosting target
-  function updateCustomDomainVaultWarning(domain: string, hostingTarget: string) {
+  function updateCustomDomainVaultWarning(
+    domain: string,
+    hostingTarget: string,
+  ) {
     if (!customDomainVaultWarningEl || !customDomainVerifyBtnEl) return;
-    const needsVault: boolean = !!domain && hostingTarget === "cloudflare_pages" && vaultState !== "unlocked";
+    const needsVault: boolean =
+      !!domain &&
+      hostingTarget === "cloudflare_pages" &&
+      vaultState !== "unlocked";
     customDomainVaultWarningEl.classList.toggle("hidden", !needsVault);
     if (needsVault) {
       customDomainVaultWarningEl.textContent =
@@ -4182,7 +4667,12 @@ const comboboxOptions = Array.from(detectedProjects)
 
   function updateCustomDomainProgressiveDisclosure() {
     const domain = customDomainInputEl?.value?.trim() ?? "";
-    const hostingTarget = (document.querySelector('input[name="custom-domain-hosting"]:checked') as HTMLInputElement)?.value ?? "cloudflare_pages";
+    const hostingTarget =
+      (
+        document.querySelector(
+          'input[name="custom-domain-hosting"]:checked',
+        ) as HTMLInputElement
+      )?.value ?? "cloudflare_pages";
 
     // Show/hide hosting target section (only when domain is entered)
     if (customDomainHostingSectionEl) {
@@ -4200,12 +4690,18 @@ const comboboxOptions = Array.from(detectedProjects)
 
     // Show/hide Cloudflare actions (only for Cloudflare + domain)
     if (customDomainCloudflareActionsEl) {
-      customDomainCloudflareActionsEl.classList.toggle("hidden", !(domain && hostingTarget === "cloudflare_pages"));
+      customDomainCloudflareActionsEl.classList.toggle(
+        "hidden",
+        !(domain && hostingTarget === "cloudflare_pages"),
+      );
     }
 
     // Show/hide Elsewhere message (only for Elsewhere + domain)
     if (customDomainElsewhereMessageEl) {
-      customDomainElsewhereMessageEl.classList.toggle("hidden", !(domain && hostingTarget === "elsewhere"));
+      customDomainElsewhereMessageEl.classList.toggle(
+        "hidden",
+        !(domain && hostingTarget === "elsewhere"),
+      );
     }
 
     updateCustomDomainVaultWarning(domain, hostingTarget);
@@ -4216,7 +4712,10 @@ const comboboxOptions = Array.from(detectedProjects)
       customDomainSummaryDomainEl.textContent = domain || "—";
     }
     if (customDomainSummaryHostingEl) {
-      customDomainSummaryHostingEl.textContent = hostingTarget === "cloudflare_pages" ? "Cloudflare Pages" : "Manual DNS";
+      customDomainSummaryHostingEl.textContent =
+        hostingTarget === "cloudflare_pages"
+          ? "Cloudflare Pages"
+          : "Manual DNS";
     }
   }
 
@@ -4229,7 +4728,7 @@ const comboboxOptions = Array.from(detectedProjects)
   });
 
   // Update on hosting target change
-  customDomainHostingRadiosEl.forEach(radio => {
+  customDomainHostingRadiosEl.forEach((radio) => {
     radio.addEventListener("change", () => {
       customDomainForceEdit = true;
       updateCustomDomainProgressiveDisclosure();
@@ -4244,7 +4743,12 @@ const comboboxOptions = Array.from(detectedProjects)
   // Summary/Edit mode toggle
   function updateCustomDomainModes() {
     const domain = customDomainInputEl?.value?.trim() ?? "";
-    const hostingTarget = (document.querySelector('input[name="custom-domain-hosting"]:checked') as HTMLInputElement | null)?.value ?? "cloudflare_pages";
+    const hostingTarget =
+      (
+        document.querySelector(
+          'input[name="custom-domain-hosting"]:checked',
+        ) as HTMLInputElement | null
+      )?.value ?? "cloudflare_pages";
     const hasDomain = !!domain;
     const shouldEdit = customDomainForceEdit || !hasDomain;
 
@@ -4294,7 +4798,12 @@ const comboboxOptions = Array.from(detectedProjects)
             : "Cloudflare is verifying your DNS. This can take up to 24 hours.";
     }
 
-    if (customDomainHelpRecordEl && customDomainHelpRecordNameEl && customDomainHelpRecordTargetEl && projectName) {
+    if (
+      customDomainHelpRecordEl &&
+      customDomainHelpRecordNameEl &&
+      customDomainHelpRecordTargetEl &&
+      projectName
+    ) {
       customDomainHelpRecordEl.classList.remove("hidden");
       customDomainHelpRecordNameEl.textContent = domain || "—";
       customDomainHelpRecordTargetEl.textContent = `${projectName}.pages.dev`;
@@ -4316,7 +4825,12 @@ const comboboxOptions = Array.from(detectedProjects)
   // Verify DNS button
   customDomainVerifyBtnEl?.addEventListener("click", async () => {
     const domain = customDomainInputEl?.value?.trim() ?? "";
-    const hostingTarget = (document.querySelector('input[name="custom-domain-hosting"]:checked') as HTMLInputElement)?.value ?? "cloudflare_pages";
+    const hostingTarget =
+      (
+        document.querySelector(
+          'input[name="custom-domain-hosting"]:checked',
+        ) as HTMLInputElement
+      )?.value ?? "cloudflare_pages";
     const enabled = customDomainEnabledEl?.checked ?? false;
     const addWww = customDomainAddWwwCheckboxEl?.checked ?? false;
 
@@ -4337,12 +4851,21 @@ const comboboxOptions = Array.from(detectedProjects)
       const configureRes = await fetch("/api/deployment/custom-domain", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "configure", domain, addWww, hostingTarget, enabled }),
+        body: JSON.stringify({
+          action: "configure",
+          domain,
+          addWww,
+          hostingTarget,
+          enabled,
+        }),
       });
       const configureData = await configureRes.json();
 
       if (!configureData.success) {
-        showDomainToast(configureData.error || "Failed to save domain", "error");
+        showDomainToast(
+          configureData.error || "Failed to save domain",
+          "error",
+        );
         if (customDomainErrorEl) {
           customDomainErrorEl.textContent = configureData.error || "";
           customDomainErrorEl.classList.remove("hidden");
@@ -4361,35 +4884,52 @@ const comboboxOptions = Array.from(detectedProjects)
         });
         const verifyData = await verifyRes.json();
         const status = verifyData.status ?? "not_configured";
-        
+
         if (customDomainStatusBadgeEl) {
           customDomainStatusBadgeEl.textContent =
-            status === "active" ? "Active" :
-            status === "pending" ? "Pending" :
-            status === "error" ? "Error" : "Not configured";
+            status === "active"
+              ? "Active"
+              : status === "pending"
+                ? "Pending"
+                : status === "error"
+                  ? "Error"
+                  : "Not configured";
           customDomainStatusBadgeEl.dataset.status = status;
-          customDomainStatusBadgeEl.className = "text-xs px-2 py-1 rounded cursor-help " + (
-            status === "active" ? "bg-green-500/10 text-green-400" :
-            status === "pending" ? "bg-yellow-500/10 text-yellow-400" :
-            status === "error" ? "bg-red-500/10 text-red-400" :
-            "bg-admin-bg text-admin-muted"
-          );
+          customDomainStatusBadgeEl.className =
+            "text-xs px-2 py-1 rounded cursor-help " +
+            (status === "active"
+              ? "bg-green-500/10 text-green-400"
+              : status === "pending"
+                ? "bg-yellow-500/10 text-yellow-400"
+                : status === "error"
+                  ? "bg-red-500/10 text-red-400"
+                  : "bg-admin-bg text-admin-muted");
           if (verifyData.lastChecked) {
-            customDomainStatusBadgeEl.setAttribute("title", `Last checked: ${new Date(verifyData.lastChecked).toLocaleString()}`);
+            customDomainStatusBadgeEl.setAttribute(
+              "title",
+              `Last checked: ${new Date(verifyData.lastChecked).toLocaleString()}`,
+            );
           }
         }
 
         // Update summary status badge if visible
         if (customDomainSummarySatusEl) {
           customDomainSummarySatusEl.textContent =
-            status === "active" ? "Active" :
-            status === "pending" ? "Pending" :
-            status === "error" ? "Error" : "Not configured";
+            status === "active"
+              ? "Active"
+              : status === "pending"
+                ? "Pending"
+                : status === "error"
+                  ? "Error"
+                  : "Not configured";
           customDomainSummarySatusEl.className = `text-xs px-2 py-1 rounded ${
-            status === "active" ? "bg-green-500/10 text-green-400" :
-            status === "pending" ? "bg-yellow-500/10 text-yellow-400" :
-            status === "error" ? "bg-red-500/10 text-red-400" :
-            "bg-admin-bg text-admin-muted"
+            status === "active"
+              ? "bg-green-500/10 text-green-400"
+              : status === "pending"
+                ? "bg-yellow-500/10 text-yellow-400"
+                : status === "error"
+                  ? "bg-red-500/10 text-red-400"
+                  : "bg-admin-bg text-admin-muted"
           }`;
         }
 
@@ -4410,11 +4950,13 @@ const comboboxOptions = Array.from(detectedProjects)
         // Elsewhere: update status to "Manual DNS"
         if (customDomainStatusBadgeEl) {
           customDomainStatusBadgeEl.textContent = "Manual DNS";
-          customDomainStatusBadgeEl.className = "text-xs px-2 py-1 rounded bg-admin-bg text-admin-muted";
+          customDomainStatusBadgeEl.className =
+            "text-xs px-2 py-1 rounded bg-admin-bg text-admin-muted";
         }
         if (customDomainSummarySatusEl) {
           customDomainSummarySatusEl.textContent = "Manual DNS";
-          customDomainSummarySatusEl.className = "text-xs px-2 py-1 rounded bg-admin-bg text-admin-muted";
+          customDomainSummarySatusEl.className =
+            "text-xs px-2 py-1 rounded bg-admin-bg text-admin-muted";
         }
       }
 

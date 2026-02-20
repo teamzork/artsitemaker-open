@@ -1,0 +1,299 @@
+---
+import AdminLayout from "@layouts/AdminLayout.astro";
+import { getSession, SESSION_COOKIE_NAME } from "../lib/auth";
+import { isEmailAuthConfigured, validateSession } from "../lib/db-auth";
+import Button from "../components/ui/Button.astro";
+import { User, Mail, Lock } from "lucide-react";
+import { getInitials } from "../lib/string-utils";
+
+// Get current user session
+const sessionCookie = Astro.cookies.get(SESSION_COOKIE_NAME)?.value;
+const basicSession = getSession(Astro.cookies);
+
+let sessionUser: { username: string; email?: string; avatarUrl?: string | null; role?: string } | null = null;
+
+if (basicSession) {
+  sessionUser = {
+    username: basicSession.username,
+    email: undefined, // Basic auth doesn't have email
+    avatarUrl: basicSession.avatarUrl,
+    role: "admin",
+  };
+} else if (sessionCookie && /^[a-f0-9]{64}$/i.test(sessionCookie)) {
+  const emailConfigured = await isEmailAuthConfigured();
+  if (emailConfigured) {
+    const result = await validateSession(sessionCookie);
+    if (result.valid) {
+      sessionUser = {
+        username: result.user.username || result.user.email,
+        email: result.user.email,
+        avatarUrl: null,
+        role: result.user.role,
+      };
+    }
+  }
+}
+
+// If no session, redirect to login
+if (!sessionUser) {
+  return Astro.redirect("/login");
+}
+---
+
+<AdminLayout title="Profile">
+  <div class="space-y-6 max-w-2xl">
+    <!-- Profile Information -->
+    <div class="card">
+      <div class="flex items-center gap-2 mb-6">
+        <User className="w-5 h-5 text-admin-accent" />
+        <h2 class="text-lg font-semibold">Profile Information</h2>
+      </div>
+
+      <div class="flex items-start gap-6 mb-6">
+        <!-- Avatar -->
+        <div>
+          {sessionUser.avatarUrl ? (
+            <img
+              src={sessionUser.avatarUrl}
+              alt={sessionUser.username}
+              class="w-20 h-20 rounded-full"
+            />
+          ) : (
+            <div
+              class:list={[
+                "w-20 h-20 rounded-full text-2xl font-semibold flex items-center justify-center",
+                sessionUser.role === "admin"
+                  ? "bg-orange-700 text-white shadow-lg shadow-orange-900/50"
+                  : "bg-admin-card text-admin-text",
+              ]}
+              aria-hidden="true"
+            >
+              {getInitials(sessionUser.username)}
+            </div>
+          )}
+        </div>
+
+        <!-- User Details -->
+        <div class="flex-1 space-y-4">
+          <div>
+            <label class="block text-sm text-admin-muted mb-2">Username</label>
+            <input
+              type="text"
+              value={sessionUser.username}
+              class="w-full"
+              readonly
+              disabled
+            />
+          </div>
+
+          {sessionUser.email && (
+            <div>
+              <label class="block text-sm text-admin-muted mb-2">
+                <Mail className="w-4 h-4 inline mr-1" />
+                Email
+              </label>
+              <input
+                type="email"
+                value={sessionUser.email}
+                class="w-full"
+                readonly
+                disabled
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      <p class="text-sm text-admin-muted">
+        Profile information is managed through your authentication provider.
+      </p>
+    </div>
+
+    <!-- Change Password -->
+    <div class="card">
+      <div class="flex items-center gap-2 mb-6">
+        <Lock className="w-5 h-5 text-admin-accent" />
+        <h2 class="text-lg font-semibold">Change Password</h2>
+      </div>
+
+      <form id="password-form" class="space-y-4">
+        <div>
+          <label for="current-password" class="block text-sm text-admin-muted mb-2">
+            Current Password
+          </label>
+          <input
+            type="password"
+            id="current-password"
+            name="currentPassword"
+            class="w-full"
+            placeholder="Enter current password"
+            required
+          />
+        </div>
+
+        <div>
+          <label for="new-password" class="block text-sm text-admin-muted mb-2">
+            New Password
+          </label>
+          <input
+            type="password"
+            id="new-password"
+            name="newPassword"
+            class="w-full"
+            placeholder="Enter new password"
+            required
+            minlength="8"
+          />
+          <p class="text-xs text-admin-muted mt-1">
+            Must be at least 8 characters long
+          </p>
+        </div>
+
+        <div>
+          <label for="confirm-password" class="block text-sm text-admin-muted mb-2">
+            Confirm New Password
+          </label>
+          <input
+            type="password"
+            id="confirm-password"
+            name="confirmPassword"
+            class="w-full"
+            placeholder="Confirm new password"
+            required
+            minlength="8"
+          />
+        </div>
+
+        <div id="password-status" class="text-sm hidden" aria-live="polite"></div>
+
+        <div class="flex gap-3">
+          <Button type="submit" variant="primary" disabled id="update-password-btn">
+            Update Password
+          </Button>
+        </div>
+      </form>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  const form = document.getElementById("password-form") as HTMLFormElement;
+  const status = document.getElementById("password-status");
+  const updateBtn = document.getElementById("update-password-btn");
+  const inputs = form?.querySelectorAll("input[type='password']");
+
+  // Validate form on input
+  function validateForm() {
+    let allFilled = true;
+    inputs?.forEach((input) => {
+      if (!(input as HTMLInputElement).value) {
+        allFilled = false;
+      }
+    });
+
+    if (updateBtn) {
+      if (allFilled) {
+        updateBtn.removeAttribute("disabled");
+        updateBtn.removeAttribute("aria-disabled");
+      } else {
+        updateBtn.setAttribute("disabled", "");
+        updateBtn.setAttribute("aria-disabled", "true");
+      }
+    }
+  }
+
+  inputs?.forEach((input) => {
+    input.addEventListener("input", validateForm);
+  });
+
+  // Form submission
+  form?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const formData = new FormData(form);
+    const currentPassword = formData.get("currentPassword") as string;
+    const newPassword = formData.get("newPassword") as string;
+    const confirmPassword = formData.get("confirmPassword") as string;
+
+    // Client-side validation
+    if (newPassword !== confirmPassword) {
+      if (status) {
+        status.textContent = "New passwords do not match";
+        status.className = "text-sm text-red-400";
+        status.classList.remove("hidden");
+      }
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      if (status) {
+        status.textContent = "Password must be at least 8 characters long";
+        status.className = "text-sm text-red-400";
+        status.classList.remove("hidden");
+      }
+      return;
+    }
+
+    // Show loading state
+    if (status) {
+      status.textContent = "Updating password...";
+      status.className = "text-sm text-admin-muted";
+      status.classList.remove("hidden");
+    }
+    
+    if (updateBtn) {
+      updateBtn.setAttribute("disabled", "");
+    }
+
+    try {
+      const response = await fetch("/api/profile/change-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          currentPassword,
+          newPassword,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        if (status) {
+          status.textContent = "Password updated successfully!";
+          status.className = "text-sm text-green-400";
+          status.classList.remove("hidden");
+        }
+        form.reset();
+        validateForm(); // Re-disable button
+
+        // Show success toast
+        window.dispatchEvent(
+          new CustomEvent("artsitemaker:toast", {
+            detail: {
+              title: "Password updated successfully",
+              variant: "success",
+            },
+          })
+        );
+      } else {
+        if (status) {
+          status.textContent = result.error || "Failed to update password";
+          status.className = "text-sm text-red-400";
+          status.classList.remove("hidden");
+        }
+        // Re-enable button if failed
+        validateForm();
+      }
+    } catch (error) {
+      if (status) {
+        status.textContent = "An error occurred. Please try again.";
+        status.className = "text-sm text-red-400";
+        status.classList.remove("hidden");
+      }
+      // Re-enable button if error
+      validateForm();
+    }
+  });
+</script>

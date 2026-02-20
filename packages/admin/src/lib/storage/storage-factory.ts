@@ -41,7 +41,7 @@ export async function loadStorageConfig(): Promise<StorageConfig> {
         case 'credentials-missing':
         case 'credentials-incomplete':
           throw new Error(
-            'R2 credentials not found in secrets vault or session expired. Please unlock secrets and configure R2 credentials in Admin > Configuration.'
+            'R2 credentials not found in secrets vault or session expired. Configure R2 credentials in Configuration > Secrets.'
           );
         case 'config-missing':
           throw new Error(

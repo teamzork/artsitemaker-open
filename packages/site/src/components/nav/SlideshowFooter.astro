@@ -76,6 +76,7 @@ const copyrightName = footer.copyrightName || siteTitle;
 const artistName = footer.artistName || "";
 const showCredits = footer.showCredits !== false;
 const allRightsReserved = footer.allRightsReserved !== false;
+const poweredByArtSiteMaker = footer.poweredByArtSiteMaker === true;
 
 // Service pages for copyright bar (dynamic from showInCopyright flag)
 const copyrightPages: { label: string; href: string }[] = [];
@@ -188,6 +189,21 @@ const currentYear = new Date().getFullYear();
               <a href={page.href}>{page.label}</a>
             </>
           ))}
+          {poweredByArtSiteMaker && (
+            <>
+              <span class="separator">&middot;</span>
+              <span>
+                Powered by{" "}
+                <a
+                  href="https://artsitemaker.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  ArtSiteMaker
+                </a>
+              </span>
+            </>
+          )}
         </div>
       )
     }

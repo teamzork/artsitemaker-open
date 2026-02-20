@@ -341,12 +341,17 @@ export default defineConfig({
   output: "static",
   integrations: [tailwind()],
 
+  server: {
+    port: parseInt(process.env.PORT) || 4321,
+    host: process.env.HOST || '0.0.0.0'
+  },
+
   vite: {
     clearScreen: false,
     define: {
       "import.meta.env.IMAGE_BASE_URL": JSON.stringify(
         process.env.IMAGE_BASE_URL ||
-          "https://images.artsitemaker.com/artsitemaker",
+        "https://images.artsitemaker.com/artsitemaker",
       ),
     },
     plugins: [

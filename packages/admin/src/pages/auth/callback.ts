@@ -2,11 +2,12 @@
 // Handles GitHub OAuth callback
 
 import type { APIRoute } from 'astro';
-import { 
-  github, 
-  isUserAllowed, 
-  encodeSession, 
-  SESSION_COOKIE_NAME, 
+import {
+  getGitHubCredentials,
+  createGitHubClient,
+  isUserAllowed,
+  encodeSession,
+  SESSION_COOKIE_NAME,
   SESSION_MAX_AGE,
   getSessionCookieOptions
 } from '@lib/auth';
@@ -38,7 +39,14 @@ export const GET: APIRoute = async ({ url, cookies, redirect }) => {
   }
 
   try {
+    // Get credentials from vault
+    const creds = await getGitHubCredentials();
+    if (!creds.clientId || !creds.clientSecret) {
+      return redirect('/login?error=not_configured');
+    }
+
     // Exchange code for access token
+    const github = createGitHubClient(creds.clientId, creds.clientSecret, creds.callbackUrl);
     const tokens = await github.validateAuthorizationCode(code);
     const accessToken = tokens.accessToken();
 
@@ -58,7 +66,7 @@ export const GET: APIRoute = async ({ url, cookies, redirect }) => {
     const githubUser: GitHubUser = await userResponse.json();
 
     // Check if user is allowed
-    if (!isUserAllowed(githubUser.login)) {
+    if (!isUserAllowed(githubUser.login, creds.allowedUsers)) {
       console.warn(`User ${githubUser.login} not in allowed users list`);
       return redirect('/login?error=access_denied');
     }
@@ -69,6 +77,7 @@ export const GET: APIRoute = async ({ url, cookies, redirect }) => {
       username: githubUser.login,
       avatarUrl: githubUser.avatar_url,
       accessToken: accessToken,
+      authMethod: 'github' as const,
       expiresAt: Date.now() + (SESSION_MAX_AGE * 1000)
     };
 
@@ -83,4 +92,3 @@ export const GET: APIRoute = async ({ url, cookies, redirect }) => {
     return redirect('/login?error=auth_failed');
   }
 };
-

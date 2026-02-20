@@ -303,6 +303,15 @@ try {
             />
             <span class="text-sm">Show copyright bar</span>
           </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              id="copyright-powered-by"
+              checked={footerData.poweredByArtSiteMaker === true}
+              class="w-4 h-4 accent-[var(--admin-accent)]"
+            />
+            <span class="text-sm">Powered by ArtSiteMaker</span>
+          </label>
         </div>
 
         <!-- Service Pages in Copyright -->
@@ -578,6 +587,9 @@ try {
   const copyrightShowCreditsCheckbox = document.getElementById(
     "copyright-show-credits",
   ) as HTMLInputElement;
+  const copyrightPoweredByCheckbox = document.getElementById(
+    "copyright-powered-by",
+  ) as HTMLInputElement;
   const copyrightPreviewLine = document.getElementById(
     "copyright-preview-line",
   ) as HTMLElement;
@@ -597,6 +609,7 @@ try {
       artist: copyrightArtistInput?.value || "",
       allRights: copyrightAllRightsCheckbox?.checked ?? true,
       showCredits: copyrightShowCreditsCheckbox?.checked ?? true,
+      poweredBy: copyrightPoweredByCheckbox?.checked ?? false,
       servicePages: servicePageStates,
     });
   }
@@ -617,6 +630,10 @@ try {
     copyrightServicePageCheckboxes.forEach((cb) => {
       if (cb.checked) parts.push(cb.dataset.title || cb.dataset.slug || "");
     });
+
+    if (copyrightPoweredByCheckbox?.checked) {
+      parts.push("Powered by ArtSiteMaker");
+    }
 
     copyrightPreviewLine.textContent = parts.join(" · ");
     copyrightPreviewLine.classList.toggle(
@@ -1594,6 +1611,7 @@ try {
         artistName: copyrightArtistInput?.value || "",
         allRightsReserved: copyrightAllRightsCheckbox?.checked ?? true,
         showCredits: copyrightShowCreditsCheckbox?.checked ?? true,
+        poweredByArtSiteMaker: copyrightPoweredByCheckbox?.checked ?? false,
       };
 
       const saveFooterRes = await fetch("/api/footer", {
@@ -1685,7 +1703,7 @@ try {
       });
     });
 
-    [copyrightAllRightsCheckbox, copyrightShowCreditsCheckbox].forEach((cb) => {
+    [copyrightAllRightsCheckbox, copyrightShowCreditsCheckbox, copyrightPoweredByCheckbox].forEach((cb) => {
       cb?.addEventListener("change", () => {
         updateCopyrightPreview();
         markChanged();

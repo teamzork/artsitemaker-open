@@ -4,7 +4,7 @@ import path from 'path';
 import { PAGE_TYPES } from './pageTypes';
 import { getSettingsPath, getThemeConfigPath } from './paths';
 import type { ArtSiteMakerContext } from './content';
-import { getFontFormat, type ContentFolderFont } from '@artsitemaker/shared';
+import { getFontFormat, type ContentFolderFont, findDimkaFont } from '@artsitemaker/shared';
 
 export interface FontConfig {
     family: string;
@@ -321,79 +321,67 @@ export function generateFontFaces(
     identityKit: IdentityKit,
     contentFolderFonts: ContentFolderFont[] = []
 ): string {
-    let css = '';
+    const rules: string[] = [];
 
-    // Heading font
-    if (identityKit.fonts?.heading) {
-        const heading = identityKit.fonts.heading;
+    const processFont = (fontConfig: string | FontConfig | undefined, isHeading: boolean) => {
+        if (!fontConfig) return;
 
-        // Check if it's the new object format with a file
-        if (typeof heading === 'object' && heading.file) {
-            const fontFormat = getFontFormat(heading.file);
+        const familyName = typeof fontConfig === 'string' ? fontConfig : fontConfig.family;
+        if (!familyName) return;
 
-            css += `
-@font-face {
-  font-family: "${heading.family}";
-  src: url('/user-assets/${heading.file}') format('${fontFormat}');
-  font-weight: ${heading.weight || 700};
-  font-style: ${heading.style || 'normal'};
-  font-display: swap;
-}
-            `.trim() + '\n\n';
-        }
-        // NEW: Handle string format by looking up in Content Folder fonts
-        else if (typeof heading === 'string') {
-            const match = contentFolderFonts.find(f => f.displayName === heading);
-            if (match) {
-                const fontFormat = getFontFormat(match.file);
-                css += `
-@font-face {
-  font-family: "${heading}";
-  src: url('/user-assets/fonts/${match.file}') format('${fontFormat}');
-  font-weight: 700;
+        // Priority 1: Check if it's a Dimka CDN font
+        const dimkaFont = findDimkaFont(familyName);
+        if (dimkaFont) {
+            for (const variant of dimkaFont.variants) {
+                rules.push(
+                    `@font-face {
+  font-family: "${dimkaFont.name}";
+  src: url("${variant.woff2}") format("woff2"),
+       url("${variant.woff}") format("woff");
+  font-weight: ${variant.weight};
   font-style: normal;
   font-display: swap;
-}
-            `.trim() + '\n\n';
+}`.trim()
+                );
             }
+            return;
         }
-    }
 
-    // Body font
-    if (identityKit.fonts?.body) {
-        const body = identityKit.fonts.body;
-
-        // Check if it's the new object format with a file
-        if (typeof body === 'object' && body.file) {
-            const fontFormat = getFontFormat(body.file);
-
-            css += `
-@font-face {
-  font-family: "${body.family}";
-  src: url('/user-assets/${body.file}') format('${fontFormat}');
-  font-weight: ${body.weight || 400};
-  font-style: ${body.style || 'normal'};
+        // Priority 2: Object format with explicit file
+        if (typeof fontConfig === 'object' && fontConfig.file) {
+            const fontFormat = getFontFormat(fontConfig.file);
+            rules.push(
+                `@font-face {
+  font-family: "${fontConfig.family}";
+  src: url('/user-assets/${fontConfig.file}') format('${fontFormat}');
+  font-weight: ${fontConfig.weight || (isHeading ? 700 : 400)};
+  font-style: ${fontConfig.style || 'normal'};
   font-display: swap;
-}
-            `.trim() + '\n\n';
+}`.trim()
+            );
+            return;
         }
-        // NEW: Handle string format by looking up in Content Folder fonts
-        else if (typeof body === 'string') {
-            const match = contentFolderFonts.find(f => f.displayName === body);
+
+        // Priority 3: String format - lookup in content folder fonts (fallback)
+        if (typeof fontConfig === 'string') {
+            const match = contentFolderFonts.find(f => f.displayName === fontConfig);
             if (match) {
                 const fontFormat = getFontFormat(match.file);
-                css += `
-@font-face {
-  font-family: "${body}";
+                rules.push(
+                    `@font-face {
+  font-family: "${fontConfig}";
   src: url('/user-assets/fonts/${match.file}') format('${fontFormat}');
-  font-weight: 400;
+  font-weight: ${isHeading ? 700 : 400};
   font-style: normal;
   font-display: swap;
-}
-            `.trim() + '\n\n';
+}`.trim()
+                );
             }
         }
-    }
+    };
 
-    return css;
+    processFont(identityKit.fonts?.heading, true);
+    processFont(identityKit.fonts?.body, false);
+
+    return rules.join('\n\n');
 }

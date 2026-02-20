@@ -95,6 +95,7 @@ const copyrightName = footer.copyrightName || siteTitle;
 const artistName = footer.artistName || "";
 const showCredits = footer.showCredits !== false;
 const allRightsReserved = footer.allRightsReserved !== false;
+const poweredByArtSiteMaker = footer.poweredByArtSiteMaker === true;
 
 // Service pages for copyright bar (dynamic from showInCopyright flag)
 const copyrightPages: { label: string; href: string }[] = [];
@@ -200,24 +201,28 @@ for (const footerMeta of footerPageMap.values()) {
           (websiteUrl || portfolioUrl) && (
             <div class="mt-4 space-y-1">
               {websiteUrl && (
-                <a
-                  href={websiteUrl}
-                  target="_blank"
-                  rel="noopener"
-                  class="footer-link block"
-                >
-                  {websiteLabel || websiteUrl}
-                </a>
+                <div>
+                  <a
+                    href={websiteUrl}
+                    target="_blank"
+                    rel="noopener"
+                    class="footer-link"
+                  >
+                    {websiteLabel || websiteUrl}
+                  </a>
+                </div>
               )}
               {portfolioUrl && (
-                <a
-                  href={portfolioUrl}
-                  target="_blank"
-                  rel="noopener"
-                  class="footer-link block"
-                >
-                  {portfolioLabel || portfolioUrl}
-                </a>
+                <div>
+                  <a
+                    href={portfolioUrl}
+                    target="_blank"
+                    rel="noopener"
+                    class="footer-link"
+                  >
+                    {portfolioLabel || portfolioUrl}
+                  </a>
+                </div>
               )}
             </div>
           )
@@ -283,6 +288,22 @@ for (const footerMeta of footerPageMap.values()) {
               </a>
             </>
           ))}
+          {poweredByArtSiteMaker && (
+            <>
+              <span class="mx-2">&middot;</span>
+              <span>
+                Powered by{" "}
+                <a
+                  href="https://artsitemaker.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="footer-link"
+                >
+                  ArtSiteMaker
+                </a>
+              </span>
+            </>
+          )}
         </div>
       )
     }
@@ -308,7 +329,7 @@ for (const footerMeta of footerPageMap.values()) {
 
   .footer-logo-section {
     display: flex;
-    justify-content: flex-start;
+    justify-content: center;
   }
 
   .footer-logo {

@@ -2,18 +2,20 @@
 // Initiates GitHub OAuth flow
 
 import type { APIRoute } from 'astro';
-import { github, isOAuthConfigured } from '@lib/auth';
+import { getGitHubCredentials, createGitHubClient } from '@lib/auth';
 import { generateState } from 'arctic';
 
 export const GET: APIRoute = async ({ cookies, redirect }) => {
-  // Check if OAuth is configured
-  if (!isOAuthConfigured()) {
+  // Get GitHub credentials (vault → env → config)
+  const creds = await getGitHubCredentials();
+
+  if (!creds.clientId || !creds.clientSecret) {
     return redirect('/login?error=not_configured');
   }
 
   // Generate state for CSRF protection
   const state = generateState();
-  
+
   // Store state in cookie for verification on callback
   cookies.set('github_oauth_state', state, {
     path: '/',
@@ -24,8 +26,8 @@ export const GET: APIRoute = async ({ cookies, redirect }) => {
   });
 
   // Create authorization URL
+  const github = createGitHubClient(creds.clientId, creds.clientSecret, creds.callbackUrl);
   const url = github.createAuthorizationURL(state, ['read:user', 'user:email']);
-  
+
   return redirect(url.toString());
 };
-

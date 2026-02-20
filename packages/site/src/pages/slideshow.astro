@@ -1,15 +1,15 @@
 ---
 // packages/site/src/pages/slideshow.astro
-import PageLayout from '@layouts/PageLayout.astro';
-import SlideshowFooter from '@components/nav/SlideshowFooter.astro';
-import { isPageEnabled } from '../lib/pageTypes';
-import type { ArtworkData } from '../types/content';
-import { getImageBaseUrl } from '../lib/paths';
-import { listArtworks } from '../lib/content-service';
+import PageLayout from "@layouts/PageLayout.astro";
+import SlideshowFooter from "@components/nav/SlideshowFooter.astro";
+import { isPageEnabled } from "../lib/pageTypes";
+import type { ArtworkData } from "../types/content";
+import { getImageBaseUrl } from "../lib/paths";
+import { listArtworks } from "../lib/content-service";
 
 // Check if this page type is enabled
-if (!await isPageEnabled('slider')) {
-  return Astro.redirect('/');
+if (!(await isPageEnabled("slider"))) {
+  return Astro.redirect("/");
 }
 
 const imageBaseUrl = getImageBaseUrl();
@@ -22,36 +22,53 @@ const artworks: ArtworkData[] = await listArtworks();
   <div class="slideshow-container" data-testid="slideshow-container">
     <!-- Main image area -->
     <div class="main-image-wrapper">
-      <button id="prev-btn" class="nav-btn nav-prev" aria-label="Previous" data-testid="slideshow-prev-btn">
+      <button
+        id="prev-btn"
+        class="nav-btn nav-prev"
+        aria-label="Previous"
+        data-testid="slideshow-prev-btn"
+      >
         <img
-          src="/themes/kazya-mazya/assets/nav-arrow.svg"
+          src="/themes/kazya-mazya/assets/main-nav-arrow.png"
           alt=""
           aria-hidden="true"
           class="nav-btn-icon"
         />
       </button>
 
-      <div id="slide-viewport" class="slide-viewport" data-testid="slideshow-main-image">
+      <div
+        id="slide-viewport"
+        class="slide-viewport"
+        data-testid="slideshow-main-image"
+      >
         <div class="slide-panel active" id="slide-a">
-          {artworks.length > 0 && (
-            <img
-              src={artworks[0].processing?.processedAt
-                ? `${imageBaseUrl}/large/${artworks[0].slug}.webp`
-                : '/placeholder.svg'
-              }
-              alt={artworks[0].title}
-              data-testid="slideshow-image"
-            />
-          )}
+          {
+            artworks.length > 0 && (
+              <img
+                src={
+                  artworks[0].processing?.processedAt
+                    ? `${imageBaseUrl}/large/${artworks[0].slug}.webp`
+                    : "/placeholder.svg"
+                }
+                alt={artworks[0].title}
+                data-testid="slideshow-image"
+              />
+            )
+          }
         </div>
         <div class="slide-panel" id="slide-b">
           <img src="" alt="" />
         </div>
       </div>
 
-      <button id="next-btn" class="nav-btn nav-next" aria-label="Next" data-testid="slideshow-next-btn">
+      <button
+        id="next-btn"
+        class="nav-btn nav-next"
+        aria-label="Next"
+        data-testid="slideshow-next-btn"
+      >
         <img
-          src="/themes/kazya-mazya/assets/nav-arrow.svg"
+          src="/themes/kazya-mazya/assets/main-nav-arrow.png"
           alt=""
           aria-hidden="true"
           class="nav-btn-icon"
@@ -59,13 +76,33 @@ const artworks: ArtworkData[] = await listArtworks();
       </button>
     </div>
 
-    <!-- Title with More Info button -->
+    <!-- Title with More Info link -->
     <div class="title-area">
-      <span id="artwork-title" class="artwork-title" data-testid="slideshow-title">
-        {artworks[0]?.title || ''}
-      </span>
-      <a id="more-info-link" href={`/gallery/${artworks[0]?.slug}`} class="more-info-btn" title="View details" data-testid="slideshow-more-info">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <a
+        id="more-info-link"
+        href={`/gallery/${artworks[0]?.slug}`}
+        class="title-link"
+        title="View details"
+        data-testid="slideshow-more-info"
+      >
+        <span
+          id="artwork-title"
+          class="artwork-title"
+          data-testid="slideshow-title"
+        >
+          {artworks[0]?.title || ""}
+        </span>
+        <svg
+          class="info-icon"
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
           <circle cx="12" cy="12" r="10"></circle>
           <path d="M12 16v-4"></path>
           <path d="M12 8h.01"></path>
@@ -75,35 +112,55 @@ const artworks: ArtworkData[] = await listArtworks();
 
     <!-- Carousel -->
     <div class="carousel-container">
-      <button id="carousel-prev" class="carousel-nav" aria-label="Scroll left">‹</button>
+      <button id="carousel-prev" class="carousel-nav" aria-label="Scroll left">
+        <img
+          src="/themes/kazya-mazya/assets/small-nav-arrow.png"
+          alt=""
+          class="carousel-nav-icon"
+        />
+      </button>
 
-      <div id="carousel-track" class="carousel-track" data-testid="slideshow-carousel">
-        {artworks.map((artwork, index) => (
-          <button
-            class={`carousel-thumb ${index === 0 ? 'active' : ''}`}
-            data-index={index}
-            data-slug={artwork.slug}
-            data-title={artwork.title}
-            data-testid="carousel-thumb"
-            data-image={artwork.processing?.processedAt
-              ? `${imageBaseUrl}/large/${artwork.slug}.webp`
-              : '/placeholder.svg'
-            }
-          >
-            <img
-              src={artwork.processing?.processedAt && imageBaseUrl
-                ? `${imageBaseUrl}/thumbnails/${artwork.slug}.png`
-                : `/thumbnails/${artwork.slug}.png`
+      <div
+        id="carousel-track"
+        class="carousel-track"
+        data-testid="slideshow-carousel"
+      >
+        {
+          artworks.map((artwork, index) => (
+            <button
+              class={`carousel-thumb ${index === 0 ? "active" : ""}`}
+              data-index={index}
+              data-slug={artwork.slug}
+              data-title={artwork.title}
+              data-testid="carousel-thumb"
+              data-image={
+                artwork.processing?.processedAt
+                  ? `${imageBaseUrl}/large/${artwork.slug}.webp`
+                  : "/placeholder.svg"
               }
-              alt={artwork.title}
-              loading="lazy"
-              onerror="this.src='/placeholder.svg'"
-            />
-          </button>
-        ))}
+            >
+              <img
+                src={
+                  artwork.processing?.processedAt && imageBaseUrl
+                    ? `${imageBaseUrl}/thumbnails/${artwork.slug}.png`
+                    : `/thumbnails/${artwork.slug}.png`
+                }
+                alt={artwork.title}
+                loading="lazy"
+                onerror="this.src='/placeholder.svg'"
+              />
+            </button>
+          ))
+        }
       </div>
 
-      <button id="carousel-next" class="carousel-nav" aria-label="Scroll right">›</button>
+      <button id="carousel-next" class="carousel-nav" aria-label="Scroll right">
+        <img
+          src="/themes/kazya-mazya/assets/small-nav-arrow.png"
+          alt=""
+          class="carousel-nav-icon"
+        />
+      </button>
     </div>
   </div>
 
@@ -117,18 +174,19 @@ const artworks: ArtworkData[] = await listArtworks();
     flex-direction: column;
     height: calc(100vh - 20px);
     position: relative;
+    overflow: hidden;
   }
-  
+
   .main-image-wrapper {
     flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
     position: relative;
-    padding: 50px 0 20px; /* More top padding for spacing from nav bar */
+    padding: 50px; /* Invisible envelope: 50px from all edges */
     min-height: 0;
   }
-  
+
   .slide-viewport {
     max-width: 100%;
     max-height: 100%;
@@ -173,13 +231,13 @@ const artworks: ArtworkData[] = await listArtworks();
   .slide-panel:not(.active) {
     pointer-events: none;
   }
-  
+
   .slide-panel img {
     max-width: 100%;
     max-height: calc(100vh - 280px);
     object-fit: contain;
     border-radius: var(--corner-radius, 12px);
-    box-shadow: 2px 2px 20px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 15px 100px 20px rgba(0, 0, 0, 0.4);
   }
 
   .slide-panel.loading {
@@ -187,18 +245,27 @@ const artworks: ArtworkData[] = await listArtworks();
   }
 
   .slide-panel.loading::before {
-    content: '';
+    content: "";
     position: absolute;
     inset: 8%;
     border-radius: var(--corner-radius, 12px);
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.06));
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.18),
+      rgba(255, 255, 255, 0.06)
+    );
     animation: slideshow-shimmer 1.4s ease-in-out infinite;
     pointer-events: none;
   }
 
   @keyframes slideshow-shimmer {
-    0% { transform: translateX(-25%); }
-    100% { transform: translateX(25%); }
+    0% {
+      transform: translateX(-25%);
+    }
+    100% {
+      transform: translateX(25%);
+    }
   }
 
   .nav-btn {
@@ -210,7 +277,9 @@ const artworks: ArtworkData[] = await listArtworks();
     color: var(--color-text);
     padding: 16px 12px;
     cursor: pointer;
-    transition: background-color 0.4s ease-in-out, opacity 0.2s ease;
+    transition:
+      background-color 0.4s ease-in-out,
+      opacity 0.2s ease;
     z-index: 10;
     border-radius: 8px;
   }
@@ -218,13 +287,15 @@ const artworks: ArtworkData[] = await listArtworks();
   .nav-btn-icon {
     display: block;
     width: auto;
-    height: 100px;
+    height: 120px;
+    filter: drop-shadow(0px 2px 3px rgba(0, 0, 0, 0.3));
   }
 
-  .nav-prev .nav-btn-icon {
+  /* main-nav-arrow.png points LEFT by default */
+  .nav-next .nav-btn-icon {
     transform: scaleX(-1);
   }
-  
+
   .nav-btn:hover {
     background-color: rgba(255, 255, 255, 0.32);
   }
@@ -234,53 +305,60 @@ const artworks: ArtworkData[] = await listArtworks();
     color: var(--color-accent, #efb600);
     outline: none;
   }
-  
-  .nav-prev { left: 15px; }
-  .nav-next { right: 15px; }
-  
+
+  .nav-prev {
+    left: 15px;
+  }
+  .nav-next {
+    right: 15px;
+  }
+
   /* Title area */
   .title-area {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
     padding: 12px 20px;
     flex-shrink: 0;
   }
-  
+
+  .title-link {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+    color: inherit;
+    border: none !important;
+    gap: 8px;
+    position: relative;
+    padding-left: 26px; /* Balance icon width (18px) + gap (8px) so name stays centered */
+  }
+
+  .title-link:hover {
+    border: none !important;
+  }
+
   .artwork-title {
     font-family: var(--font-heading, sans-serif);
     font-weight: 100;
     color: var(--color-text, #323232);
     letter-spacing: 0.05em;
+    text-decoration: underline;
+    text-decoration-style: dashed;
+    text-underline-offset: 4px;
+    text-decoration-color: currentColor;
+    opacity: 0.5;
   }
-  
-  .more-info-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 44px;
-    min-width: 44px;
-    padding: 8px 12px;
-    font-family: var(--font-body, sans-serif);
-    font-size: 15px;
-    font-weight: 500;
-    letter-spacing: 0.03em;
-    color: var(--color-text, #323232);
-    background: var(--color-surface, rgba(0, 0, 0, 0.06));
-    border: 1px solid var(--color-text, rgba(0, 0, 0, 0.12));
-    border-radius: 6px;
-    text-decoration: none;
-    cursor: pointer;
-    transition: background 0.2s, color 0.2s, border-color 0.2s;
+
+  .info-icon {
+    opacity: 0.5;
+    flex-shrink: 0;
   }
-  
-  .more-info-btn:hover {
-    color: var(--color-accent, #efb600);
-    background: var(--color-surface-hover, rgba(0, 0, 0, 0.1));
-    border-color: var(--color-accent, #efb600);
+
+  .title-link:hover .artwork-title,
+  .title-link:hover .info-icon {
+    opacity: 0.8;
   }
-  
+
   /* Carousel container - fixed at bottom */
   .carousel-container {
     display: flex;
@@ -298,34 +376,44 @@ const artworks: ArtworkData[] = await listArtworks();
   .carousel-container.centered .carousel-nav {
     display: none;
   }
-  
+
   .carousel-nav {
-    background: rgba(0, 0, 0, 0.06);
+    background: transparent;
     border: none;
     color: var(--color-text);
-    font-size: 28px;
-    padding: 20px 12px;
+    padding: 0 5px;
     cursor: pointer;
-    transition: color 0.2s, background 0.2s, opacity 0.2s;
+    transition: opacity 0.2s;
     border-radius: 6px;
     flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    height: var(--carousel-thumb-size, 80px); /* Match thumbnail height */
+    height: var(--carousel-thumb-size, 80px);
   }
-  
+
+  .carousel-nav-icon {
+    height: 40px;
+    width: auto;
+    display: block;
+    filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.2));
+  }
+
+  /* small-nav-arrow.png points LEFT by default */
+  #carousel-next .carousel-nav-icon {
+    transform: scaleX(-1);
+  }
+
   .carousel-nav:hover {
-    color: var(--color-accent);
-    background: rgba(0, 0, 0, 0.16);
+    opacity: 0.7;
+    background: transparent;
   }
 
   .carousel-nav:focus-visible {
-    color: var(--color-accent);
-    background: rgba(0, 0, 0, 0.2);
     outline: none;
+    opacity: 1;
   }
-  
+
   .carousel-track {
     flex: 1;
     display: flex;
@@ -335,16 +423,16 @@ const artworks: ArtworkData[] = await listArtworks();
     padding: 5px 10px;
     align-items: center;
   }
-  
+
   .carousel-track::-webkit-scrollbar {
     height: 4px;
   }
-  
+
   .carousel-track::-webkit-scrollbar-thumb {
     background: var(--color-border);
     border-radius: 2px;
   }
-  
+
   .carousel-thumb {
     flex-shrink: 0;
     width: var(--carousel-thumb-size, 70px);
@@ -352,19 +440,21 @@ const artworks: ArtworkData[] = await listArtworks();
     border-radius: var(--carousel-thumb-radius, 0);
     overflow: hidden;
     cursor: pointer;
-    transition: border-color 0.2s, transform 0.2s;
+    transition:
+      border-color 0.2s,
+      transform 0.2s;
     background: var(--color-background-alt);
   }
-  
+
   .carousel-thumb:hover {
     border-color: var(--color-text);
   }
-  
+
   .carousel-thumb.active {
     border: 6px solid var(--color-accent);
     transform: scale(1.05);
   }
-  
+
   .carousel-thumb img {
     width: 100%;
     height: 100%;
@@ -376,8 +466,6 @@ const artworks: ArtworkData[] = await listArtworks();
     pointer-events: none;
   }
 
-
-
   @media (prefers-reduced-motion: reduce) {
     .slide-panel {
       transition-duration: 1ms;
@@ -387,16 +475,16 @@ const artworks: ArtworkData[] = await listArtworks();
       animation: none;
     }
   }
-  
+
   @media (max-width: 768px) {
     .main-image-wrapper {
-      padding: 35px 0 15px; /* Maintain spacing from nav on mobile */
+      padding: 35px 15px 15px; /* Maintain spacing from nav on mobile */
     }
-    
+
     .slide-panel {
       padding: 0 3%;
     }
-    
+
     .nav-btn {
       display: none;
     }
@@ -404,42 +492,54 @@ const artworks: ArtworkData[] = await listArtworks();
 </style>
 
 <script>
-  const thumbs = document.querySelectorAll('.carousel-thumb');
-  const slideA = document.getElementById('slide-a') as HTMLElement;
-  const slideB = document.getElementById('slide-b') as HTMLElement;
+  const thumbs = document.querySelectorAll(".carousel-thumb");
+  const slideA = document.getElementById("slide-a") as HTMLElement;
+  const slideB = document.getElementById("slide-b") as HTMLElement;
 
-  const titleEl = document.getElementById('artwork-title');
-  const moreInfoLink = document.getElementById('more-info-link') as HTMLAnchorElement;
-  const track = document.getElementById('carousel-track');
-  const slideViewport = document.getElementById('slide-viewport');
-  
+  const titleEl = document.getElementById("artwork-title");
+  const moreInfoLink = document.getElementById(
+    "more-info-link",
+  ) as HTMLAnchorElement;
+  const track = document.getElementById("carousel-track");
+  const slideViewport = document.getElementById("slide-viewport");
+
   let currentIndex = 0;
-  let activePanel: 'a' | 'b' = 'a';
+  let activePanel: "a" | "b" = "a";
   let isAnimating = false;
-  const prefersReducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+  let transitionTimeout: number | undefined;
+  let transitionIncoming: HTMLElement | null = null;
+  let transitionHandler: ((event: TransitionEvent) => void) | null = null;
+  const prefersReducedMotionQuery = window.matchMedia(
+    "(prefers-reduced-motion: reduce)",
+  );
   let transitionMs = prefersReducedMotionQuery.matches ? 1 : 800;
   const SWIPE_THRESHOLD_PX = 50;
   const SWIPE_MAX_OFF_AXIS_PX = 80;
   const preloadCache = new Set<string>();
 
-  const getScrollBehavior = () => (prefersReducedMotionQuery.matches ? 'auto' : 'smooth');
-  const controlsContainer = document.querySelector('.slideshow-container');
+  const getScrollBehavior = () =>
+    prefersReducedMotionQuery.matches ? "auto" : "smooth";
+  const controlsContainer = document.querySelector(".slideshow-container");
   const INACTIVITY_MS = 3000;
   let inactivityTimeout: number | undefined;
 
-  prefersReducedMotionQuery.addEventListener('change', (event) => {
+  prefersReducedMotionQuery.addEventListener("change", (event) => {
     transitionMs = event.matches ? 1 : 800;
   });
 
   const showControls = () => {
     if (!controlsContainer) return;
-    controlsContainer.classList.remove('controls-hidden');
+    controlsContainer.classList.remove("controls-hidden");
   };
 
   const hideControls = () => {
     if (!controlsContainer) return;
-    if (document.activeElement && controlsContainer.contains(document.activeElement)) return;
-    controlsContainer.classList.add('controls-hidden');
+    if (
+      document.activeElement &&
+      controlsContainer.contains(document.activeElement)
+    )
+      return;
+    controlsContainer.classList.add("controls-hidden");
   };
 
   const resetInactivityTimer = () => {
@@ -451,7 +551,7 @@ const artworks: ArtworkData[] = await listArtworks();
   };
 
   const hash = window.location.hash;
-  if (hash.startsWith('#/')) {
+  if (hash.startsWith("#/")) {
     const idx = parseInt(hash.slice(2));
     if (!isNaN(idx) && idx >= 0 && idx < thumbs.length) {
       currentIndex = idx;
@@ -459,11 +559,44 @@ const artworks: ArtworkData[] = await listArtworks();
   }
 
   function getCurrentPanel(): HTMLElement {
-    return activePanel === 'a' ? slideA : slideB;
+    return activePanel === "a" ? slideA : slideB;
   }
 
   function getInactivePanel(): HTMLElement {
-    return activePanel === 'a' ? slideB : slideA;
+    return activePanel === "a" ? slideB : slideA;
+  }
+
+  function cancelTransition() {
+    if (!isAnimating) return;
+    isAnimating = false;
+    if (transitionTimeout !== undefined) {
+      clearTimeout(transitionTimeout);
+      transitionTimeout = undefined;
+    }
+    if (transitionIncoming && transitionHandler) {
+      transitionIncoming.removeEventListener("transitionend", transitionHandler);
+    }
+    transitionIncoming = null;
+    transitionHandler = null;
+
+    const active =
+      slideA.classList.contains("active") || !slideB.classList.contains("active")
+        ? slideA
+        : slideB;
+    const inactive = active === slideA ? slideB : slideA;
+
+    active.classList.add("no-transition");
+    inactive.classList.add("no-transition");
+    active.classList.remove("off-left", "off-right");
+    inactive.classList.remove("off-left", "off-right");
+    inactive.classList.remove("active");
+
+    void active.offsetWidth;
+
+    active.classList.remove("no-transition");
+    inactive.classList.remove("no-transition");
+
+    activePanel = active === slideA ? "a" : "b";
   }
 
   function preloadImage(url?: string) {
@@ -484,31 +617,49 @@ const artworks: ArtworkData[] = await listArtworks();
     preloadImage(prevThumb?.dataset.image);
   }
 
-  function setPanelImage(panel: HTMLElement, src: string | undefined, alt: string) {
-    const img = panel.querySelector('img') as HTMLImageElement | null;
+  function centerThumbInTrack(thumb: HTMLElement) {
+    if (!track) return;
+    const trackRect = track.getBoundingClientRect();
+    const thumbRect = thumb.getBoundingClientRect();
+    const currentScrollLeft = track.scrollLeft;
+    const thumbOffsetLeft = thumbRect.left - trackRect.left + currentScrollLeft;
+    const thumbCenter = thumbOffsetLeft + thumbRect.width / 2;
+    const targetScrollLeft = thumbCenter - track.clientWidth / 2;
+    const maxScrollLeft = track.scrollWidth - track.clientWidth;
+    const nextScrollLeft = Math.max(0, Math.min(targetScrollLeft, maxScrollLeft));
+
+    track.scrollTo({ left: nextScrollLeft, behavior: getScrollBehavior() });
+  }
+
+  function setPanelImage(
+    panel: HTMLElement,
+    src: string | undefined,
+    alt: string,
+  ) {
+    const img = panel.querySelector("img") as HTMLImageElement | null;
     if (!img || !src) return;
 
-    panel.classList.add('loading');
+    panel.classList.add("loading");
 
     img.onload = () => {
-      panel.classList.remove('loading');
+      panel.classList.remove("loading");
     };
 
     img.onerror = () => {
-      panel.classList.remove('loading');
+      panel.classList.remove("loading");
     };
 
     img.src = src;
     img.alt = alt;
 
     if (img.complete && img.naturalWidth > 0) {
-      panel.classList.remove('loading');
+      panel.classList.remove("loading");
     }
   }
 
-  function showSlide(index: number, direction?: 'next' | 'prev') {
-    if (isAnimating) return;
-    
+  function showSlide(index: number, direction?: "next" | "prev") {
+    if (isAnimating) cancelTransition();
+
     const total = thumbs.length;
     if (total === 0) return;
 
@@ -518,9 +669,9 @@ const artworks: ArtworkData[] = await listArtworks();
     if (index === currentIndex) return;
 
     if (direction === undefined) {
-      direction = index > currentIndex ? 'next' : 'prev';
-      if (index === 0 && currentIndex === total - 1) direction = 'next';
-      if (index === total - 1 && currentIndex === 0) direction = 'prev';
+      direction = index > currentIndex ? "next" : "prev";
+      if (index === 0 && currentIndex === total - 1) direction = "next";
+      if (index === total - 1 && currentIndex === 0) direction = "prev";
     }
 
     isAnimating = true;
@@ -529,49 +680,57 @@ const artworks: ArtworkData[] = await listArtworks();
     const incoming = getInactivePanel();
     const outgoing = getCurrentPanel();
 
-    setPanelImage(incoming, thumb.dataset.image, thumb.dataset.title || '');
+    setPanelImage(incoming, thumb.dataset.image, thumb.dataset.title || "");
 
     // Reset outgoing to center without animating
-    outgoing.classList.add('no-transition');
-    outgoing.classList.remove('off-left', 'off-right');
+    outgoing.classList.add("no-transition");
+    outgoing.classList.remove("off-left", "off-right");
 
     // Position incoming off-screen without animating
-    incoming.classList.add('no-transition');
-    incoming.classList.remove('off-left', 'off-right');
-    incoming.classList.add(direction === 'next' ? 'off-right' : 'off-left');
+    incoming.classList.add("no-transition");
+    incoming.classList.remove("off-left", "off-right");
+    incoming.classList.add(direction === "next" ? "off-right" : "off-left");
 
     void incoming.offsetWidth;
 
-    incoming.classList.remove('no-transition');
-    outgoing.classList.remove('no-transition');
+    incoming.classList.remove("no-transition");
+    outgoing.classList.remove("no-transition");
 
-    incoming.classList.add('active');
-    outgoing.classList.remove('active');
+    incoming.classList.add("active");
+    outgoing.classList.remove("active");
 
     requestAnimationFrame(() => {
-      incoming.classList.remove('off-left', 'off-right');
-      outgoing.classList.add(direction === 'next' ? 'off-left' : 'off-right');
+      incoming.classList.remove("off-left", "off-right");
+      outgoing.classList.add(direction === "next" ? "off-left" : "off-right");
     });
-
-    let transitionTimeout: number | undefined;
 
     const finishTransition = () => {
       if (!isAnimating) return;
       isAnimating = false;
-      activePanel = activePanel === 'a' ? 'b' : 'a';
+      activePanel = activePanel === "a" ? "b" : "a";
       if (transitionTimeout !== undefined) {
         clearTimeout(transitionTimeout);
         transitionTimeout = undefined;
       }
-      incoming.removeEventListener('transitionend', onTransitionEnd);
+      if (transitionIncoming && transitionHandler) {
+        transitionIncoming.removeEventListener(
+          "transitionend",
+          transitionHandler,
+        );
+      }
+      transitionIncoming = null;
+      transitionHandler = null;
     };
 
     const onTransitionEnd = (event: TransitionEvent) => {
-      if (event.target !== incoming || event.propertyName !== 'transform') return;
+      if (event.target !== incoming || event.propertyName !== "transform")
+        return;
       finishTransition();
     };
 
-    incoming.addEventListener('transitionend', onTransitionEnd);
+    transitionIncoming = incoming;
+    transitionHandler = onTransitionEnd;
+    incoming.addEventListener("transitionend", onTransitionEnd);
     transitionTimeout = window.setTimeout(finishTransition, transitionMs + 80);
 
     currentIndex = newIndex;
@@ -585,12 +744,12 @@ const artworks: ArtworkData[] = await listArtworks();
     }
 
     thumbs.forEach((t, i) => {
-      t.classList.toggle('active', i === newIndex);
+      t.classList.toggle("active", i === newIndex);
     });
 
-    thumb.scrollIntoView({ behavior: getScrollBehavior(), inline: 'center', block: 'nearest' });
+    centerThumbInTrack(thumb);
 
-    window.history.replaceState(null, '', `#/${newIndex}`);
+    window.history.replaceState(null, "", `#/${newIndex}`);
     preloadAdjacent(newIndex);
   }
 
@@ -599,7 +758,7 @@ const artworks: ArtworkData[] = await listArtworks();
     if (!thumb) return;
 
     const panel = getCurrentPanel();
-    setPanelImage(panel, thumb.dataset.image, thumb.dataset.title || '');
+    setPanelImage(panel, thumb.dataset.image, thumb.dataset.title || "");
 
     if (titleEl && thumb.dataset.title) {
       titleEl.textContent = thumb.dataset.title;
@@ -610,74 +769,82 @@ const artworks: ArtworkData[] = await listArtworks();
     }
 
     thumbs.forEach((t, i) => {
-      t.classList.toggle('active', i === currentIndex);
+      t.classList.toggle("active", i === currentIndex);
     });
 
-    thumb.scrollIntoView({ behavior: getScrollBehavior(), inline: 'center', block: 'nearest' });
-    window.history.replaceState(null, '', `#/${currentIndex}`);
+    centerThumbInTrack(thumb);
+    window.history.replaceState(null, "", `#/${currentIndex}`);
     preloadAdjacent(currentIndex);
   }
 
   showInitialSlide();
 
-  document.getElementById('prev-btn')?.addEventListener('click', () => {
-    showSlide(currentIndex - 1, 'prev');
+  document.getElementById("prev-btn")?.addEventListener("click", () => {
+    showSlide(currentIndex - 1, "prev");
   });
-  document.getElementById('next-btn')?.addEventListener('click', () => {
-    showSlide(currentIndex + 1, 'next');
+  document.getElementById("next-btn")?.addEventListener("click", () => {
+    showSlide(currentIndex + 1, "next");
   });
 
-  document.getElementById('carousel-prev')?.addEventListener('click', () => {
+  document.getElementById("carousel-prev")?.addEventListener("click", () => {
     if (track) track.scrollBy({ left: -300, behavior: getScrollBehavior() });
   });
-  document.getElementById('carousel-next')?.addEventListener('click', () => {
+  document.getElementById("carousel-next")?.addEventListener("click", () => {
     if (track) track.scrollBy({ left: 300, behavior: getScrollBehavior() });
   });
 
   thumbs.forEach((thumb, index) => {
-    thumb.addEventListener('click', () => showSlide(index));
+    thumb.addEventListener("click", () => showSlide(index));
   });
 
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowLeft') showSlide(currentIndex - 1, 'prev');
-    if (e.key === 'ArrowRight') showSlide(currentIndex + 1, 'next');
-    if (e.key === 'Home') showSlide(0);
-    if (e.key === 'End') showSlide(thumbs.length - 1);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowLeft") showSlide(currentIndex - 1, "prev");
+    if (e.key === "ArrowRight") showSlide(currentIndex + 1, "next");
+    if (e.key === "Home") showSlide(0);
+    if (e.key === "End") showSlide(thumbs.length - 1);
   });
 
   let touchStartX = 0;
   let touchStartY = 0;
   let isTouching = false;
 
-  slideViewport?.addEventListener('touchstart', (event) => {
-    if (isAnimating) return;
-    const touch = event.touches[0];
-    if (!touch) return;
-    isTouching = true;
-    touchStartX = touch.clientX;
-    touchStartY = touch.clientY;
-  }, { passive: true });
+  slideViewport?.addEventListener(
+    "touchstart",
+    (event) => {
+      if (isAnimating) return;
+      const touch = event.touches[0];
+      if (!touch) return;
+      isTouching = true;
+      touchStartX = touch.clientX;
+      touchStartY = touch.clientY;
+    },
+    { passive: true },
+  );
 
-  slideViewport?.addEventListener('touchend', (event) => {
-    if (!isTouching) return;
-    isTouching = false;
-    const touch = event.changedTouches[0];
-    if (!touch) return;
-    const deltaX = touch.clientX - touchStartX;
-    const deltaY = touch.clientY - touchStartY;
-    if (Math.abs(deltaY) > SWIPE_MAX_OFF_AXIS_PX) return;
-    if (deltaX > SWIPE_THRESHOLD_PX) {
-      showSlide(currentIndex - 1, 'prev');
-    } else if (deltaX < -SWIPE_THRESHOLD_PX) {
-      showSlide(currentIndex + 1, 'next');
-    }
-  }, { passive: true });
+  slideViewport?.addEventListener(
+    "touchend",
+    (event) => {
+      if (!isTouching) return;
+      isTouching = false;
+      const touch = event.changedTouches[0];
+      if (!touch) return;
+      const deltaX = touch.clientX - touchStartX;
+      const deltaY = touch.clientY - touchStartY;
+      if (Math.abs(deltaY) > SWIPE_MAX_OFF_AXIS_PX) return;
+      if (deltaX > SWIPE_THRESHOLD_PX) {
+        showSlide(currentIndex - 1, "prev");
+      } else if (deltaX < -SWIPE_THRESHOLD_PX) {
+        showSlide(currentIndex + 1, "next");
+      }
+    },
+    { passive: true },
+  );
 
   let isCentered = false;
   let resizeTimeout: number;
 
   function checkCarouselCentering() {
-    const container = document.querySelector('.carousel-container');
+    const container = document.querySelector(".carousel-container");
     if (!container || !track) return;
 
     const trackWidth = track.scrollWidth;
@@ -691,7 +858,7 @@ const artworks: ArtworkData[] = await listArtworks();
 
     if (shouldCenter !== isCentered) {
       isCentered = shouldCenter;
-      container.classList.toggle('centered', shouldCenter);
+      container.classList.toggle("centered", shouldCenter);
     }
   }
 
@@ -701,11 +868,11 @@ const artworks: ArtworkData[] = await listArtworks();
   }
 
   checkCarouselCentering();
-  window.addEventListener('resize', debouncedCheck);
+  window.addEventListener("resize", debouncedCheck);
 
   resetInactivityTimer();
-  document.addEventListener('mousemove', resetInactivityTimer);
-  document.addEventListener('keydown', resetInactivityTimer);
-  document.addEventListener('focusin', resetInactivityTimer);
-  document.addEventListener('mouseleave', hideControls);
+  document.addEventListener("mousemove", resetInactivityTimer);
+  document.addEventListener("keydown", resetInactivityTimer);
+  document.addEventListener("focusin", resetInactivityTimer);
+  document.addEventListener("mouseleave", hideControls);
 </script>

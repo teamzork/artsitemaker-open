@@ -47,143 +47,140 @@ const mainImageUrl = artwork?.processing?.processedAt
 
 {artwork ? (
 <PageLayout title={artwork.title}>
-  <!-- Back to gallery button - circle under logo -->
+  <!-- Back to gallery button -->
   <a href={backUrl} class="back-to-gallery" aria-label={`Back to ${backLabel}`}>
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
       <polyline points="15,18 9,12 15,6"></polyline>
     </svg>
   </a>
   
-  <!-- Prev/Next navigation - slideshow style -->
+  <!-- Prev/Next navigation -->
   {prevArtwork ? (
     <a href={`/gallery/${prevArtwork.slug}`} class="artwork-nav-btn artwork-nav-prev" aria-label="Previous artwork">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polyline points="15,18 9,12 15,6"></polyline>
-      </svg>
+      <img src="/themes/kazya-mazya/assets/main-nav-arrow.png" alt="" class="nav-arrow-icon" />
     </a>
   ) : (
     <span class="artwork-nav-btn artwork-nav-prev disabled" aria-hidden="true">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polyline points="15,18 9,12 15,6"></polyline>
-      </svg>
+      <img src="/themes/kazya-mazya/assets/main-nav-arrow.png" alt="" class="nav-arrow-icon" />
     </span>
   )}
   
   {nextArtwork ? (
     <a href={`/gallery/${nextArtwork.slug}`} class="artwork-nav-btn artwork-nav-next" aria-label="Next artwork">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polyline points="9,18 15,12 9,6"></polyline>
-      </svg>
+      <img src="/themes/kazya-mazya/assets/main-nav-arrow.png" alt="" class="nav-arrow-icon" />
     </a>
   ) : (
     <span class="artwork-nav-btn artwork-nav-next disabled" aria-hidden="true">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polyline points="9,18 15,12 9,6"></polyline>
-      </svg>
+      <img src="/themes/kazya-mazya/assets/main-nav-arrow.png" alt="" class="nav-arrow-icon" />
     </span>
   )}
   
   <article class="artwork-detail">
-    <div class="max-w-3xl mx-auto px-4 md:px-8 pt-16 pb-12">
-      <!-- Main image - clickable for fullscreen -->
-      <div class="mb-8 flex justify-center image-container">
-        <button 
-          id="fullscreen-trigger" 
-          class="fullscreen-trigger"
-          data-image-url={mainImageUrl}
-          data-title={artwork.title}
-          aria-label="View fullscreen"
-        >
-          <img 
-            src={mainImageUrl}
-            alt={artwork.title}
-            class="artwork-main-image"
-          />
-          <span class="zoom-indicator">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="15 3 21 3 21 9"></polyline>
-              <polyline points="9 21 3 21 3 15"></polyline>
-              <line x1="21" y1="3" x2="14" y2="10"></line>
-              <line x1="3" y1="21" x2="10" y2="14"></line>
-            </svg>
-          </span>
-        </button>
-      </div>
-      
-      <!-- Metadata (Title & Description first) -->
-      <div class="space-y-4 metadata-section">
-        <h1 class="text-3xl artwork-title">{artwork.title}</h1>
-        
-        <div class="flex flex-wrap gap-2 text-sm">
-          {artwork.year && <span>{artwork.year}</span>}
-          {artwork.medium && <span>• {artwork.medium}</span>}
-          {artwork.dimensions && <span>• {artwork.dimensions}</span>}
+    <div class="artwork-layout">
+      <!-- LEFT COLUMN: Images -->
+      <div class="artwork-images-column">
+        <!-- Main image - clickable for fullscreen -->
+        <div class="artwork-image-wrapper">
+          <button 
+            class="fullscreen-trigger"
+            data-image-url={mainImageUrl}
+            data-title={artwork.title}
+            aria-label="View fullscreen"
+          >
+            <img 
+              src={mainImageUrl}
+              alt={artwork.title}
+              class="artwork-main-image"
+            />
+            <span class="zoom-indicator">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <polyline points="9 21 3 21 3 15"></polyline>
+                <line x1="21" y1="3" x2="14" y2="10"></line>
+                <line x1="3" y1="21" x2="10" y2="14"></line>
+              </svg>
+            </span>
+          </button>
         </div>
-        
-        {artwork.description && (
-          <div class="prose prose-invert max-w-none">
-            <p class="description">{artwork.description}</p>
-          </div>
-        )}
 
-        {artwork.tags?.length > 0 && (
-          <div class="tags-container">
-            {artwork.tags.map((tag: string) => (
-              <span class="art-tag">#{tag}</span>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <!-- Additional Images (below title and description) -->
-      {artwork.additional && artwork.additional.length > 0 && (
-        <div class="my-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-          {artwork.additional.map((img, index) => {
-            // Handle both old string format and new object format
+        <!-- Additional Images -->
+        {artwork.additional && artwork.additional.length > 0 && (
+          artwork.additional.map((img) => {
             const file = typeof img === 'string' ? img : img.file;
             const title = typeof img === 'string' ? null : img.title;
             const imageUrl = file.startsWith('http') ? file : `${imageBaseUrl}/large/${file}`;
             return (
-              <div class="additional-image-wrapper">
-                <div class="image-container additional-image">
-                  <button 
-                    class="fullscreen-trigger"
-                    data-image-url={imageUrl}
-                    data-title={title || `${artwork.title} detail`}
-                    aria-label="View fullscreen"
-                  >
-                    <img 
-                      src={imageUrl}
-                      alt={title || `${artwork.title} detail`}
-                      loading="lazy"
-                    />
-                  </button>
-                </div>
+              <div class="artwork-image-wrapper">
+                <button
+                  class="fullscreen-trigger"
+                  data-image-url={imageUrl}
+                  data-title={title || `${artwork.title} detail`}
+                  aria-label="View fullscreen"
+                >
+                  <img
+                    src={imageUrl}
+                    alt={title || `${artwork.title} detail`}
+                    loading="lazy"
+                    class="artwork-main-image"
+                  />
+                  <span class="zoom-indicator">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="15 3 21 3 21 9"></polyline>
+                      <polyline points="9 21 3 21 3 15"></polyline>
+                      <line x1="21" y1="3" x2="14" y2="10"></line>
+                      <line x1="3" y1="21" x2="10" y2="14"></line>
+                    </svg>
+                  </span>
+                </button>
                 {title && (
-                  <p class="additional-image-title">{title}</p>
+                  <p class="image-caption">{title}</p>
                 )}
               </div>
             );
-          })}
+          })
+        )}
+      </div>
+
+      <!-- RIGHT COLUMN: Info -->
+      <div class="artwork-info-column">
+        <div class="metadata-section">
+          <h1 class="artwork-title">{artwork.title}</h1>
+          
+          <div class="artwork-meta">
+            {artwork.year && <span>{artwork.year}</span>}
+            {artwork.medium && <span>• {artwork.medium}</span>}
+            {artwork.dimensions && <span>• {artwork.dimensions}</span>}
+          </div>
+          
+          {artwork.description && (
+            <div class="artwork-description">
+              <p>{artwork.description}</p>
+            </div>
+          )}
+
+          {artwork.tags?.length > 0 && (
+            <div class="tags-container">
+              {artwork.tags.map((tag: string) => (
+                <span class="art-tag">#{tag}</span>
+              ))}
+            </div>
+          )}
+
+          <!-- Sales Info -->
+          {artwork.price && !artwork.sold && (
+            <div class="price-box">
+              <span>
+                {artwork.inquireOnly ? 'Price on request' : `$${artwork.price} ${artwork.currency || 'USD'}`}
+              </span>
+            </div>
+          )}
+          
+          {artwork.sold && (
+            <div class="price-box">
+              <span class="sold-label">Sold</span>
+            </div>
+          )}
         </div>
-      )}
-      
-      <!-- Sales Info -->
-      <div class="space-y-4">
-        <!-- Sales info -->
-        {artwork.price && !artwork.sold && (
-          <div class="mt-6 p-4 price-box w-fit">
-            <span class="text-lg font-bold">
-              {artwork.inquireOnly ? 'Price on request' : `$${artwork.price} ${artwork.currency || 'USD'}`}
-            </span>
-          </div>
-        )}
-        
-        {artwork.sold && (
-          <div class="mt-6 p-4 price-box w-fit">
-            <span class="text-lg sold-label">Sold</span>
-          </div>
-        )}
       </div>
     </div>
   </article>
@@ -204,82 +201,42 @@ const mainImageUrl = artwork?.processing?.processedAt
   <div class="min-h-screen p-8 flex items-center justify-center">
     <div class="text-center">
       <h1 class="text-3xl mb-4" style="color: var(--color-text-muted)">Artwork not found</h1>
-      <a href="/" class="nav-link">← Back to Gallery</a>
+      <a href="/" class="nav-link">← Go to Gallery</a>
     </div>
   </div>
 </PageLayout>
 )}
 
 <style>
+  /* ===== Two-Column Layout ===== */
   .artwork-detail {
-    /* Theme CSS handles padding */
+    padding: 140px 80px 60px;
   }
-  
-  /* Back to gallery button - circle under logo */
-  .back-to-gallery {
-    position: fixed;
-    top: 105px; /* Below enlarged logo */
-    left: 80px;
-    z-index: 100;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: rgba(0, 0, 0, 0.15);
-    color: var(--color-text-muted, #a4a4a0);
+
+  .artwork-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 60px;
+    align-items: start;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  /* Left column: images */
+  .artwork-images-column {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
-    border: none !important;
+    flex-direction: column;
+    gap: 24px;
+    position: sticky;
+    top: 40px;
   }
-  
-  .back-to-gallery:hover {
-    background: rgba(0, 0, 0, 0.25);
-    color: var(--color-accent, #efb600);
-    border: none !important;
-  }
-  
-  /* Prev/Next navigation buttons - slideshow style */
-  .artwork-nav-btn {
-    position: fixed;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 100;
-    background: rgba(0, 0, 0, 0.25);
-    color: white;
-    padding: 25px 14px;
-    border-radius: 8px;
-    transition: all 0.2s ease;
+
+  .artwork-image-wrapper {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    border: none !important;
+    flex-direction: column;
+    gap: 6px;
   }
-  
-  .artwork-nav-btn:hover {
-    background: rgba(0, 0, 0, 0.45);
-    border: none !important;
-  }
-  
-  .artwork-nav-btn.disabled {
-    opacity: 0.2;
-    cursor: not-allowed;
-    pointer-events: none;
-  }
-  
-  .artwork-nav-prev { left: 15px; }
-  .artwork-nav-next { right: 15px; }
-  
-  /* Image container - transparent, no background */
-  .image-container {
-    background: transparent;
-    border-radius: 0;
-    overflow: visible;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
+
   .fullscreen-trigger {
     position: relative;
     cursor: zoom-in;
@@ -289,24 +246,22 @@ const mainImageUrl = artwork?.processing?.processedAt
     display: block;
     width: 100%;
   }
-  
+
   .artwork-main-image {
     max-width: 100%;
-    max-height: 65vh;
-    width: auto;
+    width: 100%;
     height: auto;
     object-fit: contain;
     display: block;
-    margin: 0 auto;
-    border-radius: 8px;
-    box-shadow: 2px 2px 20px rgba(0, 0, 0, 0.3);
+    border-radius: var(--corner-radius, 8px);
+    box-shadow: 0 15px 100px 20px rgba(0, 0, 0, 0.4);
     transition: opacity 0.2s ease;
   }
-  
+
   .fullscreen-trigger:hover .artwork-main-image {
     opacity: 0.95;
   }
-  
+
   .zoom-indicator {
     position: absolute;
     top: 15px;
@@ -321,86 +276,147 @@ const mainImageUrl = artwork?.processing?.processedAt
     align-items: center;
     justify-content: center;
   }
-  
+
   .fullscreen-trigger:hover .zoom-indicator {
     opacity: 1;
   }
-  
-  .additional-image img {
-    max-width: 100%;
-    max-height: 500px;
-    width: auto;
-    height: auto;
-    object-fit: contain;
-    display: block;
-    margin: 0 auto;
-    border-radius: 6px;
-    box-shadow: 1px 1px 10px rgba(0, 0, 0, 0.2);
-  }
-  
-  .additional-image-wrapper {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-  
-  .additional-image-title {
+
+  .image-caption {
     text-align: center;
     font-size: 0.875rem;
     color: var(--color-text-muted, #666);
     margin: 0;
     font-style: italic;
   }
-  
-  /* Metadata section */
+
+  /* Right column: info */
+  .artwork-info-column {
+    padding-top: 20px;
+  }
+
   .metadata-section {
-    border-color: var(--color-border, rgba(0, 0, 0, 0.2));
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
   }
-  
+
   .artwork-title {
-    color: var(--color-text, #323232);
+    font-size: clamp(1.4rem, 1.1rem + 1vw, 2rem);
+    font-weight: 600;
     font-family: var(--font-heading, sans-serif);
-  }
-  
-  .text-muted {
-    color: var(--color-text-muted, #666);
-  }
-  
-  .description {
     color: var(--color-text, #323232);
-    line-height: 1.7;
+    margin: 0;
+    letter-spacing: 0.01em;
   }
-  
-  /* Tags - small hashtag style */
+
+  .artwork-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: 1rem;
+    color: var(--color-text, #323232);
+  }
+
+  .artwork-description {
+    line-height: 1.7;
+    color: var(--color-text, #323232);
+    font-size: 1rem;
+  }
+
+  .artwork-description p {
+    margin: 0;
+  }
+
   .tags-container {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    margin-top: 12px;
+    margin-top: 8px;
   }
-  
-  .tag {
-    font-size: 11px;
-    color: var(--color-text-muted, #888);
-    opacity: 0.7;
-    transition: opacity 0.2s ease;
+
+  .art-tag {
+    font-size: 0.9rem;
+    color: var(--color-text, #323232);
+    opacity: 0.8;
   }
-  
-  .tag:hover {
-    opacity: 1;
-  }
-  
+
   .price-box {
-    background: var(--color-background-alt, rgba(0, 0, 0, 0.05));
-    border-radius: 8px;
-    color: var(--color-accent, #efb600);
+    margin-top: 16px;
+    color: var(--color-text);
+    font-size: 1.1rem;
   }
-  
+
   .sold-label {
     color: var(--color-text-muted, #666);
+    font-style: italic;
   }
-  
-  /* Fullscreen modal */
+
+  /* ===== Navigation ===== */
+  .back-to-gallery {
+    position: fixed;
+    top: 105px;
+    left: 80px;
+    z-index: 100;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.15);
+    color: var(--color-text-muted, #a4a4a0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    border: none !important;
+  }
+
+  .back-to-gallery:hover {
+    background: rgba(0, 0, 0, 0.25);
+    color: var(--color-accent, #efb600);
+    border: none !important;
+  }
+
+  .artwork-nav-btn {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 100;
+    background: transparent;
+    color: white;
+    padding: 10px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none !important;
+  }
+
+  .nav-arrow-icon {
+    height: 80px;
+    width: auto;
+    filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.4));
+  }
+
+  /* main-nav-arrow.png points LEFT by default */
+  .artwork-nav-next .nav-arrow-icon {
+    transform: scaleX(-1);
+  }
+
+  .artwork-nav-btn:hover {
+    background: rgba(0, 0, 0, 0.1);
+    border: none !important;
+  }
+
+  .artwork-nav-btn.disabled {
+    opacity: 0.2;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  .artwork-nav-prev { left: 15px; }
+  .artwork-nav-next { right: 15px; }
+
+  /* ===== Fullscreen Modal ===== */
   .fullscreen-modal {
     position: fixed;
     top: 0;
@@ -415,18 +431,18 @@ const mainImageUrl = artwork?.processing?.processedAt
     cursor: zoom-out;
     padding: 20px;
   }
-  
+
   .fullscreen-modal[hidden] {
     display: none;
   }
-  
+
   .fullscreen-image {
     max-width: 95vw;
     max-height: 95vh;
     object-fit: contain;
     border-radius: 4px;
   }
-  
+
   .fullscreen-close {
     position: absolute;
     top: 20px;
@@ -443,15 +459,31 @@ const mainImageUrl = artwork?.processing?.processedAt
     justify-content: center;
     transition: background 0.2s ease, color 0.2s ease;
   }
-  
+
   .fullscreen-close:hover {
     background: rgba(255, 255, 255, 0.2);
     color: var(--color-accent, #efb600);
   }
-  
+
+  /* ===== Responsive ===== */
+  @media (max-width: 900px) {
+    .artwork-detail {
+      padding: 40px 20px 40px;
+    }
+
+    .artwork-layout {
+      grid-template-columns: 1fr;
+      gap: 30px;
+    }
+
+    .artwork-images-column {
+      position: static;
+    }
+  }
+
   @media (max-width: 768px) {
     .back-to-gallery {
-      top: 60px; /* Below mobile logo */
+      top: 60px;
       left: 85px;
     }
     

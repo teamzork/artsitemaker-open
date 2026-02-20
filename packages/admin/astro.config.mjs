@@ -53,7 +53,7 @@ function contextualAliasResolver() {
                     const fullPath = resolvedPath + ext;
                     try {
                         const fs = await
-                        import ('fs');
+                            import('fs');
                         if (fs.existsSync(fullPath)) {
                             return fullPath;
                         }
@@ -74,7 +74,7 @@ function serveSitePublic() {
         name: 'serve-site-public',
         async configureServer(server) {
             const fs = await
-            import ('fs');
+                import('fs');
             const sitePublicPath = path.resolve(__dirname, '../site/public');
             const demoFilesPath = path.resolve(__dirname, '../../demo-site/files');
             const demoUserAssetsPath = path.resolve(__dirname, '../../demo-site/user-data/assets');
@@ -82,14 +82,14 @@ function serveSitePublic() {
             // Get user data path using bootstrap config with mtime checking
             // This ensures the admin picks up config changes without restart
             const yaml = await import('js-yaml');
-            
+
             let cachedUserDataPath = null;
             let cachedBootstrapMtime = 0;
-            
+
             function getUserDataPath() {
                 const artSiteMakerRoot = path.resolve(__dirname, '../..');
                 const bootstrapPath = path.join(artSiteMakerRoot, 'artis.config.yaml');
-                
+
                 // ALWAYS check if bootstrap file has changed
                 if (fs.existsSync(bootstrapPath)) {
                     try {
@@ -107,18 +107,18 @@ function serveSitePublic() {
                         cachedBootstrapMtime = 0;
                     }
                 }
-                
+
                 if (cachedUserDataPath !== null) {
                     return cachedUserDataPath;
                 }
-                
+
                 // Read from artis.config.yaml
                 if (fs.existsSync(bootstrapPath)) {
                     try {
                         const content = fs.readFileSync(bootstrapPath, 'utf-8');
                         const config = yaml.load(content);
                         const pathValue = config?.userDataPath || config?.contentPath;
-                        
+
                         if (pathValue) {
                             let resolved;
                             if (path.isAbsolute(pathValue)) {
@@ -129,7 +129,7 @@ function serveSitePublic() {
                             } else {
                                 resolved = path.resolve(artSiteMakerRoot, pathValue);
                             }
-                            
+
                             if (fs.existsSync(resolved)) {
                                 cachedUserDataPath = resolved;
                                 return cachedUserDataPath;
@@ -139,16 +139,16 @@ function serveSitePublic() {
                         console.warn('Failed to read artis.config.yaml:', error);
                     }
                 }
-                
+
                 // Fallback to auto-discovery
                 const rootUserData = path.join(artSiteMakerRoot, 'user-data');
                 const rootContent = path.join(artSiteMakerRoot, 'content');
                 cachedUserDataPath = fs.existsSync(rootUserData) ? rootUserData :
                     fs.existsSync(rootContent) ? rootContent :
-                    path.join(artSiteMakerRoot, 'demo-site', 'user-data');
+                        path.join(artSiteMakerRoot, 'demo-site', 'user-data');
                 return cachedUserDataPath;
             }
-            
+
             const userDataPath = getUserDataPath();
             const userAssetsPath = path.join(userDataPath, 'assets');
 
@@ -268,7 +268,7 @@ export default defineConfig({
 
     server: {
         port: parseInt(process.env.PORT) || 4322,
-        host: process.env.HOST || 'localhost'
+        host: process.env.HOST || '0.0.0.0'
     },
 
     vite: {

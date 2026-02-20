@@ -21,6 +21,7 @@ const { title, currentPath = Astro.url.pathname } = Astro.props;
 ---
 
 <BaseLayout title={title}>
+  <slot name="head" slot="head" />
   <div class="flex min-h-screen">
     <!-- Sidebar -->
     <Sidebar currentPath={currentPath} />

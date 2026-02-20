@@ -45,11 +45,14 @@ for theme_dir in "$THEMES_SRC"/*; do
         cp "$theme_dir/styles.css" "$THEMES_DEST/$theme_name/"
     fi
 
-    # Copy preview image if it exists (for admin UI)
-    if [ -f "$theme_dir/assets/preview.png" ]; then
+    # Copy assets directory if it exists (includes preview.png and nav arrows)
+    if [ -d "$theme_dir/assets" ]; then
         mkdir -p "$THEMES_DEST/$theme_name/assets"
-        cp "$theme_dir/assets/preview.png" "$THEMES_DEST/$theme_name/assets/"
-    elif [ -f "$theme_dir/preview.png" ]; then
+        cp -r "$theme_dir/assets/"* "$THEMES_DEST/$theme_name/assets/"
+    fi
+
+    # Fallback: Copy preview.png from root if not in assets
+    if [ ! -f "$THEMES_DEST/$theme_name/assets/preview.png" ] && [ -f "$theme_dir/preview.png" ]; then
         cp "$theme_dir/preview.png" "$THEMES_DEST/$theme_name/"
     fi
 
